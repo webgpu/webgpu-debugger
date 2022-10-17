@@ -13,7 +13,7 @@ class ObjectRegistry {
 
         this.dataMap.set(obj, data);
         this.objects.push(new WeakRef(obj));
-        data.webgpuObject = object;
+        data.webgpuObject = obj;
         data.traceSerial = this.currentTraceSerial;
 
     }
@@ -51,16 +51,19 @@ class ObjectRegistry {
     }
 }
 
-function createPrototypeWrapper(registry, methodsToWrap) {
-    let proto = {};
+function replacePrototypeOf(c, registry, methodsToWrap) {
+    let newProto = {};
+    let originalProto = {};
     for (const name of methodsToWrap) {
-        proto[name] = function() {
+        originalProto[name] = c.prototype[name];
+        c.prototype[name] = function() {
             let self = registry.get(this)[name];
             return self[name].apply(self, arguments);
         }
     }
-    return proto;
+    return originalProto;
 }
+
 
 
 class Spector2 {
@@ -76,32 +79,19 @@ class Spector2 {
         this.textures = new ObjectRegistry();
         this.textureViews = new ObjectRegistry();
 
-        this.canvasContextProto = Object.getPrototypeOf(GPUCanvasContext);
-        this.commandEncoderProto = Object.getPrototypeOf(GPUCommandEncoder);
-        this.deviceProto = Object.getPrototypeOf(GPUDevice);
-        this.queueProto = Object.getPrototypeOf(GPUQueue);
-        this.renderPassEncoderProto = Object.getPrototypeOf(GPURenderPassEncoder);
-        this.renderPipelineProto = Object.getPrototypeOf(GPURenderPipeline);
-        this.shaderModuleProto = Object.getPrototypeOf(GPUShaderModule);
-        this.textureProto = Object.getPrototypeOf(GPUTexture);
-        this.textureView = Object.getPrototypeOf(GPUTextureView);
-
-        Object.setPrototypeOf(GPUCanvasContext, createPrototypeWrapper(this.canvasContexts, ['configure', 'unconfigure', 'getCurrentTextureView']));
-        Object.setPrototypeOf(GPUTexture, createPrototypeWrapper(this.texturePrototype, ['destroy', 'createView']));
+        this.canvasContextProto = replacePrototypeOf(GPUCanvasContext, this.canvasContexts, ['configure', 'unconfigure', 'getCurrentTextureView']);
+        this.textureProto = replacePrototypeOf(GPUTexture, this.texturePrototype, ['destroy', 'createView']);
 
         console.log("replacing proto");
-        let canvasProto = Object.getPrototypeOf(HTMLCanvasElement);
-        Object.setPrototypeOf(HTMLCanvasElement, {
-            prototype: canvasProto,
-            getContext: function(type) {
-                console.log("getContext");
-                let context = canvasProto.apply(this, arguments);
-                if (type === 'webgpu') {
-                    this.canvasContext.add(context, new CanvasContextState(this));
-                }
-                return context;
+        let canvasGetContext = HTMLCanvasElement.prototype.getContext;
+        HTMLCanvasElement.prototype.getContext = function(type) {
+            console.log("getContext");
+            let context = canvasGetContext.apply(this, arguments);
+            if (type === 'webgpu') {
+                spector2.canvasContexts.add(context, new CanvasContextState(this));
             }
-        });
+            return context;
+        };
     }
     // TODO add support for prune all.
 }
