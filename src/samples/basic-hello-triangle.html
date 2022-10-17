@@ -11,7 +11,6 @@ async function run() {
     const adapter = await navigator.gpu.requestAdapter();
     const device = await adapter.requestDevice();
 
-    console.log("getting context");
     const context = document.getElementById("renderCanvas").getContext('webgpu');
     const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
     context.configure({

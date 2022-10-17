@@ -52,23 +52,20 @@ class ObjectRegistry {
 }
 
 function replacePrototypeOf(c, registry, methodsToWrap) {
-    let newProto = {};
     let originalProto = {};
     for (const name of methodsToWrap) {
+        console.assert(c.prototype[name]);
         originalProto[name] = c.prototype[name];
         c.prototype[name] = function() {
-            let self = registry.get(this)[name];
+            let self = registry.get(this);
             return self[name].apply(self, arguments);
         }
     }
     return originalProto;
 }
 
-
-
 class Spector2 {
     constructor() {
-        console.log("init spector2");
         this.canvasContexts = new ObjectRegistry();
         this.commandEncoder = new ObjectRegistry();
         this.devices = new ObjectRegistry();
@@ -79,13 +76,11 @@ class Spector2 {
         this.textures = new ObjectRegistry();
         this.textureViews = new ObjectRegistry();
 
-        this.canvasContextProto = replacePrototypeOf(GPUCanvasContext, this.canvasContexts, ['configure', 'unconfigure', 'getCurrentTextureView']);
-        this.textureProto = replacePrototypeOf(GPUTexture, this.texturePrototype, ['destroy', 'createView']);
+        this.canvasContextProto = replacePrototypeOf(GPUCanvasContext, this.canvasContexts, ['configure', 'unconfigure', 'getCurrentTexture']);
+        this.textureProto = replacePrototypeOf(GPUTexture, this.textures, ['destroy', 'createView']);
 
-        console.log("replacing proto");
         let canvasGetContext = HTMLCanvasElement.prototype.getContext;
         HTMLCanvasElement.prototype.getContext = function(type) {
-            console.log("getContext");
             let context = canvasGetContext.apply(this, arguments);
             if (type === 'webgpu') {
                 spector2.canvasContexts.add(context, new CanvasContextState(this));
@@ -117,14 +112,19 @@ class CanvasContextState extends BaseState {
     configure(config) {
         this.device = config.device;
         this.format = config.format;
-        this.usage = config.usage;
-        this.viewFormats = config.viewFormats; // TODO clone the inside
-        this.colorSpace = config.colorSpace;
-        this.alphaMode = config.alphaMode;
+        this.usage = config.usage ?? GPUTextureUsage.RENDER_ATTACHMENT;
+        this.viewFormats = config.viewFormats ?? []; // TODO clone the inside
+        this.colorSpace = config.colorSpace ?? 'srgb';
+        this.alphaMode = config.alphaMode ?? 'opaque';
 
-        // TODO don't mutate incoming config, instead make a new object.
-        config.usage |= GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST;
-        spector2.canvasContextProto.configure.call(this.webgpuObject, config);
+        spector2.canvasContextProto.configure.call(this.webgpuObject, {
+            device: this.device,
+            format: this.format,
+            usage: this.usage | GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST,
+            viewFormats: this.viewFormats,
+            colorSpace: this.colorSpace,
+            alphaMode: this.alphaMode,
+        });
     }
 
     unconfigure() {
@@ -133,11 +133,11 @@ class CanvasContextState extends BaseState {
 
     getCurrentTexture() {
         const texture = spector2.canvasContextProto.getCurrentTexture.call(this.webgpuObject);
-        spector2Registry.add(texture, new TextureState({
+        spector2.textures.add(texture, new TextureState({
             format: this.format,
             size: {width: this.canvas.width, height: this.canvas.height, depthOrArrayLayers: 1},
             usage: this.usage,
-            viewFormats: viewFormats,
+            viewFormats: this.viewFormats,
         }));
         return texture;
     }
@@ -164,7 +164,7 @@ class TextureState extends BaseState {
 
     createView(viewDesc) {
         const view = spector2.textureProto.createView.call(this.webgpuObject, viewDesc);
-        spector2Registry.textureViews.add(view, new TextureViewState(this, viewDesc));
+        spector2.textureViews.add(view, new TextureViewState(this, viewDesc ?? {}));
         return view;
     }
 
