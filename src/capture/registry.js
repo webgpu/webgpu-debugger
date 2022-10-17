@@ -59,6 +59,7 @@ function createPrototypeWrapper(registry, methodsToWrap) {
             return self[name].apply(self, arguments);
         }
     }
+    return proto;
 }
 
 
@@ -75,30 +76,32 @@ class Spector2 {
         this.textures = new ObjectRegistry();
         this.textureViews = new ObjectRegistry();
 
-        this.canvasContextProto = GPUCanvasContext.prototype;
-        this.commandEncoderProto = GPUCommandEncoder.prototype;
-        this.deviceProto = GPUDevice.prototype;
-        this.queueProto = GPUQueue.prototype;
-        this.renderPassEncoderProto = GPURenderPassEncoder.prototype;
-        this.renderPipelineProto = GPURenderPipeline.prototype;
-        this.shaderModuleProto = GPUShaderModule.prototype;
-        this.textureProto = GPUTexture.prototype;
-        this.textureView = GPUTextureView.prototype;
+        this.canvasContextProto = Object.getPrototypeOf(GPUCanvasContext);
+        this.commandEncoderProto = Object.getPrototypeOf(GPUCommandEncoder);
+        this.deviceProto = Object.getPrototypeOf(GPUDevice);
+        this.queueProto = Object.getPrototypeOf(GPUQueue);
+        this.renderPassEncoderProto = Object.getPrototypeOf(GPURenderPassEncoder);
+        this.renderPipelineProto = Object.getPrototypeOf(GPURenderPipeline);
+        this.shaderModuleProto = Object.getPrototypeOf(GPUShaderModule);
+        this.textureProto = Object.getPrototypeOf(GPUTexture);
+        this.textureView = Object.getPrototypeOf(GPUTextureView);
 
-        GPUCanvasContext.__proto__ = createPrototypeWrapper(this.canvasContexts, ['configure', 'unconfigure', 'getCurrentTextureView']);
-        GPUTexture.__proto__ = createPrototypeWrapper(this.texturePrototype, ['destroy', 'createView']);
+        Object.setPrototypeOf(GPUCanvasContext, createPrototypeWrapper(this.canvasContexts, ['configure', 'unconfigure', 'getCurrentTextureView']));
+        Object.setPrototypeOf(GPUTexture, createPrototypeWrapper(this.texturePrototype, ['destroy', 'createView']));
 
-        let canvasProto = HTMLCanvasElement.prototype;
-        HTMLCanvasElement.__proto__ = {
+        console.log("replacing proto");
+        let canvasProto = Object.getPrototypeOf(HTMLCanvasElement);
+        Object.setPrototypeOf(HTMLCanvasElement, {
             prototype: canvasProto,
             getContext: function(type) {
+                console.log("getContext");
                 let context = canvasProto.apply(this, arguments);
                 if (type === 'webgpu') {
                     this.canvasContext.add(context, new CanvasContextState(this));
                 }
                 return context;
             }
-        }
+        });
     }
     // TODO add support for prune all.
 }
