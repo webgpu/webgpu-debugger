@@ -3,6 +3,7 @@
 <head>
     <title>Basic Hello Triangle for development.</title>
     <script src="../capture/registry.js"></script>
+    <script src="../replay/lib.js"></script>
 </head>
 <body>
 <canvas id="renderCanvas" width=400 height=400></canvas>
@@ -71,9 +72,14 @@ async function run() {
         requestAnimationFrame(frame);
     }
 
-    spector2.traceFrame().then((trace) => console.log(trace))
+    spector2.traceFrame().then(async (trace) => {
+        console.log(trace);
+        spector2.revertEntryPoints();
+        const replay = await loadReplay(trace);
+        console.log(replay);
+    });
 
-    frame();
+    requestAnimationFrame(frame);
 }
 run();
 </script>

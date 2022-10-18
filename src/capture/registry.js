@@ -51,27 +51,6 @@ class ObjectRegistry {
     }
 }
 
-function replacePrototypeOf(c, registry, methodsToWrap) {
-    let originalProto = {};
-    for (const name of methodsToWrap) {
-        console.assert(c.prototype[name]);
-        originalProto[name] = c.prototype[name];
-        c.prototype[name] = function() {
-            let self = registry.get(this);
-            return self[name].apply(self, arguments);
-        }
-    }
-    return originalProto;
-}
-
-function serializeAllObjects(registry) {
-    const result = {};
-    for (const obj of registry) {
-        result[obj.traceSerial] = obj.serialize();
-    }
-    return result;
-}
-
 const TraceState = {
     On: Symbol("On"),
     Off: Symbol("Off"),
@@ -80,6 +59,19 @@ const TraceState = {
 
 class Spector2 {
     constructor() {
+        function replacePrototypeOf(c, registry, methodsToWrap) {
+            let originalProto = {};
+            for (const name of methodsToWrap) {
+                console.assert(c.prototype[name]);
+                originalProto[name] = c.prototype[name];
+                c.prototype[name] = function() {
+                    let self = registry.get(this);
+                    return self[name].apply(self, arguments);
+                }
+            }
+            return originalProto;
+        }
+
         this.traceState = TraceState.Off;
         this.presentsInFlight = 0;
 
@@ -132,25 +124,52 @@ class Spector2 {
         // GPUTextureView doesn't have methods except the label setter?
 
         // Special case replacements
-        let canvasGetContext = HTMLCanvasElement.prototype.getContext;
+        this.canvasGetContext = HTMLCanvasElement.prototype.getContext;
         HTMLCanvasElement.prototype.getContext = function(type) {
-            let context = canvasGetContext.apply(this, arguments);
+            let context = spector2.canvasGetContext.apply(this, arguments);
             if (type === 'webgpu') {
                 spector2.registerObjectIn('canvasContexts', context, new CanvasContextState(this));
             }
             return context;
         };
-        let gpuRequestAdapter = GPU.prototype.requestAdapter;
+        this.gpuRequestAdapter = GPU.prototype.requestAdapter;
         GPU.prototype.requestAdapter = async function(options) {
-            let adapter = await gpuRequestAdapter.apply(this, arguments);
+            let adapter = await spector2.gpuRequestAdapter.apply(this, arguments);
             spector2.registerObjectIn('adapters', adapter, new AdapterState(options)); // TODO deep copy options
             return adapter;
         };
     }
 
+    // For now we don't support all entrypoints, which breaks the replay, here's a method to put regular entrypoints back.
+    revertEntryPoints() {
+        function revertEntryPoints(Class, proto) {
+            for (const name in proto) {
+                Class.prototype[name] = proto[name];
+            }
+        }
+        revertEntryPoints(GPUAdapter, this.adapterProto);
+        revertEntryPoints(GPUCommandEncoder, this.commandEncoderProto);
+        revertEntryPoints(GPUCanvasContext, this.canvasContextProto);
+        revertEntryPoints(GPUDevice, this.deviceProto);
+        revertEntryPoints(GPUQueue, this.queueProto);
+        revertEntryPoints(GPURenderPassEncoder, this.renderPassEncoderProto);
+        revertEntryPoints(GPUTexture, this.textureProto);
+
+        HTMLCanvasElement.prototype.getContext = this.canvasGetContext;
+        GPU.prototype.requestAdapter = this.gpuRequestAdapter;
+    }
+
     // TODO add support for prune all.
     // TODO make something to trace easily instead of start stop trace.
     startTracing() {
+        function serializeAllObjects(registry) {
+            const result = {};
+            for (const obj of registry) {
+                result[obj.traceSerial] = obj.serialize();
+            }
+            return result;
+        }
+
         this.traceState = TraceState.On;
         this.presentsInFlight = [];
 
@@ -180,6 +199,10 @@ class Spector2 {
 
         await Promise.all(this.presentsInFlight);
         return this.trace;
+    }
+
+    tracingNewPresents() {
+        return this.traceState === TraceState.On;
     }
 
     addPendingPresent(presentPromise) {
@@ -319,27 +342,30 @@ class CanvasContextState extends BaseState {
 
     getCurrentTexture() {
         const texture = spector2.canvasContextProto.getCurrentTexture.call(this.webgpuObject);
-        spector2.registerObjectIn('textures', texture, new TextureState(this, {
+        const state = new TextureState(this, {
             format: this.format,
             size: {width: this.canvas.width, height: this.canvas.height, depthOrArrayLayers: 1},
             usage: this.usage,
             viewFormats: this.viewFormats,
-        }));
+        });
+        spector2.registerObjectIn('textures', texture, state);
 
         // Mark the texture as presented right after the animation frame.
         // TODO also mark the texture destroyed?
-        const presentPromise = new Promise((resolve,) => {
-            requestAnimationFrame(() => {
-                setTimeout(() => {
-                    spector2.traceCommand({
-                        name: 'present',
-                        args: {canvasContextSerial: this.traceSerial, textureSerial: texture.traceSerial}
-                    }, 0);
-                    resolve();
+        if (spector2.tracingNewPresents()) {
+            const presentPromise = new Promise((resolve,) => {
+                requestAnimationFrame(() => {
+                    setTimeout(() => {
+                        spector2.traceCommand({
+                            name: 'present',
+                            args: {canvasContextSerial: this.traceSerial, textureSerial: state.traceSerial}
+                        }, 0);
+                        resolve();
+                    });
                 });
             });
-        });
-        spector2.addPendingPresent(presentPromise);
+            spector2.addPendingPresent(presentPromise);
+        }
 
         return texture;
     }
@@ -451,12 +477,12 @@ class RenderPipelineState extends BaseState {
             deviceSerial: this.device.traceSerial,
             layout: this.layout, // TODO support explicit layout
             vertex: {
-                moduleSerial: this.vertex.module.traceSerial,
-                entryPoint: this.vertex.module.entryPoint,
+                moduleSerial: spector2.shaderModules.get(this.vertex.module).traceSerial,
+                entryPoint: this.vertex.entryPoint,
             },
             fragment: {
-                moduleSerial: this.fragment.module.traceSerial,
-                entryPoint: this.fragment.module.entryPoint,
+                moduleSerial: spector2.shaderModules.get(this.fragment.module).traceSerial,
+                entryPoint: this.fragment.entryPoint,
                 targets: this.fragment.targets,
             }
         };
