@@ -66,16 +66,12 @@ async function run() {
         pass.draw(3);
         pass.end();
 
-        // TODO make this work.
-        // TODO export JSON somewhere and check what it gives
-        // TODO object creation made tracing too?
-        // spector2.startTracing();
         device.queue.submit([encoder.finish()]);
-        // spector2.endTracing();
 
-        /// TODO will need removing this.
         requestAnimationFrame(frame);
     }
+
+    spector2.traceFrame().then((trace) => console.log(trace))
 
     frame();
 }

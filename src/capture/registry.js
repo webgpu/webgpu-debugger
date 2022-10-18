@@ -15,7 +15,7 @@ class ObjectRegistry {
         this.objects.push(new WeakRef(obj));
         data.webgpuObject = obj;
         data.traceSerial = this.currentTraceSerial;
-
+        this.currentTraceSerial ++;
     }
 
     get(obj) {
@@ -67,14 +67,21 @@ function replacePrototypeOf(c, registry, methodsToWrap) {
 function serializeAllObjects(registry) {
     const result = {};
     for (const obj of registry) {
-        result[obj.tracingSerial] = obj.serialize();
+        result[obj.traceSerial] = obj.serialize();
     }
     return result;
 }
 
+const TraceState = {
+    On: Symbol("On"),
+    Off: Symbol("Off"),
+    WaitingForPresent: Symbol("WaitingForPresent"),
+}
+
 class Spector2 {
     constructor() {
-        this.tracing = false;
+        this.traceState = TraceState.Off;
+        this.presentsInFlight = 0;
 
         this.adapters = new ObjectRegistry();
         this.commandBuffers = new ObjectRegistry();
@@ -129,14 +136,14 @@ class Spector2 {
         HTMLCanvasElement.prototype.getContext = function(type) {
             let context = canvasGetContext.apply(this, arguments);
             if (type === 'webgpu') {
-                spector2.canvasContexts.add(context, new CanvasContextState(this));
+                spector2.registerObjectIn('canvasContexts', context, new CanvasContextState(this));
             }
             return context;
         };
         let gpuRequestAdapter = GPU.prototype.requestAdapter;
         GPU.prototype.requestAdapter = async function(options) {
             let adapter = await gpuRequestAdapter.apply(this, arguments);
-            spector2.adapters.add(adapter, new AdapterState(options)); // TODO deep copy options
+            spector2.registerObjectIn('adapters', adapter, new AdapterState(options)); // TODO deep copy options
             return adapter;
         };
     }
@@ -144,14 +151,19 @@ class Spector2 {
     // TODO add support for prune all.
     // TODO make something to trace easily instead of start stop trace.
     startTracing() {
-        this.tracing = true;
+        this.traceState = TraceState.On;
+        this.presentsInFlight = [];
+
         this.trace = {
             objects: {
                 // TODO have objects created after tracing work as well, whoops
                 adapters: serializeAllObjects(this.adapters),
                 commandBuffers: serializeAllObjects(this.commandBuffers),
+                commandEncoders: {},
+                canvasContexts: {},
                 devices: serializeAllObjects(this.devices),
                 queues: serializeAllObjects(this.queues),
+                renderPassEncoders: {},
                 renderPipelines: serializeAllObjects(this.renderPipelines),
                 shaderModules: serializeAllObjects(this.shaderModules),
                 textures: serializeAllObjects(this.textures),
@@ -161,9 +173,48 @@ class Spector2 {
         }
     }
 
-    endTracing() {
-        this.tracing = false;
-        return JSON.stringify(trace);
+    async endTracing() {
+        // No more commands are recorded except presents
+        this.traceState = TraceState.WaitingForPresent;
+        // TODO deep copy what we currently have? We risk changing state with future operations.
+
+        await Promise.all(this.presentsInFlight);
+        return this.trace;
+    }
+
+    addPendingPresent(presentPromise) {
+        if (this.traceState === TraceState.On) {
+            this.presentsInFlight.push(presentPromise);
+        }
+    }
+
+    traceCommand(command) {
+        if (this.traceState == TraceState.On) {
+            this.trace.commands.push(command);
+        } else if (this.traceState === TraceState.WaitingForPresent && command.name === 'present') {
+            this.trace.commands.push(command);
+        }
+    }
+
+    registerObjectIn(typePlural, webgpuObject, state) {
+        this[typePlural].add(webgpuObject, state);
+        if (this.traceState === TraceState.On) {
+            this.trace.objects[typePlural][state.traceSerial] = state.serialize();
+        }
+    }
+
+    async traceFrame() {
+        this.startTracing();
+
+        await new Promise((resolve) => {
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    resolve();
+                }, 0);
+            });
+        });
+
+        return await this.endTracing();
     }
 }
 
@@ -176,7 +227,7 @@ class BaseState {
             this.label = desc.label;
         }
         this.webgpuObj = null;
-        this.tracingSerial = -1;
+        this.traceSerial = -1;
     }
 }
 
@@ -191,8 +242,8 @@ class AdapterState extends BaseState {
 
     async requestDevice(desc) {
         let device = await spector2.adapterProto.requestDevice.call(this.webgpuObject, desc);
-        spector2.devices.add(device, new DeviceState(this, desc ?? {}));
-        spector2.queues.add(device.queue, new QueueState(spector2.devices.get(device), {}/*TODO desc*/));
+        spector2.registerObjectIn('devices', device, new DeviceState(this, desc ?? {}));
+        spector2.registerObjectIn('queues', device.queue, new QueueState(spector2.devices.get(device), {}/*TODO desc*/));
         return device;
     }
 }
@@ -206,7 +257,7 @@ class CommandBufferState extends BaseState {
     }
 
     serialize() {
-        return {commands: this.commands, deviceSerial: this.device.tracingSerial};
+        return {commands: this.commands, deviceSerial: this.device.traceSerial};
     }
 }
 
@@ -217,19 +268,23 @@ class CommandEncoderState extends BaseState {
         this.commands = [];
     }
 
+    serialize() {
+        return {};
+    }
+
     addCommand(command) {
         this.commands.push(command);
     }
 
     beginRenderPass(desc) {
         const pass = spector2.commandEncoderProto.beginRenderPass.call(this.webgpuObject, desc);
-        spector2.renderPassEncoders.add(pass, new RenderPassEncoderState(this, desc));
+        spector2.registerObjectIn('renderPassEncoders', pass, new RenderPassEncoderState(this, desc));
         return pass;
     }
 
     finish(desc) {
         const commandBuffer = spector2.commandEncoderProto.finish.call(this.webgpuObject, desc);
-        spector2.commandBuffers.add(commandBuffer, new CommandBufferState(this, desc ?? {}));
+        spector2.registerObjectIn('commandBuffers', commandBuffer, new CommandBufferState(this, desc ?? {}));
         return commandBuffer;
     }
 }
@@ -263,14 +318,29 @@ class CanvasContextState extends BaseState {
     }
 
     getCurrentTexture() {
-        // TODO mark destroyed postAnimationFrame?
         const texture = spector2.canvasContextProto.getCurrentTexture.call(this.webgpuObject);
-        spector2.textures.add(texture, new TextureState(this.device, {
+        spector2.registerObjectIn('textures', texture, new TextureState(this, {
             format: this.format,
             size: {width: this.canvas.width, height: this.canvas.height, depthOrArrayLayers: 1},
             usage: this.usage,
             viewFormats: this.viewFormats,
         }));
+
+        // Mark the texture as presented right after the animation frame.
+        // TODO also mark the texture destroyed?
+        const presentPromise = new Promise((resolve,) => {
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    spector2.traceCommand({
+                        name: 'present',
+                        args: {canvasContextSerial: this.traceSerial, textureSerial: texture.traceSerial}
+                    }, 0);
+                    resolve();
+                });
+            });
+        });
+        spector2.addPendingPresent(presentPromise);
+
         return texture;
     }
 }
@@ -282,24 +352,24 @@ class DeviceState extends BaseState {
     }
 
     serialize() {
-        return {adapterSerial: this.adapter.tracingSerial};
+        return {adapterSerial: this.adapter.traceSerial};
     }
 
     createCommandEncoder(desc) {
         const encoder = spector2.deviceProto.createCommandEncoder.call(this.webgpuObject, desc);
-        spector2.commandEncoders.add(encoder, new CommandEncoderState(this, desc ?? {}));
+        spector2.registerObjectIn('commandEncoders', encoder, new CommandEncoderState(this, desc ?? {}));
         return encoder;
     }
 
     createRenderPipeline(desc) {
         const pipeline = spector2.deviceProto.createRenderPipeline.call(this.webgpuObject, desc);
-        spector2.renderPipelines.add(pipeline, new RenderPipelineState(this, desc));
+        spector2.registerObjectIn('renderPipelines', pipeline, new RenderPipelineState(this, desc));
         return pipeline;
     }
 
     createShaderModule(desc) {
         const module = spector2.deviceProto.createShaderModule.call(this.webgpuObject, desc);
-        spector2.shaderModules.add(module, new ShaderModuleState(this, desc));
+        spector2.registerObjectIn('shaderModules', module, new ShaderModuleState(this, desc));
         return module;
     }
 }
@@ -311,12 +381,15 @@ class QueueState extends BaseState {
     }
 
     serialize() {
-        return {deviceSerial: this.device.tracingSerial};
+        return {deviceSerial: this.device.traceSerial};
     }
 
     submit(commandBuffers) {
         spector2.queueProto.submit.call(this.webgpuObject, commandBuffers);
-        // TODO add to trace
+        spector2.traceCommand({
+            name: 'queueSubmit',
+            args: {commandBufferSerials: commandBuffers.map(c => spector2.commandBuffers.get(c).traceSerial)},
+        });
     }
 }
 
@@ -336,6 +409,10 @@ class RenderPassEncoderState extends BaseState {
         this.encoder.addCommand({name: 'beginRenderPass', args: serializeDesc});
     }
 
+    serialize() {
+        return {};
+    }
+
     draw(vertexCount, instanceCount, firstVertex, firstInstance) {
         spector2.renderPassEncoderProto.draw.call(this.webgpuObject, vertexCount, instanceCount, firstVertex, firstInstance);
         this.encoder.addCommand({name: 'draw', args: {
@@ -349,7 +426,7 @@ class RenderPassEncoderState extends BaseState {
     setPipeline(pipeline) {
         spector2.renderPassEncoderProto.setPipeline.call(this.webgpuObject, pipeline);
         this.encoder.addCommand({name: 'setPipeline', args: {
-            pipeline: spector2.renderPipelines.get(pipeline).traceSerial,
+            pipelineSerial: spector2.renderPipelines.get(pipeline).traceSerial,
         }});
     }
 
@@ -371,14 +448,14 @@ class RenderPipelineState extends BaseState {
 
     serialize() {
         return {
-            deviceSerial: this.device.tracingSerial,
+            deviceSerial: this.device.traceSerial,
             layout: this.layout, // TODO support explicit layout
             vertex: {
-                moduleSerial: this.vertex.module.tracingSerial,
+                moduleSerial: this.vertex.module.traceSerial,
                 entryPoint: this.vertex.module.entryPoint,
             },
             fragment: {
-                moduleSerial: this.fragment.module.tracingSerial,
+                moduleSerial: this.fragment.module.traceSerial,
                 entryPoint: this.fragment.module.entryPoint,
                 targets: this.fragment.targets,
             }
@@ -395,7 +472,7 @@ class ShaderModuleState extends BaseState {
     }
 
     serialize() {
-        return {deviceSerial: this.device.tracingSerial, code: this.code};
+        return {deviceSerial: this.device.traceSerial, code: this.code};
     }
 }
 
@@ -414,7 +491,7 @@ class TextureState extends BaseState {
 
     serialize() {
         return {
-            deviceSerial: this.device.tracingSerial,
+            deviceSerial: this.device.traceSerial,
             format: this.format,
             usage: this.usage,
             size: this.size,
@@ -428,7 +505,7 @@ class TextureState extends BaseState {
 
     createView(viewDesc) {
         const view = spector2.textureProto.createView.call(this.webgpuObject, viewDesc);
-        spector2.textureViews.add(view, new TextureViewState(this, viewDesc ?? {}));
+        spector2.registerObjectIn('textureViews', view, new TextureViewState(this, viewDesc ?? {}));
         return view;
     }
 
@@ -456,7 +533,7 @@ class TextureViewState extends BaseState {
 
     serialize() {
         return {
-            textureSerial: this.texture.tracingSerial,
+            textureSerial: this.texture.traceSerial,
             format: this.format,
             dimension: this.dimension,
             aspect: this.aspect,
