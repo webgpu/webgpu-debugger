@@ -59,16 +59,14 @@ const TraceState = {
 
 class Spector2 {
     constructor() {
-        function replacePrototypeOf(c, registry) {
+        function replacePrototypeOf(c, registry, methodsToWrap) {
             let originalProto = {};
-            for (const name in c) {
-                if (typeof c.prototype[name] !== 'function') {
-                  continue;
-                }
+            for (const name of methodsToWrap) {
+                console.assert(c.prototype[name]);
                 originalProto[name] = c.prototype[name];
-                c.prototype[name] = function(...args) {
+                c.prototype[name] = function() {
                     let self = registry.get(this);
-                    return self[name].apply(self, args);
+                    return self[name].apply(self, arguments);
                 }
             }
             return originalProto;
@@ -89,16 +87,40 @@ class Spector2 {
         this.textures = new ObjectRegistry();
         this.textureViews = new ObjectRegistry();
 
-        this.adapterProto = replacePrototypeOf(GPUAdapter, this.adapters);
+        this.adapterProto = replacePrototypeOf(GPUAdapter, this.adapters, ['requestDevice']);
         // GPUCommandBuffer doesn't have methods except the label setter?
-        this.commandEncoderProto = replacePrototypeOf(GPUCommandEncoder, this.commandEncoders);
-        this.canvasContextProto = replacePrototypeOf(GPUCanvasContext, this.canvasContexts);
-        this.deviceProto = replacePrototypeOf(GPUDevice, this.devices);
-        this.queueProto = replacePrototypeOf(GPUQueue, this.queues);
-        this.renderPassEncoderProto = replacePrototypeOf(GPURenderPassEncoder, this.renderPassEncoders);
+        this.commandEncoderProto = replacePrototypeOf(GPUCommandEncoder, this.commandEncoders, [
+            'beginRenderPass', 'beginComputePass',
+            'copyBufferToBuffer', 'copyBufferToTexture', 'copyTextureToBuffer', 'copyTextureToTexture',
+            'clearBuffer', 'writeTimestamp', 'resolveQuerySet',
+            'finish',
+        ]);
+        this.canvasContextProto = replacePrototypeOf(GPUCanvasContext, this.canvasContexts, ['configure', 'unconfigure', 'getCurrentTexture']);
+        this.deviceProto = replacePrototypeOf(GPUDevice, this.devices, [
+            'destroy',
+            'createBuffer', 'createTexture', 'createSampler', 'importExternalTexture',
+            'createBindGroupLayout', 'createPipelineLayout', 'createBindGroup',
+            'createShaderModule', 'createComputePipeline', 'createRenderPipeline', 'createComputePipelineAsync', 'createRenderPipelineAsync',
+            'createCommandEncoder', 'createRenderBundleEncoder',
+            'createQuerySet',
+        ]);
+        this.queueProto = replacePrototypeOf(GPUQueue, this.queues, [
+            'submit', 'onSubmittedWorkDone',
+            'writeBuffer', 'writeTexture', 'copyExternalImageToTexture',
+        ]);
+        this.renderPassEncoderProto = replacePrototypeOf(GPURenderPassEncoder, this.renderPassEncoders, [
+            'pushDebugGroup', 'popDebugGroup', 'insertDebugMarker',
+            'setBindGroup',
+            'setPipeline', 'setIndexBuffer', 'setVertexBuffer',
+            'draw', 'drawIndexed', 'drawIndirect', 'drawIndexedIndirect',
+            'setViewport', 'setScissorRect', 'setBlendConstant', 'setStencilReference',
+            'beginOcclusionQuery', 'endOcclusionQuery',
+            'executeBundles',
+            'end',
+        ]);
         // TODO render pipeline prototype
         // TODO shader module prototype
-        this.textureProto = replacePrototypeOf(GPUTexture, this.textures);
+        this.textureProto = replacePrototypeOf(GPUTexture, this.textures, ['destroy', 'createView']);
         // GPUTextureView doesn't have methods except the label setter?
 
         // Special case replacements
