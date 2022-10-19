@@ -414,6 +414,7 @@ class QueueState extends BaseState {
         spector2.queueProto.submit.call(this.webgpuObject, commandBuffers);
         spector2.traceCommand({
             name: 'queueSubmit',
+            queueSerial: this.traceSerial,
             args: {commandBufferSerials: commandBuffers.map(c => spector2.commandBuffers.get(c).traceSerial)},
         });
     }
@@ -428,7 +429,7 @@ class RenderPassEncoderState extends BaseState {
             colorAttachments: [{
                 viewSerial: spector2.textureViews.get(desc.colorAttachments[0].view).traceSerial,
                 clearColor: desc.colorAttachments[0].clearColor,
-                loadOp: desc.colorAttachments[0].clearColor,
+                loadOp: desc.colorAttachments[0].loadOp,
                 storeOp: desc.colorAttachments[0].storeOp,
             }],
         };

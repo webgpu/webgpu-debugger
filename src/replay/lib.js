@@ -52,9 +52,40 @@ class Replay {
         this.commandBuffers = recreateObjects(this, ReplayCommandBuffer, trace.objects.commandBuffers);
         // GPUCommandEncoder, GPURenderPassEncoder, GPUCanvasContext not needed for replay?
 
-        this.commands = trace.commands;
+        this.commands = trace.commands.map(command => {
+            const c = window.structuredClone(command);
+            switch (c.name) {
+                case 'queueSubmit':
+                    c.queue = this.queues[c.queueSerial];
+                    delete c.queueSerial;
+                    c.args.commandBuffers = c.args.commandBufferSerials.map(serial => this.commandBuffers[serial]);
+                    delete c.args.commandBufferSerials;
+                    break;
+                case 'present':
+                    c.args.texture = this.textures[c.args.textureSerial];
+                    delete c.args.textureSerial;
+                    break;
+                default:
+                    console.assert("Unhandled command type '" + c.name + "'");
+            }
+            return c;
+        });
     }
 
+    // Note sure what the correct abstraction is for partial replays etc.
+    execute(command) {
+       switch (command.name) {
+            case 'queueSubmit':
+                command.queue.executeSubmit(command.args.commandBuffers);
+                break;
+
+            case 'present':
+               // Nothing to do?
+               break;
+            default:
+                console.assert("Unhandled command type '" + c.name + "'");
+        }
+    }
 }
 
 class ReplayObject {
@@ -77,7 +108,52 @@ class ReplayAdapter extends ReplayObject {
 class ReplayCommandBuffer extends ReplayObject {
     constructor(replay, desc) {
         super(replay, desc);
-        this.commands = desc.commands;
+        this.commands = desc.commands.map(command => {
+            const c = window.structuredClone(command);
+            switch (c.name) {
+                case 'beginRenderPass':
+                    for (const attachment of c.args.colorAttachments) {
+                        attachment.viewState = this.replay.textureViews[attachment.viewSerial];
+                        attachment.view = attachment.viewState.webgpuObject;
+                        delete attachment.viewSerial;
+                    }
+                    break;
+                case 'setPipeline':
+                    c.args.pipeline = this.replay.renderPipelines[c.args.pipelineSerial];
+                    delete c.args.pipelineSerial;
+                    break;
+                case 'draw':
+                case 'endPass':
+                    break;
+                default:
+                    console.assert("Unhandled command type '" + c.name + "'");
+            }
+            return c;
+        });
+    }
+
+    encodeIn(encoder) {
+        let renderPass = null;
+        for (const c of this.commands) {
+            switch (c.name) {
+                case 'beginRenderPass': {
+                    renderPass = encoder.beginRenderPass(c.args);
+                    break;
+                }
+                case 'setPipeline':
+                    renderPass.setPipeline(c.args.pipeline.webgpuObject);
+                    break;
+                case 'draw':
+                    renderPass.draw(c.args.vertexCount, c.args.instanceCount, c.args.firstVertex, c.args.firstInstance);
+                    break;
+                case 'endPass':
+                    renderPass.end();
+                    renderPass = null;
+                    break;
+                default:
+                    console.assert("Unhandled command type '" + c.name + "'");
+            }
+        }
     }
 }
 
@@ -95,7 +171,16 @@ class ReplayDevice extends ReplayObject {
 class ReplayQueue extends ReplayObject {
     constructor(replay, desc) {
         super(replay, desc);
-        this.webgpuObject = this.replay.devices[desc.deviceSerial].queue;
+        this.device = this.replay.devices[desc.deviceSerial]
+        this.webgpuObject = this.device.webgpuObject.queue;
+    }
+
+    executeSubmit(commandBuffers) {
+        const encoder = this.device.webgpuObject.createCommandEncoder();
+        for (const commandBuffer of commandBuffers) {
+            commandBuffer.encodeIn(encoder);
+        }
+        this.webgpuObject.submit([encoder.finish()]);
     }
 }
 
@@ -139,11 +224,14 @@ class ReplayShaderModule extends ReplayObject {
 class ReplayTexture extends ReplayObject {
     constructor(replay, desc) {
         super(replay, desc);
-        const device = this.replay.devices[desc.deviceSerial];
-        this.webgpuObject = device.webgpuObject.createTexture({
-            format: desc.format,
-            usage: desc.usage,
-            size: desc.size,
+        this.device = this.replay.devices[desc.deviceSerial];
+        this.size = desc.size;
+        this.format = desc.format;
+
+        this.webgpuObject = this.device.webgpuObject.createTexture({
+            format: this.format,
+            usage: desc.usage | GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST,
+            size: this.size,
             dimension: desc.dimension,
             mipLevelCount: desc.mipLevelCount,
             sampleCount: desc.sampleCount,
