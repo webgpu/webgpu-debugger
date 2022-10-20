@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>GLTF Babylon.js scene for development.</title>
+    <!-- <script src="../capture/registry.js"></script>
+    <script src="../replay/lib.js"></script> -->
+
+    <script src="https://assets.babylonjs.com/generated/Assets.js"></script>
+    <script src="https://preview.babylonjs.com/ammo.js"></script>
+    <script src="https://preview.babylonjs.com/cannon.js"></script>
+    <script src="https://preview.babylonjs.com/Oimo.js"></script>
+    <script src="https://preview.babylonjs.com/earcut.min.js"></script>
+    <script src="https://preview.babylonjs.com/babylon.js"></script>
+    <script src="https://preview.babylonjs.com/materialsLibrary/babylonjs.materials.min.js"></script>
+    <script src="https://preview.babylonjs.com/proceduralTexturesLibrary/babylonjs.proceduralTextures.min.js"></script>
+    <script src="https://preview.babylonjs.com/postProcessesLibrary/babylonjs.postProcess.min.js"></script>
+    <script src="https://preview.babylonjs.com/loaders/babylonjs.loaders.js"></script>
+    <script src="https://preview.babylonjs.com/serializers/babylonjs.serializers.min.js"></script>
+    <script src="https://preview.babylonjs.com/gui/babylon.gui.min.js"></script>
+    <script src="https://preview.babylonjs.com/inspector/babylon.inspector.bundle.js"></script>
+
+    <style>
+        #renderCanvas {
+            width: 400px;
+            height: 400px;
+            touch-action: none;
+        }
+    </style>
+</head>
+<body>
+<canvas id="renderCanvas"></canvas>
+<canvas id="captureCanvas" width=1 height=1></canvas>
+
+<script>
+async function createEngine(canvas) { 
+    const engine = new BABYLON.WebGPUEngine(canvas);
+    await engine.initAsync();
+    return engine;
+};
+
+async function createScene(engine) {
+    // Create a scene.
+    const scene = new BABYLON.Scene(engine);
+
+    // Create a default skybox with an environment.
+    const hdrTexture = new BABYLON.CubeTexture("https://playground.babylonjs.com/textures/environment.env", scene);
+    const currentSkybox = scene.createDefaultSkybox(hdrTexture, true, 1000, 0.7);
+
+    // Append glTF model to scene.
+    await BABYLON.SceneLoader.AppendAsync("https://playground.babylonjs.com/scenes/BoomBox/", "BoomBox.gltf", scene);
+
+    // Create a default arc rotate camera and light.
+    scene.createDefaultCameraOrLight(true, true, true);
+
+    // The default camera looks at the back of the asset.
+    // Rotate the camera by 180 degrees to the front of the asset.
+    scene.activeCamera.alpha += Math.PI;
+
+    return scene;
+};
+
+async function runBabylonScene() {
+    const canvas = document.getElementById("renderCanvas");
+    const engine = await createEngine(canvas);
+    const scene = await createScene(engine);
+
+    engine.runRenderLoop(() => {
+        scene.render();
+    });
+
+    // Resize
+    window.addEventListener("resize", function () {
+        engine.resize();
+    });
+
+    await scene.whenReadyAsync(true);
+}
+</script>
+
+<script>
+async function run() {
+    await runBabylonScene();
+
+    // spector2.traceFrame().then(async (trace) => {
+    //     // Trace the frame and set up the replay.
+    //     console.log(trace);
+    //     spector2.revertEntryPoints();
+    //     const replay = await loadReplay(trace);
+    //     console.log(replay);
+
+    //     // Go through each command, and show the presented texture of the trace on the capture canvas.
+    //     const captureCanvas = document.getElementById('captureCanvas');
+    //     const context = captureCanvas.getContext('webgpu');
+
+    //     for (const c of replay.commands) {
+    //         replay.execute(c);
+
+    //         if (c.name === 'present') {
+    //             const textureState = c.args.texture;
+    //             const device = textureState.device.webgpuObject;
+
+    //             captureCanvas.width = textureState.size.width;
+    //             captureCanvas.height = textureState.size.height;
+    //             context.configure({
+    //                 device,
+    //                 usage: GPUTextureUsage.COPY_DST,
+    //                 format: textureState.format,
+    //                 alphaMode: 'opaque',
+    //             });
+
+    //             const encoder = device.createCommandEncoder();
+    //             encoder.copyTextureToTexture(
+    //                 {texture: textureState.webgpuObject},
+    //                 {texture: context.getCurrentTexture()},
+    //                 textureState.size
+    //             );
+    //             device.queue.submit([encoder.finish()]);
+    //         }
+    //     }
+    // });
+}
+
+run();
+</script>
+</body>
+</html>
