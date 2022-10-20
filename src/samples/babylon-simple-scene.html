@@ -2,8 +2,8 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
     <title>Simple Babylon.js scene for development.</title>
-    <!-- <script src="../capture/registry.js"></script>
-    <script src="../replay/lib.js"></script> -->
+    <script src="../capture/registry.js"></script>
+    <script src="../replay/lib.js"></script>
 
     <script src="https://assets.babylonjs.com/generated/Assets.js"></script>
     <script src="https://preview.babylonjs.com/ammo.js"></script>
@@ -91,9 +91,9 @@ async function runBabylonScene() {
 async function run() {
     await runBabylonScene();
 
-    // spector2.traceFrame().then(async (trace) => {
-    //     // Trace the frame and set up the replay.
-    //     console.log(trace);
+    spector2.traceFrame().then(async (trace) => {
+        // Trace the frame and set up the replay.
+        console.log(trace);
     //     spector2.revertEntryPoints();
     //     const replay = await loadReplay(trace);
     //     console.log(replay);
@@ -127,7 +127,7 @@ async function run() {
     //             device.queue.submit([encoder.finish()]);
     //         }
     //     }
-    // });
+    });
 }
 
 run();

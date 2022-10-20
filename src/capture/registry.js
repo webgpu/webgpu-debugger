@@ -18,6 +18,10 @@ class ObjectRegistry {
         this.currentTraceSerial ++;
     }
 
+    has(obj) {
+        return this.dataMap.has(obj);
+    }
+
     get(obj) {
         return this.dataMap.get(obj);
     }
@@ -70,6 +74,9 @@ class Spector2 {
                 originalProto[name] = c.prototype[name];
                 c.prototype[name] = function(...args) {
                     let self = registry.get(this);
+                    if (!self[name]) {
+                        console.assert(false, `Doesn't have "${name}"`);
+                    }
                     return self[name].apply(self, args);
                 }
             }
@@ -80,25 +87,37 @@ class Spector2 {
         this.presentsInFlight = 0;
 
         this.adapters = new ObjectRegistry();
+        this.bindGroups = new ObjectRegistry();
+        this.bindGroupLayouts = new ObjectRegistry();
+        this.buffers = new ObjectRegistry();
         this.commandBuffers = new ObjectRegistry();
         this.commandEncoders = new ObjectRegistry();
         this.canvasContexts = new ObjectRegistry();
         this.devices = new ObjectRegistry();
+        this.pipelineLayouts = new ObjectRegistry();
+        this.querySets = new ObjectRegistry();
         this.queues = new ObjectRegistry();
         this.renderPassEncoders = new ObjectRegistry();
         this.renderPipelines = new ObjectRegistry();
+        this.samplers = new ObjectRegistry();
         this.shaderModules = new ObjectRegistry();
         this.textures = new ObjectRegistry();
         this.textureViews = new ObjectRegistry();
 
         this.adapterProto = replacePrototypeOf(GPUAdapter, this.adapters);
+        // GPUBindGroup doesn't have methods except the label setter?
+        // GPUBindGroupLayout doesn't have methods except the label setter?
+        this.bufferProto = replacePrototypeOf(GPUBuffer, this.buffers);
         // GPUCommandBuffer doesn't have methods except the label setter?
         this.commandEncoderProto = replacePrototypeOf(GPUCommandEncoder, this.commandEncoders);
         this.canvasContextProto = replacePrototypeOf(GPUCanvasContext, this.canvasContexts);
         this.deviceProto = replacePrototypeOf(GPUDevice, this.devices);
+        // GPUPipelineLayout doesn't have methods except the label setter?
+        this.querySetProto = replacePrototypeOf(GPUQuerySet, this.querySets);
         this.queueProto = replacePrototypeOf(GPUQueue, this.queues);
         this.renderPassEncoderProto = replacePrototypeOf(GPURenderPassEncoder, this.renderPassEncoders);
         // TODO render pipeline prototype
+        // GPUSampler doesn't have methods except the label setter?
         // TODO shader module prototype
         this.textureProto = replacePrototypeOf(GPUTexture, this.textures);
         // GPUTextureView doesn't have methods except the label setter?
@@ -128,9 +147,11 @@ class Spector2 {
             }
         }
         revertEntryPoints(GPUAdapter, this.adapterProto);
+        revertEntryPoints(GPUBuffer, this.bufferProto);
         revertEntryPoints(GPUCommandEncoder, this.commandEncoderProto);
         revertEntryPoints(GPUCanvasContext, this.canvasContextProto);
         revertEntryPoints(GPUDevice, this.deviceProto);
+        revertEntryPoints(GPUQuerySet, this.querySetProto);
         revertEntryPoints(GPUQueue, this.queueProto);
         revertEntryPoints(GPURenderPassEncoder, this.renderPassEncoderProto);
         revertEntryPoints(GPUTexture, this.textureProto);
@@ -157,11 +178,17 @@ class Spector2 {
             objects: {
                 // TODO have objects created after tracing work as well, whoops
                 adapters: serializeAllObjects(this.adapters),
+                bindGroups: serializeAllObjects(this.bindGroups),
+                bindGroupLayouts: serializeAllObjects(this.bindGroupLayouts),
+                buffers: serializeAllObjects(this.buffers),
                 commandBuffers: serializeAllObjects(this.commandBuffers),
                 commandEncoders: {},
                 canvasContexts: {},
                 devices: serializeAllObjects(this.devices),
+                pipelineLayouts: serializeAllObjects(this.pipelineLayouts),
+                querySets: serializeAllObjects(this.querySets),
                 queues: serializeAllObjects(this.queues),
+                samplers: serializeAllObjects(this.samplers),
                 renderPassEncoders: {},
                 renderPipelines: serializeAllObjects(this.renderPipelines),
                 shaderModules: serializeAllObjects(this.shaderModules),
@@ -251,6 +278,118 @@ class AdapterState extends BaseState {
     }
 }
 
+class BindGroupState extends BaseState {
+    constructor(device, desc) {
+        super(desc);
+        this.device = device;
+        this.layout = spector2.bindGroupLayouts.get(desc.layout);
+
+        this.entries = desc.entries.map(e => {
+            const entry = {binding: e.binding};
+            if (spector2.textureViews.has(e.resource)) {
+                entry.textureView = spector2.textureViews.get(e.resource);
+            } else if (spector2.samplers.has(e.resource)) {
+                entry.sampler = spector2.samplers.get(e.resource);
+            } else if (e.resource.buffer !== undefined) {
+                entry.buffer = spector2.buffers.get(e.resource.buffer);
+                entry.offset = e.resource.offset ?? 0;
+                entry.size = e.resource.size ?? Math.max(0, entry.buffer.size - entry.offset);
+            } else {
+                console.assert('Unhandled binding type.');
+            }
+            return entry;
+        });
+    }
+
+    serialize() {
+        return {
+            deviceSerial: this.device.traceSerial,
+            layoutSerial: this.layout.traceSerial,
+            entries: this.entries.map(e => {
+                const entry = {binding: e.binding};
+                if (e.textureView !== undefined) {
+                    entry.textureViewSerial = e.textureView.traceSerial;
+                }
+                if (e.sampler !== undefined) {
+                    entry.samplerSerial = e.sampler.traceSerial;
+                }
+                if (e.buffer !== undefined) {
+                    entry.bufferSerial = e.buffer.traceSerial;
+                    entry.offset = e.offset;
+                    entry.size = e.size;
+                }
+                return entry;
+            }),
+        };
+    }
+}
+
+class BindGroupLayoutState extends BaseState {
+    constructor(device, desc) {
+        super(desc);
+        this.device = device;
+
+        this.entries = desc.entries.map(e => {
+            const entry = {binding: e.binding, visibility: e.visibility};
+            if (e.buffer) {
+                entry.buffer = {
+                    type: e.buffer.type ?? 'uniform',
+                    hasDynamicOffset: e.buffer.hasDynamicOffset ?? false,
+                    minBindingSize: e.buffer.minBindingSize ?? 0,
+                };
+            }
+            if (e.sampler) {
+                entry.sampler = {
+                    type: e.sampler.type ?? 'filtering',
+                };
+            }
+            if (e.texture) {
+                entry.texture = {
+                    sampleType: e.texture.sampleType ?? 'float',
+                    viewDimension: e.texture.viewDimension ?? '2d',
+                    multisampled: e.texture.multisampled ?? false,
+                };
+            }
+            if (e.storageTexture) {
+                entry.storageTexture = {
+                    access: e.storageTexture.access ?? 'write-only',
+                    format: e.storageTexture.format,
+                    viewDimension: e.storageTexture.viewDimension ?? '2d',
+                };
+            }
+            if (e.externalTexture) {
+                entry.externalTexture = {};
+            }
+        });
+    }
+
+    serialize() {
+        return {
+            deviceSerial: this.device.traceSerial,
+            entries: this.entries, // TODO deep copy?
+        };
+    }
+}
+
+class BufferState extends BaseState {
+    constructor(device, desc) {
+        super(desc);
+        this.device = device;
+        this.usage = desc.usage;
+        this.size = desc.size;
+        this.state = desc.mappedAtCreation ? 'mapped-at-creation' : 'unmapped';
+    }
+
+    serialize() {
+        return {
+            deviceSerial: this.device.traceSerial,
+            usage: this.usage,
+            size: this.size,
+            state: this.state,
+        };
+    }
+}
+
 class CommandBufferState extends BaseState {
     constructor(encoder, desc) {
         super(desc);
@@ -280,6 +419,7 @@ class CommandEncoderState extends BaseState {
     }
 
     beginRenderPass(desc) {
+        console.log(desc);
         const pass = spector2.commandEncoderProto.beginRenderPass.call(this.webgpuObject, desc);
         spector2.registerObjectIn('renderPassEncoders', pass, new RenderPassEncoderState(this, desc));
         return pass;
@@ -361,10 +501,42 @@ class DeviceState extends BaseState {
         return {adapterSerial: this.adapter.traceSerial};
     }
 
+    createBindGroup(desc) {
+        const bg = spector2.deviceProto.createBindGroup.call(this.webgpuObject, desc);
+        spector2.registerObjectIn('bindGroups', bg, new BindGroupState(this, desc));
+        return bg;
+    }
+
+    createBindGroupLayout(desc) {
+        const bgl = spector2.deviceProto.createBindGroupLayout.call(this.webgpuObject, desc);
+        spector2.registerObjectIn('bindGroupLayouts', bgl, new BindGroupLayoutState(this, desc));
+        return bgl;
+    }
+
+    createBuffer(desc) {
+        // TODO modify the desc for non-mappable buffers, see what to do for mappable.
+        const buffer = spector2.deviceProto.createBuffer.call(this.webgpuObject, desc);
+        spector2.registerObjectIn('buffers', buffer, new BufferState(this, desc));
+        return buffer;
+    }
+
     createCommandEncoder(desc) {
         const encoder = spector2.deviceProto.createCommandEncoder.call(this.webgpuObject, desc);
         spector2.registerObjectIn('commandEncoders', encoder, new CommandEncoderState(this, desc ?? {}));
         return encoder;
+    }
+
+    createPipelineLayout(desc) {
+        const layout = spector2.deviceProto.createPipelineLayout.call(this.webgpuObject, desc);
+        spector2.registerObjectIn('pipelineLayouts', layout, new PipelineLayoutState(this, desc));
+        return layout;
+    }
+
+    createQuerySet(desc) {
+        // TODO modify the desc for non-mappable buffers, see what to do for mappable.
+        const querySet = spector2.deviceProto.createQuerySet.call(this.webgpuObject, desc);
+        spector2.registerObjectIn('querySets', querySet, new QuerySetState(this, desc));
+        return querySet;
     }
 
     createRenderPipeline(desc) {
@@ -373,10 +545,58 @@ class DeviceState extends BaseState {
         return pipeline;
     }
 
+    createSampler(desc) {
+        const module = spector2.deviceProto.createSampler.call(this.webgpuObject, desc);
+        spector2.registerObjectIn('samplers', module, new SamplerState(this, desc ?? {}));
+        return module;
+    }
+
     createShaderModule(desc) {
         const module = spector2.deviceProto.createShaderModule.call(this.webgpuObject, desc);
         spector2.registerObjectIn('shaderModules', module, new ShaderModuleState(this, desc));
         return module;
+    }
+
+    createTexture(desc) {
+        // TODO modify the desc to contain copysrc/dst.
+        const texture = spector2.deviceProto.createTexture.call(this.webgpuObject, desc);
+        spector2.registerObjectIn('textures', texture, new TextureState(this, desc));
+        return texture;
+    }
+}
+
+class PipelineLayoutState extends BaseState {
+    constructor(device, desc) {
+        super(desc);
+        this.device = device;
+        this.bindGroupLayouts = desc.bindGroupLayouts.map(bgl => spector2.bindGroupLayouts.get(bgl));
+    }
+
+    serialize() {
+        return {
+            deviceSerial: this.device.traceSerial,
+            bindGroupLayoutsSerial: this.bindGroupLayouts.map(bgl => bgl.traceSerial),
+        };
+    }
+}
+
+class QuerySetState extends BaseState {
+    constructor(device, desc) {
+        super(desc);
+        this.device = device;
+        this.type = desc.type;
+        this.count = desc.count;
+        this.state = 'valid';
+    }
+
+    serialize() {
+        return {
+            deviceSerial: this.device.traceSerial,
+            type: this.type,
+            count: this.count,
+            state: this.state,
+            // TODO what about the data it countains ????
+        };
     }
 }
 
@@ -388,6 +608,17 @@ class QueueState extends BaseState {
 
     serialize() {
         return {deviceSerial: this.device.traceSerial};
+    }
+
+    writeBuffer(buffer, bufferOffset, data, dataOffset, size) {
+        spector2.queueProto.writeBuffer.call(this.webgpuObject, buffer, bufferOffset, data, dataOffset, size);
+        spector2.traceCommand({
+            name: 'queueWriteBuffer',
+            queueSerial: this.traceSerial,
+            buffer: spector2.buffers.get(buffer).traceSerial,
+            bufferOffset,
+            // TODO the data too!
+        });
     }
 
     submit(commandBuffers) {
@@ -430,11 +661,61 @@ class RenderPassEncoderState extends BaseState {
         }});
     }
 
+    drawIndexed(indexCount, instanceCount, firstIndex, baseVertex, firstInstance) {
+        spector2.renderPassEncoderProto.drawIndexed.call(this.webgpuObject, indexCount, instanceCount, firstIndex, baseVertex, firstInstance);
+        this.encoder.addCommand({name: 'drawIndexed', args: {
+            indexCount,
+            instanceCount: instanceCount ?? 1,
+            firstIndex: firstIndex ?? 0,
+            baseVertex: baseVertex ?? 0,
+            firstInstance: firstInstance ?? 0,
+        }});
+    }
+
+    setBindGroup(index, bindGroup, dynamicOffsets) {
+        if (dynamicOffsets !== undefined) {
+            console.assert("Don't know how to handle dynamic bindgroups yet.");
+        }
+
+        spector2.renderPassEncoderProto.setBindGroup.call(this.webgpuObject, index, bindGroup);
+        this.encoder.addCommand({name: 'setBindGrouop', args: {
+            index,
+            group: spector2.bindGroups.get(bindGroup).traceSerial,
+        }})
+    }
+
+    setIndexBuffer(buffer, indexFormat, offset, size) {
+        spector2.renderPassEncoderProto.setIndexBuffer.call(this.webgpuObject, buffer, indexFormat, offset, size);
+        const bufferState = spector2.buffers.get(buffer);
+        this.encoder.addCommand({name: 'setIndexBuffer', args: {
+            bufferSerial: bufferState.traceSerial,
+            indexFormat,
+            offset: offset ?? 0,
+            size: size ?? Math.max(0, bufferState.size - offset),
+        }});
+    }
+
     setPipeline(pipeline) {
         spector2.renderPassEncoderProto.setPipeline.call(this.webgpuObject, pipeline);
         this.encoder.addCommand({name: 'setPipeline', args: {
             pipelineSerial: spector2.renderPipelines.get(pipeline).traceSerial,
         }});
+    }
+
+    setVertexBuffer(slot, buffer, offset, size) {
+        spector2.renderPassEncoderProto.setVertexBuffer.call(this.webgpuObject, slot, buffer, offset, size);
+        const bufferState = spector2.buffers.get(buffer);
+        this.encoder.addCommand({name: 'setVertexBuffer', args: {
+            slot,
+            bufferSerial: bufferState.traceSerial,
+            offset: offset ?? 0,
+            size: size ?? Math.max(0, bufferState.size - offset),
+        }});
+    }
+
+    setViewport(x, y, width, height, minDepth, maxDepth) {
+        spector2.renderPassEncoderProto.setViewport.call(this.webgpuObject, x, y, width, height, minDepth, maxDepth);
+        this.encoder.addCommand({name: 'setViewport', args: {x, y, width, height, minDepth, maxDepth}});
     }
 
     end() {
@@ -469,6 +750,31 @@ class RenderPipelineState extends BaseState {
         };
     }
 
+}
+
+class SamplerState extends BaseState {
+    constructor(device, desc) {
+        super(desc);
+        this.device = device;
+        this.desc = {};
+        this.addressModeU = desc.addressModeU ?? 'clamp-to-edge';
+        this.addressModeV = desc.addressModeV ?? 'clamp-to-edge';
+        this.addressModeW = desc.addressModeW ?? 'clamp-to-edge';
+        this.magFilter = desc.magFilter ?? 'nearest';
+        this.minFilter = desc.minFilter ?? 'nearest';
+        this.mipmapFilter = desc.mipmapFilter ?? 'nearest';
+        this.lodMinClamp = desc.lodMinClamp ?? 0;
+        this.lodMaxClamp = desc.lodMaxClamp ?? 32;
+        this.compare = desc.compare;
+        this.maxAnisotropy = desc.maxAnisotropy ?? 1;
+    }
+
+    serialize() {
+        return {
+            deviceSerial: this.device.traceSerial,
+            ...this.desc,
+        };
+    }
 }
 
 class ShaderModuleState extends BaseState {
@@ -519,7 +825,8 @@ class TextureState extends BaseState {
     destroy() {
         // TODO copy on write?
         // TODO store if recording trace.
-        spector2.textureProto.destroy.call(webgpuObject);
+        // TODO modify the current state as well
+        spector2.textureProto.destroy.call(this.webgpuObject);
     }
 
     // TODO getters lol
