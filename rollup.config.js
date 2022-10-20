@@ -42,7 +42,6 @@ export default [
       }),
       typescript({ tsconfig: "./tsconfig.json" }),
       postcss({
-//        plugins: [autoprefixer()],
         minimize: true,
         sourceMap: true,
         extract: "styles.css",

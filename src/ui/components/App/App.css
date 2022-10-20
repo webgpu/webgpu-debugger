@@ -1,0 +1,23 @@
+
+.spector2 {
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+.spector2 * {
+  box-sizing: inherit;
+}
+
+.spector2-tiles {
+  background-color: pink;
+}
+.spector2-tile {
+  background-color: red;
+  border: 1px solid yellow;
+}
+
