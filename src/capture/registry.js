@@ -419,7 +419,6 @@ class CommandEncoderState extends BaseState {
     }
 
     beginRenderPass(desc) {
-        console.log(desc);
         const pass = spector2.commandEncoderProto.beginRenderPass.call(this.webgpuObject, desc);
         spector2.registerObjectIn('renderPassEncoders', pass, new RenderPassEncoderState(this, desc));
         return pass;
@@ -635,15 +634,43 @@ class RenderPassEncoderState extends BaseState {
     constructor(encoder, desc) {
         super(desc);
         this.encoder = encoder;
-        // TODO special case less for hello triangle maybe :)
         let serializeDesc = {
-            colorAttachments: [{
-                viewSerial: spector2.textureViews.get(desc.colorAttachments[0].view).traceSerial,
-                clearColor: desc.colorAttachments[0].clearColor,
-                loadOp: desc.colorAttachments[0].loadOp,
-                storeOp: desc.colorAttachments[0].storeOp,
-            }],
-        };
+            colorAttachments: desc.colorAttachments.map(a => { return {
+                viewSerial: spector2.textureViews.get(a.view).traceSerial,
+                resolveTarget: (a.resolveTarget ? spector2.textureViews.get(a.resolveTarget).traceSerial : undefined),
+
+                clearValue: a.clearValue ?? {r: 0, g: 0, b: 0, a: 0},
+                loadOp: a.loadOp,
+                storeOp: a.storeOp,
+            };}),
+
+            timestampWrites: (desc.timestampWrites ?? []).map(w => { return {
+                querySetSerial: spector2.querySets.get(w).traceSerial,
+                queryIndex: w.queryIndex,
+                location: e.location,
+            };}),
+
+            occlusionQuerySetSerial: desc.occlusionQuerySet ? spector2.querySets.get(desc.occlusionQuerySet).traceSerial : undefined,
+            maxDrawCount: desc.maxDrawCount ?? 50000000, // Yes that's the spec default.
+        }
+
+        const ds = desc.depthStencilAttachment;
+        if (ds !== undefined) {
+            serializeDesc.depthStencilAttachment = {
+                viewSerial: spector2.textureViews.get(ds.view).traceSerial,
+
+                depthClearValue: ds.depthClearValue ?? 0,
+                depthLoadOp: ds.depthLoadOp,
+                depthStoreOp: ds.depthStoreOp,
+                depthReadOnly: ds.depthReadOnly ?? true,
+
+                stencilClearValue: ds.stencilClearValue ?? 0,
+                stencilLoadOp: ds.stencilLoadOp,
+                stencilStoreOp: ds.stencilStoreOp,
+                stencilReadOnly: ds.stencilReadOnly ?? true,
+            };
+        }
+
         this.encoder.addCommand({name: 'beginRenderPass', args: serializeDesc});
     }
 
@@ -728,28 +755,136 @@ class RenderPipelineState extends BaseState {
     constructor(device, desc) {
         super(desc);
         this.device = device;
-        // TODO ALLL TTTHEEEEE STATEEE! AND ALSO DEEP COPY! SAME FOR SERIALIZE
         this.layout = desc.layout;
-        this.vertex = desc.vertex;
-        this.fragment = desc.fragment;
+
+        const v = desc.vertex;
+        this.vertex = {
+            module: spector2.shaderModules.get(v.module),
+            entryPoint: v.entryPoint,
+            constants: {...v.constants},
+
+            buffers: (v.buffers ?? []).map(b => { return {
+                arrayStride: b.arrayStride,
+                stepMode: b.stepMode ?? 'vertex',
+                attributes: b.attributes.map(a => {return {
+                    format: a.format,
+                    offset: a.offset,
+                    shaderLocation: a.shaderLocation,
+                };})
+            };})
+        };
+
+        const p = desc.primitiveState ?? {};
+        this.primitive = {
+            topology: p.topology ?? 'triangle-list',
+            stripIndexFormat: p.stripIndexFormat,
+            frontFace: p.frontFace ?? 'ccw',
+            cullMode: p.cullMode ?? 'none',
+
+            unclippedDepth: p.unclippedDepth,
+        };
+
+        const ds = desc.depthStencil;
+        if (ds !== undefined) {
+            const stencilFront = ds.stencilFront ?? {};
+            const stencilBack = ds.stencilBack ?? {};
+
+            this.depthStencil = {
+                format: ds.format,
+
+                depthWriteEnabled: ds.depthWriteEnabled ?? false,
+                depthCompare: ds.depthCompare ?? 'always',
+
+                stencilFront: {
+                    compare: stencilFront.compare ?? 'always',
+                    failOp: stencilFront.failOp ?? 'keep',
+                    depthFailOp: stencilFront.depthFailOp ?? 'keep',
+                    passOp: stencilFront.passOp ?? 'keep',
+                },
+                stencilBack: {
+                    compare: stencilBack.compare ?? 'always',
+                    failOp: stencilBack.failOp ?? 'keep',
+                    depthFailOp: stencilBack.depthFailOp ?? 'keep',
+                    passOp: stencilBack.passOp ?? 'keep',
+                },
+
+                stencilReadMask: ds.stencilReadMask ?? 0xFFFFFFFF,
+                stencilWriteMask: ds.stencilWriteMask ?? 0xFFFFFFFF,
+
+                depthBias: ds.depthBias ?? 0,
+                depthBiasSlopScale: ds.depthBiasSlopeScale ?? 0,
+                depthBiasClamp: ds.depthBiasClamp ?? 0,
+            };
+        }
+
+        const m = desc.multisample ?? {};
+        this.multisample = {
+            count: m.count ?? 1,
+            mask: m.mask ?? 0xFFFFFFFF,
+            alphaToCoverageEnabled: m.alphaToCoverageEnabled ?? false,
+        };
+
+        const f = desc.fragment;
+        if (f !== undefined) {
+            this.fragment = {
+                module: spector2.shaderModules.get(f.module),
+                entryPoint: f.entryPoint,
+                constants: {...f.constants},
+
+                targets: f.targets.map(t => {
+                    const target = {
+                        format: t.format,
+                        writeMask: t.writeMask ?? GPUColorWrite.ALL,
+                    };
+
+                    const b = t.blend;
+                    if (b !== undefined) {
+                        target.blend = {
+                            color: {
+                                operation: b.color.operation ?? 'add',
+                                operation: b.color.srcFactor ?? 'one',
+                                operation: b.color.dstFactor ?? 'zero',
+                            },
+                            alpha: {
+                                operation: b.alpha.operation ?? 'add',
+                                operation: b.alpha.srcFactor ?? 'one',
+                                operation: b.alpha.dstFactor ?? 'zero',
+                            },
+                        }
+                    }
+
+                    return target;
+                }),
+            }
+        }
     }
 
     serialize() {
-        return {
+        const result = {
             deviceSerial: this.device.traceSerial,
-            layout: this.layout, // TODO support explicit layout
-            vertex: {
-                moduleSerial: spector2.shaderModules.get(this.vertex.module).traceSerial,
-                entryPoint: this.vertex.entryPoint,
-            },
-            fragment: {
-                moduleSerial: spector2.shaderModules.get(this.fragment.module).traceSerial,
-                entryPoint: this.fragment.entryPoint,
-                targets: this.fragment.targets,
-            }
+            layout: this.layout,
+            vertex: this.vertex,
+            primitive: this.primitive,
+            multisample: this.multisample,
+            depthStencil: this.depthStencil,
+            fragment: this.fragment,
         };
-    }
 
+        if (result.layout !== 'auto') {
+            result.layoutSerial = spector2.pipelineLayouts.get(this.layout).traceSerial;
+            delete result.layout;
+        }
+
+        result.vertex.moduleSerial = result.vertex.module.traceSerial;
+        delete result.vertex.module;
+
+        if (result.fragment !== undefined) {
+            result.fragment.moduleSerial = result.fragment.module.traceSerial;
+            delete result.fragment.module;
+        }
+
+        return result;
+    }
 }
 
 class SamplerState extends BaseState {
