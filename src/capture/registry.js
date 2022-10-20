@@ -85,6 +85,7 @@ class Spector2 {
 
         this.traceState = TraceState.Off;
         this.presentsInFlight = 0;
+        this.dataSerial = 0;
 
         this.adapters = new ObjectRegistry();
         this.bindGroups = new ObjectRegistry();
@@ -196,6 +197,7 @@ class Spector2 {
                 textureViews: serializeAllObjects(this.textureViews),
             },
             commands: [],
+            data: {},
         }
     }
 
@@ -219,11 +221,31 @@ class Spector2 {
     }
 
     traceCommand(command) {
-        if (this.traceState == TraceState.On) {
+        if (this.traceState === TraceState.On) {
             this.trace.commands.push(command);
         } else if (this.traceState === TraceState.WaitingForPresent && command.name === 'present') {
             this.trace.commands.push(command);
         }
+    }
+
+    traceData(buffer, offset, size) {
+        if (this.traceState !== TraceState.On) {
+            return {garbage: true};
+        }
+        const byteArray = new Uint8Array(buffer, offset, size);
+        // simplest base64 encode?
+        let str = '';
+        for (const c of byteArray) {
+            str += String.fromCharCode(c);
+        }
+
+        this.trace.data[this.dataSerial] = btoa(str);
+        const dataRef =  {
+            size,
+            serial: this.dataSerial,
+        }
+        this.dataSerial++;
+        return dataRef;
     }
 
     registerObjectIn(typePlural, webgpuObject, state) {
@@ -611,12 +633,23 @@ class QueueState extends BaseState {
 
     writeBuffer(buffer, bufferOffset, data, dataOffset, size) {
         spector2.queueProto.writeBuffer.call(this.webgpuObject, buffer, bufferOffset, data, dataOffset, size);
+
+        dataOffset ??= 0;
+        let serializedData = null;
+        if (data instanceof ArrayBuffer) {
+            size = size ?? data.byteLength - offset;
+            serializedData = spector2.traceData(data, dataOffset, size);
+        } else {
+            size = size ?? data.length - offset;
+            serializedData = spector2.traceData(data.buffer, dataOffset * data.BYTES_PER_ELEMENT, size * data.BYTES_PER_ELEMENT);
+        }
+
         spector2.traceCommand({
             name: 'queueWriteBuffer',
             queueSerial: this.traceSerial,
             buffer: spector2.buffers.get(buffer).traceSerial,
             bufferOffset,
-            // TODO the data too!
+            data: serializedData,
         });
     }
 
