@@ -233,13 +233,13 @@ class Spector2 {
             return {garbage: true};
         }
         const byteArray = new Uint8Array(buffer, offset, size);
-        // simplest base64 encode?
-        let str = '';
-        for (const c of byteArray) {
-            str += String.fromCharCode(c);
+        // Worst serialization ever!
+        const badArray = [];
+        for (let i = 0; i < byteArray.byteLength; i++) {
+            badArray.push(byteArray[i]);
         }
 
-        this.trace.data[this.dataSerial] = btoa(str);
+        this.trace.data[this.dataSerial] = badArray;
         const dataRef =  {
             size,
             serial: this.dataSerial,
@@ -382,6 +382,7 @@ class BindGroupLayoutState extends BaseState {
             if (e.externalTexture) {
                 entry.externalTexture = {};
             }
+            return entry;
         });
     }
 
@@ -647,9 +648,11 @@ class QueueState extends BaseState {
         spector2.traceCommand({
             name: 'queueWriteBuffer',
             queueSerial: this.traceSerial,
-            buffer: spector2.buffers.get(buffer).traceSerial,
-            bufferOffset,
-            data: serializedData,
+            args: {
+                bufferSerial: spector2.buffers.get(buffer).traceSerial,
+                bufferOffset,
+                data: serializedData,
+            }
         });
     }
 
@@ -670,7 +673,7 @@ class RenderPassEncoderState extends BaseState {
         let serializeDesc = {
             colorAttachments: desc.colorAttachments.map(a => { return {
                 viewSerial: spector2.textureViews.get(a.view).traceSerial,
-                resolveTarget: (a.resolveTarget ? spector2.textureViews.get(a.resolveTarget).traceSerial : undefined),
+                resolveTargetSerial: (a.resolveTarget ? spector2.textureViews.get(a.resolveTarget).traceSerial : undefined),
 
                 clearValue: a.clearValue ?? {r: 0, g: 0, b: 0, a: 0},
                 loadOp: a.loadOp,
@@ -695,12 +698,12 @@ class RenderPassEncoderState extends BaseState {
                 depthClearValue: ds.depthClearValue ?? 0,
                 depthLoadOp: ds.depthLoadOp,
                 depthStoreOp: ds.depthStoreOp,
-                depthReadOnly: ds.depthReadOnly ?? true,
+                depthReadOnly: ds.depthReadOnly ?? false,
 
                 stencilClearValue: ds.stencilClearValue ?? 0,
                 stencilLoadOp: ds.stencilLoadOp,
                 stencilStoreOp: ds.stencilStoreOp,
-                stencilReadOnly: ds.stencilReadOnly ?? true,
+                stencilReadOnly: ds.stencilReadOnly ?? false,
             };
         }
 
@@ -738,9 +741,9 @@ class RenderPassEncoderState extends BaseState {
         }
 
         spector2.renderPassEncoderProto.setBindGroup.call(this.webgpuObject, index, bindGroup);
-        this.encoder.addCommand({name: 'setBindGrouop', args: {
+        this.encoder.addCommand({name: 'setBindGroup', args: {
             index,
-            group: spector2.bindGroups.get(bindGroup).traceSerial,
+            bindGroupSerial: spector2.bindGroups.get(bindGroup).traceSerial,
         }})
     }
 
