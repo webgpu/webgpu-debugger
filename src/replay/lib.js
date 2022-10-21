@@ -91,7 +91,7 @@ class Replay {
                     delete c.args.textureSerial;
                     break;
                 default:
-                    console.assert("Unhandled command type '" + c.name + "'");
+                    console.assert(false, `Unhandled command type '${c.name}'`);
             }
             return c;
         });
@@ -119,7 +119,7 @@ class Replay {
                 // Nothing to do?
                 break;
             default:
-                console.assert("Unhandled command type '" + c.name + "'");
+                console.assert(false, `Unhandled command type '${c.name}'`);
         }
     }
 }
@@ -203,7 +203,7 @@ class ReplayCommandBuffer extends ReplayObject {
                 case 'endPass':
                     break;
                 default:
-                    console.assert("Unhandled command type '" + c.name + "'");
+                    console.assert(false, `Unhandled command type '${c.name}'`);
             }
             return c;
         });
@@ -242,7 +242,7 @@ class ReplayCommandBuffer extends ReplayObject {
                     renderPass.setViewport(c.args.x, c.args.y, c.args.width, c.args.height, c.args.minDepth, c.args.maxDepth);
                     break;
                 default:
-                    console.assert("Unhandled command type '" + c.name + "'");
+                    console.assert(false, `Unhandled command type '${c.name}'`);
             }
         }
     }
@@ -405,6 +405,8 @@ class ReplayTexture extends ReplayObject {
         this.size = desc.size;
         this.format = desc.format;
         this.sampleCount = desc.sampleCount;
+        this.mipLevelCount = desc.mipLevelCount;
+        this.dimension = desc.dimension;
 
         this.webgpuObject = this.device.webgpuObject.createTexture({
             format: this.format,
@@ -415,6 +417,41 @@ class ReplayTexture extends ReplayObject {
             sampleCount: desc.sampleCount,
             viewFormats: desc.viewFormats,
         });
+
+        if (desc.initialData !== undefined) {
+            this.loadInitialData(desc.initialData);
+        }
+    }
+
+    loadInitialData(initialData) {
+        if (this.sampleCount !== 1) {
+            console.warn('No support for sampleCount > 1 texture initial data.');
+            return;
+        }
+        if (this.dimension !== '2d') {
+            console.warn('No support for dimension != \'2d\' texture initial data.');
+            return;
+        }
+        if (this.size.depthOrArrayLayers !== 1) {
+            console.warn('No support for depthOrArrayLayers != 1 texture initial data.');
+            return;
+        }
+        //if (kTextureFormatInfo[this.format].type !== 'color') {
+        //    console.warn('No support for non-color texture initial data.');
+        //    return result;
+        //}
+        if (this.mipLevelCount !== 1) {
+            console.warn('No support for mipLevelCount != 1 texture initial data.');
+            return;
+        }
+
+        for (const subresource of initialData) {
+            const data = this.replay.getData(subresource.data);
+            this.device.webgpuObject.queue.writeTexture({
+                texture: this.webgpuObject,
+                mipLevel: subresource.mipLevel,
+            }, data, {bytesPerRow: subresource.bytesPerRow}, this.size);
+        }
     }
 }
 

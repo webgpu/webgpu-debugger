@@ -55,12 +55,6 @@ class ObjectRegistry {
     }
 }
 
-const TraceState = {
-    On: Symbol("On"),
-    Off: Symbol("Off"),
-    WaitingForPresent: Symbol("WaitingForPresent"),
-}
-
 class Spector2 {
     constructor() {
         function replacePrototypeOf(c, registry) {
@@ -88,7 +82,7 @@ class Spector2 {
             return originalProto;
         }
 
-        this.traceState = TraceState.Off;
+        this.tracing = false;
         this.dataSerial = 0;
         this.inReentrantWebGPUOperations = false;
 
@@ -193,13 +187,13 @@ class Spector2 {
             return result;
         }
 
-        this.traceState = TraceState.On;
+        this.tracing = true;
         this.pendingTraceOperations = [];
 
         this.trace = {
             objects: {
                 adapters: serializeAllObjects(this.adapters),
-                bindGroups: serializeAsyncAllObjects(this.bindGroups),
+                bindGroups: serializeAllObjects(this.bindGroups),
                 bindGroupLayouts: serializeAllObjects(this.bindGroupLayouts),
                 buffers: serializeAsyncAllObjects(this.buffers, this.pendingTraceOperations),
                 commandBuffers: serializeAllObjects(this.commandBuffers),
@@ -213,7 +207,7 @@ class Spector2 {
                 renderPassEncoders: {},
                 renderPipelines: serializeAllObjects(this.renderPipelines),
                 shaderModules: serializeAllObjects(this.shaderModules),
-                textures: serializeAllObjects(this.textures),
+                textures: serializeAsyncAllObjects(this.textures, this.pendingTraceOperations),
                 textureViews: serializeAllObjects(this.textureViews),
             },
             commands: [],
@@ -223,37 +217,31 @@ class Spector2 {
 
     async endTracing() {
         // No more commands are recorded except presents
-        this.traceState = TraceState.WaitingForPresent;
-        // TODO deep copy what we currently have? We risk changing state with future operations.
+        this.tracing = false;
 
+        // TODO deep copy what we currently have? We risk changing state with future operations.
         await Promise.all(this.pendingTraceOperations);
-        this.traceState = TraceState.Off;
 
         return this.trace;
     }
 
-    tracingNewPresents() {
-        return this.traceState === TraceState.On;
+    recordingTrace() {
+        return this.tracing;
     }
 
-    addPendingPresent(presentPromise) {
-        if (this.traceState === TraceState.On) {
-            this.pendingTraceOperations.push(presentPromise);
-        }
+    addPendingTraceOperation(promise) {
+        console.assert(this.tracing || this.pendingTraceOperations.length > 0)
+        this.pendingTraceOperations.push(promise);
     }
 
     traceCommand(command) {
-        if (this.traceState === TraceState.On) {
-            this.trace.commands.push(command);
-        } else if (this.traceState === TraceState.WaitingForPresent && command.name === 'present') {
-            this.trace.commands.push(command);
-        }
+        console.assert(this.tracing || this.pendingTraceOperations.length > 0)
+        this.trace.commands.push(command);
     }
 
     traceData(buffer, offset, size) {
-        if (this.traceState !== TraceState.On) {
-            return {garbage: true};
-        }
+        console.assert(this.tracing || this.pendingTraceOperations.length > 0)
+
         const byteArray = new Uint8Array(buffer, offset, size);
         // Worst serialization ever!
         const badArray = [];
@@ -272,7 +260,7 @@ class Spector2 {
 
     registerObjectIn(typePlural, webgpuObject, state) {
         this[typePlural].add(webgpuObject, state);
-        if (this.traceState === TraceState.On) {
+        if (this.tracing) {
             this.trace.objects[typePlural][state.traceSerial] = state.serialize();
         }
     }
@@ -426,9 +414,12 @@ class BufferState extends BaseState {
     }
 
     async serializeAsync() {
+        // Always serialize the creation parameters and add the initial data if possible.
+        const result = this.serialize();
+
         // TODO handle mappable buffers.
         if ((this.usage & (GPUBufferUsage.MAP_READ | GPUBufferUsage.MAP_WRITE)) != 0) {
-            return this.serialize();
+            return result;
         }
 
         // Immediately copy the buffer contents to save its initial data to the side.
@@ -450,20 +441,13 @@ class BufferState extends BaseState {
 
         await mapPromise;
 
-        let initialData = null;
         spector2.doWebGPUOp(() => {
             const data = initialDataBuffer.getMappedRange();
-            initialData = spector2.traceData(data, 0, this.size);
+            result.initialData = spector2.traceData(data, 0, this.size);
             initialDataBuffer.destroy();
         });
 
-        return {
-            deviceSerial: this.device.traceSerial,
-            usage: this.usage,
-            size: this.size,
-            state: this.state,
-            initialData,
-        };
+        return result;
     }
 
     serialize() {
@@ -525,7 +509,7 @@ class CanvasContextState extends BaseState {
     }
 
     configure(config) {
-        this.device = config.device;
+        this.device = spector2.devices.get(config.device);
         this.format = config.format;
         this.usage = config.usage ?? GPUTextureUsage.RENDER_ATTACHMENT;
         this.viewFormats = config.viewFormats ?? []; // TODO clone the inside
@@ -533,7 +517,7 @@ class CanvasContextState extends BaseState {
         this.alphaMode = config.alphaMode ?? 'opaque';
 
         spector2.canvasContextProto.configure.call(this.webgpuObject, {
-            device: this.device,
+            device: this.device.webgpuObject,
             format: this.format,
             usage: this.usage | GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST,
             viewFormats: this.viewFormats,
@@ -548,29 +532,34 @@ class CanvasContextState extends BaseState {
 
     getCurrentTexture() {
         const texture = spector2.canvasContextProto.getCurrentTexture.call(this.webgpuObject);
-        const state = new TextureState(this, {
+        const textureState = new TextureState(this.device, {
             format: this.format,
             size: {width: this.canvas.width, height: this.canvas.height, depthOrArrayLayers: 1},
             usage: this.usage,
             viewFormats: this.viewFormats,
-        });
-        spector2.registerObjectIn('textures', texture, state);
+        }, /* isSwapChain */ true);
+        spector2.registerObjectIn('textures', texture, textureState);
 
         // Mark the texture as presented right after the animation frame.
-        // TODO also mark the texture destroyed?
-        if (spector2.tracingNewPresents()) {
-            const presentPromise = new Promise((resolve,) => {
-                requestAnimationFrame(() => {
-                    setTimeout(() => {
+        const recordingThePresent = spector2.recordingTrace();
+
+        const presentPromise = new Promise((resolve,) => {
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    if (recordingThePresent) {
                         spector2.traceCommand({
                             name: 'present',
-                            args: {canvasContextSerial: this.traceSerial, textureSerial: state.traceSerial}
-                        }, 0);
-                        resolve();
-                    });
-                });
+                            args: {canvasContextSerial: this.traceSerial, textureSerial: textureState.traceSerial},
+                        });
+                    }
+                    textureState.onPresent();
+                    resolve();
+                }, 0);
             });
-            spector2.addPendingPresent(presentPromise);
+        });
+
+        if (recordingThePresent) {
+            spector2.addPendingTraceOperation(presentPromise);
         }
 
         return texture;
@@ -650,9 +639,11 @@ class DeviceState extends BaseState {
     }
 
     createTexture(desc) {
-        // TODO modify the desc to contain copysrc/dst.
-        const texture = spector2.deviceProto.createTexture.call(this.webgpuObject, desc);
-        spector2.registerObjectIn('textures', texture, new TextureState(this, desc));
+        const texture = spector2.deviceProto.createTexture.call(this.webgpuObject, {
+            ...desc,
+            usage: desc.usage | GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST,
+        });
+        spector2.registerObjectIn('textures', texture, new TextureState(this, desc, /*isSwapChain*/ false));
         return texture;
     }
 }
@@ -704,6 +695,9 @@ class QueueState extends BaseState {
 
     writeBuffer(buffer, bufferOffset, data, dataOffset, size) {
         spector2.queueProto.writeBuffer.call(this.webgpuObject, buffer, bufferOffset, data, dataOffset, size);
+        if (!spector2.recordingTrace()) {
+            return;
+        }
 
         dataOffset ??= 0;
         let serializedData = null;
@@ -726,8 +720,22 @@ class QueueState extends BaseState {
         });
     }
 
+    copyExternalImageToTexture(source, destination, copySize) {
+        spector2.queueProto.copyExternalImageToTexture.call(this.webgpuObject, source, destination, copySize);
+        if (!spector2.recordingTrace()) {
+            return;
+        }
+
+        // TODO implement me!
+        console.assert(false);
+    }
+
     submit(commandBuffers) {
         spector2.queueProto.submit.call(this.webgpuObject, commandBuffers);
+        if (!spector2.recordingTrace()) {
+            return;
+        }
+
         spector2.traceCommand({
             name: 'queueSubmit',
             queueSerial: this.traceSerial,
@@ -998,16 +1006,16 @@ class SamplerState extends BaseState {
         super(desc);
         this.device = device;
         this.desc = {};
-        this.addressModeU = desc.addressModeU ?? 'clamp-to-edge';
-        this.addressModeV = desc.addressModeV ?? 'clamp-to-edge';
-        this.addressModeW = desc.addressModeW ?? 'clamp-to-edge';
-        this.magFilter = desc.magFilter ?? 'nearest';
-        this.minFilter = desc.minFilter ?? 'nearest';
-        this.mipmapFilter = desc.mipmapFilter ?? 'nearest';
-        this.lodMinClamp = desc.lodMinClamp ?? 0;
-        this.lodMaxClamp = desc.lodMaxClamp ?? 32;
-        this.compare = desc.compare;
-        this.maxAnisotropy = desc.maxAnisotropy ?? 1;
+        this.desc.addressModeU = desc.addressModeU ?? 'clamp-to-edge';
+        this.desc.addressModeV = desc.addressModeV ?? 'clamp-to-edge';
+        this.desc.addressModeW = desc.addressModeW ?? 'clamp-to-edge';
+        this.desc.magFilter = desc.magFilter ?? 'nearest';
+        this.desc.minFilter = desc.minFilter ?? 'nearest';
+        this.desc.mipmapFilter = desc.mipmapFilter ?? 'nearest';
+        this.desc.lodMinClamp = desc.lodMinClamp ?? 0;
+        this.desc.lodMaxClamp = desc.lodMaxClamp ?? 32;
+        this.desc.compare = desc.compare;
+        this.desc.maxAnisotropy = desc.maxAnisotropy ?? 1;
     }
 
     serialize() {
@@ -1030,9 +1038,25 @@ class ShaderModuleState extends BaseState {
     }
 }
 
+const kTextureFormatInfo = {
+    'rgba8unorm': {type: 'color', blockWidth: 1, blockHeight: 1, blockByteSize: 4},
+    'bgra8unorm': {type: 'color', blockWidth: 1, blockHeight: 1, blockByteSize: 4},
+    'rgba16float': {type: 'color', blockWidth: 1, blockHeight: 1, blockByteSize: 8},
+
+    'depth32float': {type: 'depth', blockWidth: 1, blockHeight: 1, blockByteSize: 4},
+    'depth24plus-stencil8': {type: 'depth-stencil',},
+};
+const kBytesPerRowAlignment = 256;
+
+function align(n, alignment) {
+    return Math.ceil(n / alignment) * alignment;
+}
+
 class TextureState extends BaseState {
-    constructor(device, desc) {
+    constructor(device, desc, isSwapChain) {
         super(desc);
+        this.isSwapChain = isSwapChain;
+        this.state = 'available';
         this.device = device;
         this.format = desc.format;
         this.usage = desc.usage;
@@ -1043,9 +1067,89 @@ class TextureState extends BaseState {
         this.viewFormats = desc.viewFormats ?? []; // deep copy
     }
 
+    async serializeAsync() {
+        // Always serialize the creation parameters and add the initial data if possible.
+        const result = this.serialize();
+
+        // No need to gather initial data since this texture is already destroyed.
+        if (this.state === 'destroyed') {
+            return result;
+        }
+
+        if (this.isSwapChain) {
+            // TODO: We should be able to make this work but it's hard to track exactly when these textures are destroyed.
+            console.warn('No support for swapChain texture initial data.');
+            return result;
+        }
+        if (this.sampleCount !== 1) {
+            console.warn('No support for sampleCount > 1 texture initial data.');
+            return result;
+        }
+        if (this.dimension !== '2d') {
+            console.warn('No support for dimension != \'2d\' texture initial data.');
+            return result;
+        }
+        if (this.size.depthOrArrayLayers !== 1) {
+            console.warn('No support for depthOrArrayLayers != 1 texture initial data.');
+            return result;
+        }
+        if (kTextureFormatInfo[this.format].type !== 'color') {
+            console.warn('No support for non-color texture initial data.');
+            return result;
+        }
+        if (this.mipLevelCount !== 1) {
+            console.warn('No support for mipLevelCount != 1 texture initial data.');
+            return result;
+        }
+        // TODO check for compressed textures as well.
+
+        const initialData = [
+        ];
+
+        const formatInfo = kTextureFormatInfo[this.format];
+        const bytesPerRow = align(this.size.width * formatInfo.blockByteSize, kBytesPerRowAlignment);
+        const bufferSize = bytesPerRow * this.size.height;
+
+        let readbackBuffer = null;
+        let mapPromise = null;
+        spector2.doWebGPUOp(() => {
+            readbackBuffer = this.device.webgpuObject.createBuffer({
+                size: bufferSize,
+                usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+            });
+
+            // TODO pool encoders?
+            const encoder = this.device.webgpuObject.createCommandEncoder();
+            encoder.copyTextureToBuffer(
+                {texture: this.webgpuObject},
+                {buffer: readbackBuffer, bytesPerRow},
+                this.size,
+            );
+            this.device.webgpuObject.queue.submit([encoder.finish()]);
+
+            mapPromise = readbackBuffer.mapAsync(GPUMapMode.READ);
+        });
+
+        await mapPromise;
+
+        spector2.doWebGPUOp(() => {
+            const data = readbackBuffer.getMappedRange();
+            initialData.push({
+                data: spector2.traceData(data, 0, bufferSize),
+                mipLevel: 0,
+                bytesPerRow,
+            });
+            readbackBuffer.destroy();
+        });
+
+        result.initialData = initialData;
+        return result;
+    }
+        
     serialize() {
         return {
             deviceSerial: this.device.traceSerial,
+            state: this.state,
             format: this.format,
             usage: this.usage,
             size: this.size,
@@ -1063,11 +1167,22 @@ class TextureState extends BaseState {
         return view;
     }
 
+    onPresent() {
+        this.state = 'destroyed';
+    }
+
     destroy() {
-        // TODO copy on write?
-        // TODO store if recording trace.
         // TODO modify the current state as well
         spector2.textureProto.destroy.call(this.webgpuObject);
+        this.state = 'destroyed';
+        if (!spector2.recordingTrace()) {
+            return;
+        }
+
+        spector2.traceCommand({
+            name: 'textureDestroy',
+            textureSerial: this.traceSerial,
+        });
     }
 
     // TODO getters lol
