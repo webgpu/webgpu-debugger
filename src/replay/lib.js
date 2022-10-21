@@ -60,6 +60,13 @@ class Replay {
         this.pipelineLayouts = recreateObjects(this, ReplayPipelineLayout, trace.objects.pipelineLayouts);
         this.shaderModules = recreateObjects(this, ReplayShaderModule, trace.objects.shaderModules);
         this.renderPipelines = await recreateObjectsAsync(this, ReplayRenderPipeline, trace.objects.renderPipelines);
+        // Initialive the implicit bind group layouts now that all pipelines are created.
+        // Luckily implicit layouts can't be used to create pipeline layouts so we don't have circular dependencies.
+        for (const i in this.bindGroupLayouts) {
+            if (this.bindGroupLayouts[i].implicit) {
+                this.bindGroupLayouts[i].initializeFromImplicitDesc();
+            }
+        }
 
         this.buffers = recreateObjects(this, ReplayBuffer, trace.objects.buffers);
         this.samplers = recreateObjects(this, ReplaySampler, trace.objects.samplers);
@@ -86,7 +93,18 @@ class Replay {
                     c.args.buffer = this.buffers[c.args.bufferSerial];
                     delete c.args.bufferSerial;
                     break;
+                case 'queueWriteTexture':
+                    c.queue = this.queues[c.queueSerial];
+                    delete c.queueSerial;
+                    c.args.destination.textureState = this.textures[c.args.destination.textureSerial];
+                    c.args.destination.texture = c.args.destination.textureState.webgpuObject;
+                    delete c.args.destination.textureSerial;
+                    break;
                 case 'present':
+                    c.args.texture = this.textures[c.args.textureSerial];
+                    delete c.args.textureSerial;
+                    break;
+                case 'textureDestroy':
                     c.args.texture = this.textures[c.args.textureSerial];
                     delete c.args.textureSerial;
                     break;
@@ -110,14 +128,31 @@ class Replay {
                 command.queue.executeSubmit(command.args.commandBuffers);
                 break;
 
-            case 'queueWriteBuffer':
+            case 'queueWriteBuffer': {
                 const dataBuf = this.getData(command.args.data);
                 command.queue.webgpuObject.writeBuffer(command.args.buffer.webgpuObject, command.args.bufferOffset, dataBuf);
                 break;
+            }
+
+            case 'queueWriteTexture': {
+                const dataBuf = this.getData(command.args.data);
+                command.queue.webgpuObject.writeTexture(
+                    command.args.destination,
+                    dataBuf,
+                    {... command.args.dataLayout, offset: 0},
+                    command.args.size
+                );
+                break;
+            }
 
             case 'present':
                 // Nothing to do?
                 break;
+
+            case 'textureDestroy':
+                // Do nothing so as to not invalidate replay state.
+                break;
+
             default:
                 console.assert(false, `Unhandled command type '${c.name}'`);
         }
@@ -197,10 +232,28 @@ class ReplayCommandBuffer extends ReplayObject {
                     c.args.buffer = this.replay.buffers[c.args.bufferSerial];
                     delete c.args.bufferSerial;
                     break;
+                case 'copyBufferToTexture':
+                    c.args.source.bufferState = this.replay.buffers[c.args.source.bufferSerial];
+                    c.args.source.buffer = c.args.source.bufferState.webgpuObject;
+                    delete c.args.source.buffer;
+                    c.args.destination.textureState = this.replay.textures[c.args.destination.textureSerial];
+                    c.args.destination.texture = c.args.destination.textureState.webgpuObject;
+                    delete c.args.destination.texture;
+                    break;
+                case 'copyTextureToTexture':
+                    c.args.source.textureState = this.replay.textures[c.args.source.textureSerial];
+                    c.args.source.texture = c.args.source.textureState.webgpuObject;
+                    delete c.args.source.texture;
+                    c.args.destination.textureState = this.replay.textures[c.args.destination.textureSerial];
+                    c.args.destination.texture = c.args.destination.textureState.webgpuObject;
+                    delete c.args.destination.texture;
+                    break;
                 case 'setViewport':
                 case 'draw':
                 case 'drawIndexed':
                 case 'endPass':
+                case 'pushDebugGroup':
+                case 'popDebugGroup':
                     break;
                 default:
                     console.assert(false, `Unhandled command type '${c.name}'`);
@@ -216,6 +269,12 @@ class ReplayCommandBuffer extends ReplayObject {
                 case 'beginRenderPass':
                     renderPass = encoder.beginRenderPass(c.args);
                     break;
+                case 'copyBufferToTexture':
+                    encoder.copyBufferToTexture(c.args.source, c.args.destination, c.args.copySize);
+                    break;
+                case 'copyTextureToTexture':
+                    encoder.copyTextureToTexture(c.args.source, c.args.destination, c.args.copySize);
+                    break;
                 case 'draw':
                     renderPass.draw(c.args.vertexCount, c.args.instanceCount, c.args.firstVertex, c.args.firstInstance);
                     break;
@@ -225,6 +284,20 @@ class ReplayCommandBuffer extends ReplayObject {
                 case 'endPass':
                     renderPass.end();
                     renderPass = null;
+                    break;
+                case 'popDebugGroup':
+                    if (renderPass !== undefined) {
+                        renderPass.popDebugGroup();
+                    } else {
+                        encoder.popDebugGroup();
+                    }
+                    break;
+                case 'pushDebugGroup':
+                    if (renderPass !== undefined) {
+                        renderPass.pushDebugGroup(c.args.groupLabel);
+                    } else {
+                        encoder.pushDebugGroup(c.args.groupLabel);
+                    }
                     break;
                 case 'setBindGroup':
                     renderPass.setBindGroup(c.args.index, c.args.bindGroup.webgpuObject, c.dynamicOffsets);
@@ -254,11 +327,12 @@ class ReplayBuffer extends ReplayObject {
         this.device = this.replay.devices[desc.deviceSerial]
         this.usage = desc.usage;
         this.size = desc.size;
-        console.assert(desc.state === 'unmapped');
+        console.assert(desc.state === 'unmapped' || desc.state === 'mapped-at-creation');
 
         this.webgpuObject = this.device.webgpuObject.createBuffer({
             usage: desc.usage | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
             size: desc.size,
+            mappedAtCreation: desc.state === 'mapped-at-creation',
         });
         if (desc.initialData !== undefined) {
             const data = this.replay.getData(desc.initialData);
@@ -270,7 +344,8 @@ class ReplayBuffer extends ReplayObject {
 class ReplayBindGroup extends ReplayObject {
     constructor(replay, desc) {
         super(replay, desc);
-        this.device = this.replay.devices[desc.deviceSerial]
+        this.device = this.replay.devices[desc.deviceSerial];
+
         this.webgpuObject = this.device.webgpuObject.createBindGroup({
             layout: this.replay.bindGroupLayouts[desc.layoutSerial].webgpuObject,
             entries: desc.entries.map(e => {
@@ -296,7 +371,19 @@ class ReplayBindGroupLayout extends ReplayObject {
     constructor(replay, desc) {
         super(replay, desc);
         this.device = this.replay.devices[desc.deviceSerial];
+        this.desc = window.structuredClone(desc);
+
+        this.implicit = desc.entries === undefined;
+        if (this.implicit) {
+            return;
+        }
+
         this.webgpuObject = this.device.webgpuObject.createBindGroupLayout(desc);
+    }
+
+    initializeFromImplicitDesc() {
+        const pipeline = this.replay.renderPipelines[this.desc.renderPipelineSerial];
+        this.webgpuObject = pipeline.webgpuObject.getBindGroupLayout(this.desc.groupIndex);
     }
 }
 
@@ -420,6 +507,8 @@ class ReplayTexture extends ReplayObject {
 
         if (desc.initialData !== undefined) {
             this.loadInitialData(desc.initialData);
+        } else if (desc.state === 'destroyed') {
+            this.webgpuObject.destroy();
         }
     }
 
@@ -432,25 +521,24 @@ class ReplayTexture extends ReplayObject {
             console.warn('No support for dimension != \'2d\' texture initial data.');
             return;
         }
-        if (this.size.depthOrArrayLayers !== 1) {
-            console.warn('No support for depthOrArrayLayers != 1 texture initial data.');
-            return;
-        }
         //if (kTextureFormatInfo[this.format].type !== 'color') {
         //    console.warn('No support for non-color texture initial data.');
         //    return result;
         //}
-        if (this.mipLevelCount !== 1) {
-            console.warn('No support for mipLevelCount != 1 texture initial data.');
-            return;
-        }
 
         for (const subresource of initialData) {
             const data = this.replay.getData(subresource.data);
+            const mip = subresource.mipLevel;
+            const width = Math.max(1, this.size.width >> mip);
+            const height = Math.max(1, this.size.height >> mip);
+            const depthOrArrayLayers = this.size.depthOrArrayLayers; // TODO support 3D.
+
             this.device.webgpuObject.queue.writeTexture({
                 texture: this.webgpuObject,
-                mipLevel: subresource.mipLevel,
-            }, data, {bytesPerRow: subresource.bytesPerRow}, this.size);
+                mipLevel: mip,
+            }, data, {bytesPerRow: subresource.bytesPerRow, rowsPerImage: height},
+                {width, height, depthOrArrayLayers}
+            );
         }
     }
 }
