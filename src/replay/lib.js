@@ -42,6 +42,16 @@ class Replay {
             return recreatedObjects;
         }
 
+        this.data = {};
+        for (const dataSerial in trace.data) {
+            const badArray = trace.data[dataSerial];
+            const dataBuf = new Uint8Array(badArray.length);
+            for (let i = 0; i < badArray.length; i++) {
+                dataBuf[i] = badArray[i];
+            }
+            this.data[dataSerial] = dataBuf;
+        }
+
         this.adapters = await recreateObjectsAsync(this, ReplayAdapter, trace.objects.adapters);
         this.devices = await recreateObjectsAsync(this, ReplayDevice, trace.objects.devices);
         this.queues = recreateObjects(this, ReplayQueue, trace.objects.queues);
@@ -85,16 +95,6 @@ class Replay {
             }
             return c;
         });
-
-        this.data = {};
-        for (const dataSerial in trace.data) {
-            const badArray = trace.data[dataSerial];
-            const dataBuf = new Uint8Array(badArray.length);
-            for (let i = 0; i < badArray.length; i++) {
-                dataBuf[i] = badArray[i];
-            }
-            this.data[dataSerial] = dataBuf;
-        }
     }
 
     getData(serializedData) {
@@ -258,8 +258,12 @@ class ReplayBuffer extends ReplayObject {
 
         this.webgpuObject = this.device.webgpuObject.createBuffer({
             usage: desc.usage | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
-            size: desc.size
+            size: desc.size,
         });
+        if (desc.initialData !== undefined) {
+            const data = this.replay.getData(desc.initialData);
+            this.device.webgpuObject.queue.writeBuffer(this.webgpuObject, 0, data);
+        }
     }
 }
 

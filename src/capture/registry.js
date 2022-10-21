@@ -71,8 +71,13 @@ class Spector2 {
                 if (!props?.writable || typeof c.prototype[name] !== 'function') {
                   continue;
                 }
-                originalProto[name] = c.prototype[name];
+                const originalMethod = c.prototype[name];
+                originalProto[name] = originalMethod;
                 c.prototype[name] = function(...args) {
+                    if (spector2.inReentrantWebGPUOperations) {
+                        return originalMethod.apply(this, args);
+                    }
+
                     let self = registry.get(this);
                     if (!self[name]) {
                         console.assert(false, `Doesn't have "${name}"`);
@@ -84,8 +89,8 @@ class Spector2 {
         }
 
         this.traceState = TraceState.Off;
-        this.presentsInFlight = 0;
         this.dataSerial = 0;
+        this.inReentrantWebGPUOperations = false;
 
         this.adapters = new ObjectRegistry();
         this.bindGroups = new ObjectRegistry();
@@ -161,6 +166,12 @@ class Spector2 {
         GPU.prototype.requestAdapter = this.gpuRequestAdapter;
     }
 
+    doWebGPUOp(f) {
+        this.inReentrantWebGPUOperations = true;
+        f();
+        this.inReentrantWebGPUOperations = false;
+    }
+
     // TODO add support for prune all.
     // TODO make something to trace easily instead of start stop trace.
     startTracing() {
@@ -172,16 +183,25 @@ class Spector2 {
             return result;
         }
 
+        // Yuck
+        function serializeAsyncAllObjects(registry, pendingPromises) {
+            const result = {};
+            // TODO have some context where objects can ask for a device?
+            for (const obj of registry) {
+                pendingPromises.push(obj.serializeAsync().then(d => result[obj.traceSerial] = d));
+            }
+            return result;
+        }
+
         this.traceState = TraceState.On;
-        this.presentsInFlight = [];
+        this.pendingTraceOperations = [];
 
         this.trace = {
             objects: {
-                // TODO have objects created after tracing work as well, whoops
                 adapters: serializeAllObjects(this.adapters),
-                bindGroups: serializeAllObjects(this.bindGroups),
+                bindGroups: serializeAsyncAllObjects(this.bindGroups),
                 bindGroupLayouts: serializeAllObjects(this.bindGroupLayouts),
-                buffers: serializeAllObjects(this.buffers),
+                buffers: serializeAsyncAllObjects(this.buffers, this.pendingTraceOperations),
                 commandBuffers: serializeAllObjects(this.commandBuffers),
                 commandEncoders: {},
                 canvasContexts: {},
@@ -206,7 +226,9 @@ class Spector2 {
         this.traceState = TraceState.WaitingForPresent;
         // TODO deep copy what we currently have? We risk changing state with future operations.
 
-        await Promise.all(this.presentsInFlight);
+        await Promise.all(this.pendingTraceOperations);
+        this.traceState = TraceState.Off;
+
         return this.trace;
     }
 
@@ -216,7 +238,7 @@ class Spector2 {
 
     addPendingPresent(presentPromise) {
         if (this.traceState === TraceState.On) {
-            this.presentsInFlight.push(presentPromise);
+            this.pendingTraceOperations.push(presentPromise);
         }
     }
 
@@ -403,7 +425,49 @@ class BufferState extends BaseState {
         this.state = desc.mappedAtCreation ? 'mapped-at-creation' : 'unmapped';
     }
 
+    async serializeAsync() {
+        // TODO handle mappable buffers.
+        if ((this.usage & (GPUBufferUsage.MAP_READ | GPUBufferUsage.MAP_WRITE)) != 0) {
+            return this.serialize();
+        }
+
+        // Immediately copy the buffer contents to save its initial data to the side.
+        let initialDataBuffer = null;
+        let mapPromise = null;
+        spector2.doWebGPUOp(() => {
+            initialDataBuffer = this.device.webgpuObject.createBuffer({
+                size: this.size,
+                usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+            });
+
+            // TODO pool encoders?
+            const encoder = this.device.webgpuObject.createCommandEncoder();
+            encoder.copyBufferToBuffer(this.webgpuObject, 0, initialDataBuffer, 0, this.size);
+            this.device.webgpuObject.queue.submit([encoder.finish()]);
+
+            mapPromise = initialDataBuffer.mapAsync(GPUMapMode.READ);
+        });
+
+        await mapPromise;
+
+        let initialData = null;
+        spector2.doWebGPUOp(() => {
+            const data = initialDataBuffer.getMappedRange();
+            initialData = spector2.traceData(data, 0, this.size);
+            initialDataBuffer.destroy();
+        });
+
+        return {
+            deviceSerial: this.device.traceSerial,
+            usage: this.usage,
+            size: this.size,
+            state: this.state,
+            initialData,
+        };
+    }
+
     serialize() {
+        // Still called on creation during the trace
         return {
             deviceSerial: this.device.traceSerial,
             usage: this.usage,
@@ -536,8 +600,14 @@ class DeviceState extends BaseState {
     }
 
     createBuffer(desc) {
-        // TODO modify the desc for non-mappable buffers, see what to do for mappable.
-        const buffer = spector2.deviceProto.createBuffer.call(this.webgpuObject, desc);
+        let newUsage = desc.usage;
+        if ((desc.usage & (GPUBufferUsage.MAP_READ | GPUBufferUsage.MAP_WRITE)) == 0) {
+            newUsage = desc.usage | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST;
+        }
+        const buffer = spector2.deviceProto.createBuffer.call(this.webgpuObject, {
+            ...desc,
+            usage: newUsage,
+        });
         spector2.registerObjectIn('buffers', buffer, new BufferState(this, desc));
         return buffer;
     }
