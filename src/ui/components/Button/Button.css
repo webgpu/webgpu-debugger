@@ -1,0 +1,80 @@
+.button {
+	--bg-primary: #3479f6;
+	--bg-secondary: transparent;
+	--bg-ghost: #c2c2c2;
+	--border-primary: var(--bg-primary);
+	--border-secondary: var(--border-primary);
+	--text-color-primary: #ffffff;
+	--text-color-secondary: var(--bg-primary);
+	--text-color-ghost: var(--text-color-primary);
+	--shadow: 0px 2px 5px 2px rgb(50, 51, 48, 0.2);
+
+	font-size: calc(0.9rem + 0.1vmin);
+	margin: 0rem 1rem;
+	cursor: pointer;
+	padding: 0.5rem;
+	transition: 0.2s;
+	border: 1px solid transparent;
+	outline: none;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+svg {
+	height: 1rem;
+	width: 1rem;
+	margin-right: 0.5rem;
+	height: 100%;
+}
+/* dark mode */
+.button.dark {
+	--bg-primary: #323330;
+}
+svg.dark {
+	color: var(--text-color-primary);
+}
+/* size */
+.button.lg {
+	min-width: 8rem;
+	padding: 1.2rem;
+}
+.button.md {
+	min-width: 6rem;
+	padding: 0.7rem;
+}
+.button.sm {
+	width: fit-content;
+}
+/* btnType */
+.button.primary {
+	background: var(--bg-primary);
+	color: var(--text-color-primary);
+	border: 1px solid var(--border-primary);
+}
+.button.secondary {
+	background: var(--bg-secondary);
+	color: var(--text-color-secondary);
+	border: 1px solid var(--border-secondary);
+}
+.button.ghost {
+	background: var(--bg-ghost);
+	color: var(--text-color-ghost);
+}
+/* shape */
+.button.default {
+	border-radius: 0rem;
+}
+.button.rounded {
+	border-radius: 0.3rem;
+}
+.button.pill {
+	border-radius: 2rem;
+}
+/* states - hover, focus, active */
+.button:hover,
+.button:focus {
+	box-shadow: var(--shadow);
+}
+.button:active {
+	box-shadow: inset var(--shadow);
+}
