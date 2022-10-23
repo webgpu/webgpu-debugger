@@ -5,9 +5,14 @@ import {
   TileBranchSubstance,
   TileContainer,
   TileProvider,
+  TilePane,
 } from 'react-tile-pane';
 import Toolbar from '../Toolbar/Toolbar';
-import BufferViz from '../../views/BufferVis/BufferVis';
+import BufferVis from '../../views/BufferVis/BufferVis';
+import FramesVis from '../../views/FramesVis/FramesVis';
+import StepsVis from '../../views/StepsVis/StepsVis';
+import Pane from '../Pane/Pane';
+import { UIState, UIStateContext } from '../../contexts/UIStateContext';
 
 import './App.css';
 import './react-tile-pane.css';
@@ -20,39 +25,35 @@ const paneStyle: React.CSSProperties = {
   alignItems: 'center',
 };
 
-function Arbutus() {
-  const [number, count] = useState(1)
-  return (
-    <div className="spector2-tile" onClick={() => count((n) => n + 1)} style={paneStyle}>
-      {number} catties of arbutus
-    </div>
-  )
-}
+const uiState = new UIState();
 
-function Apple() {
-  return <div className="spector2-tile" style={paneStyle}>apple</div>
-}
+const paneList: TilePane[] = [];
+const names: Record<string, any> = {};  // TODO: Figure out what this maps to
 
-const [paneList, names] = createTilePanes({
-  frames: <BufferViz />,
-  arbutus: <Arbutus />,
-  pcherry: <div className="spector2-tile"style={paneStyle}>cherry</div>,
-  apple: <Apple />,
-  banana: <div className="spector2-tile" style={paneStyle}>banana</div>,
-  lemon: <div className="spector2-tile" style={paneStyle}>lemon</div>,
-  mango: <div className="spector2-tile" style={paneStyle}>mango</div>,
-  pomelo: <div className="spector2-tile"style={paneStyle}>pomelo</div>,
-});
+let nextPaneId = 0;
+function addPane(componentFn: () => JSX.Element, data: any) {
+  const temp: Record<string, React.ReactNode> = {};
+  const paneId = `pane${nextPaneId++}`;
+  uiState.setPaneViewType(paneId, componentFn, data);
+  temp[paneId] = <Pane id={paneId} />
+  const [pList, nameOb] = createTilePanes(temp);
+  paneList.push(...pList);
+  Object.assign(names, nameOb);
+};
+
+addPane(FramesVis, ['frame1', 'frame2']);
+addPane(StepsVis, [12, 34, 45]);
+addPane(BufferVis, null);
 
 const rootPane: TileBranchSubstance = {
   children: [
-    { children: [names.frames]},
+    { children: [names.pane0]},
     {
       isRow: true,
-      grow: 2,
+      grow: 5,
       children: [
-        { children: names.arbutus },
-        { children: names.lemon },
+        { children: names.pane1 },
+        { children: names.pane2 },
       ],
     },
   ],
@@ -61,13 +62,15 @@ const rootPane: TileBranchSubstance = {
 const App: React.FC = () => {
   return (
     <div className="spector2">
-      <Toolbar/>
-      <TileProvider tilePanes={paneList} rootNode={rootPane}>
-          <div className="spector2-tiles" style={{ border: '#afafaf solid 2px', width: '100%', height: '100%' }}>
-            <TileContainer />
-          </div>
-        {/* <DraggableTitle name={names.banana}>Drag this banana🍌</DraggableTitle> */}
-      </TileProvider>
+      <UIStateContext.Provider value={uiState}>
+        <Toolbar/>
+        <TileProvider tilePanes={paneList} rootNode={rootPane}>
+            <div className="spector2-tiles" style={{ border: '#afafaf solid 2px', width: '100%', height: '100%' }}>
+              <TileContainer />
+            </div>
+          {/* <DraggableTitle name={names.banana}>Drag this banana🍌</DraggableTitle> */}
+        </TileProvider>
+      </UIStateContext.Provider>
     </div>
   )
 }

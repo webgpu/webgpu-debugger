@@ -19,27 +19,27 @@
 .react-tile-pane-tabMoving {
   padding: 0.3em 1em;
   border-radius: 4px;
-  background: #f5ffd3;
+  background-color: var(--tab-moving-bg-color);
 }
 
 .react-tile-pane-tabInner {
   height: 100%;
   display: flex;
   align-items: center;
-  color: #000000;
-  background: #ffffff;
-  color: #000000;
+  background-color: var(--tab-bar-bg-color);
 }
 .react-tile-pane-tabInnerOff {
   height: 100%;
+  /* not sure where these colors are used
   border-left: 1px solid #d1d1d18f;
   border-bottom: 1px solid #b9b9b98f;
   border-right: 1px solid #8787878f;
   background: #e9e9e9;
-  color: #000000;
+  color: red;
+  box-shadow: inset 0px 1px 5px 2px #cfcfcf9c;
+  */
   display: flex;
   align-items: center;
-  box-shadow: inset 0px 1px 5px 2px #cfcfcf9c;
 }
 
 .react-tile-pane-tabInner:hover .react-tile-pane-off {
@@ -66,12 +66,12 @@
 
 .react-tile-pane-Bar {
   cursor: ew-resize;
-  background: #b6b6b6;
+  background-color: var(--tab-splitter-bg-color);
   width: 4px;
   height: 4px;
 }
 .react-tile-pane-Bar:hover {
-  background: #7dd0db;
+  background: var(--tab-move-hover-color);
   height: 6px;
   width: 6px;
 }
