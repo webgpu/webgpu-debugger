@@ -26,6 +26,11 @@ export default [
         sourcemap: true,
       },
     ],
+    // This is a hack to workaround a warning that should be fixed
+    onwarn(warning, warn) {
+        if (warning.code === 'THIS_IS_UNDEFINED') return;
+        warn(warning);
+    },
     plugins: [
       resolve({
         browser: true,
