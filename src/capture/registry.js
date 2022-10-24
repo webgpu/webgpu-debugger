@@ -8,7 +8,7 @@ class ObjectRegistry {
 
     add(obj, data) {
         if (this.iterating) {
-            throw "Mutating Registry while iterating it.";
+            throw new Error("Mutating Registry while iterating it.");
         }
 
         this.dataMap.set(obj, data);
@@ -28,7 +28,7 @@ class ObjectRegistry {
 
     prune() {
         if (this.iterating) {
-            throw "Mutating Registry while iterating it.";
+            throw new Error("Mutating Registry while iterating it.");
         }
 
         this.objects = this.objects.filter(ref => ref.deref() !== undefined);
