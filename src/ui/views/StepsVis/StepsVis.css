@@ -1,0 +1,10 @@
+.spector2-cmd:nth-child(even) {
+  background-color: var(--spector2-step-even-bg-color);
+}
+
+.spector2-cmd>* {
+  display: inline;
+}
+.spector2-cmd-args {
+  color: pink;
+}

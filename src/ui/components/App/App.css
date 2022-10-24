@@ -5,6 +5,7 @@
   --tab-bar-bg-color: #eee;
   --tab-splitter-bg-color: #b6b6b6;
   --tab-move-hover-color: #7dd0db;
+  --spector2-step-even-bg-color: #eee;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -12,6 +13,7 @@
     --bg-color: #333;
     --color: white;
     --tab-bar-bg-color: #555;
+    --spector2-step-even-bg-color: #222;
   }
 }
 
@@ -35,3 +37,7 @@
   font-size: inherit;
 }
 
+.spector2-viz {
+  height: 100%;
+  overflow: auto;
+}

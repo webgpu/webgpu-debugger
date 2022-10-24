@@ -4,10 +4,123 @@
     <link href="../dist/styles.css" rel="stylesheet">
   </head>
   <body>
-    <div>content wpodkwe wepdko wepokwe pdwek dpowek dpwoek dpweokd wepodk wepodk wepodk wepodk wepodk wepodk wepodk wepodk weopdkwepodk wepodkweop</div>
+    <canvas id="renderCanvas" width=400 height=400></canvas>
+    <canvas id="captureCanvas" width=1 height=1></canvas>
+    <script src="../src/capture/registry.js"></script>
+    <script src="../src/replay/lib.js"></script>
     <script type="module">
-    import spector2 from '../dist/index.js';
-    spector2();
+import ui from '../dist/index.js';
+async function run() {
+    const adapter = await navigator.gpu.requestAdapter();
+    const device = await adapter.requestDevice();
+
+    const context = document.getElementById("renderCanvas").getContext('webgpu');
+    const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+    context.configure({
+        device,
+        format: presentationFormat,
+        alphaMode: 'opaque',
+    });
+
+    const module = device.createShaderModule({
+        code: `
+            @vertex fn vs(
+              @builtin(vertex_index) VertexIndex : u32
+            ) -> @builtin(position) vec4<f32> {
+              var pos = array<vec2<f32>, 3>(
+                vec2(0.0, 0.5),
+                vec2(-0.5, -0.5),
+                vec2(0.5, -0.5)
+              );
+
+              return vec4(pos[VertexIndex], 0.0, 1.0);
+            }
+
+            @fragment fn fs() -> @location(0) vec4<f32> {
+              return vec4(1.0, 0.0, 0.0, 1.0);
+            }
+        `,
+    });
+
+    const pipeline = device.createRenderPipeline({
+        layout: 'auto',
+        vertex: {
+            module,
+            entryPoint: 'vs',
+        },
+        fragment: {
+            module,
+            entryPoint: 'fs',
+            targets: [{format: presentationFormat}],
+        },
+    });
+
+    function frame() {
+        const encoder = device.createCommandEncoder();
+        const pass = encoder.beginRenderPass({
+            colorAttachments: [{
+                view: context.getCurrentTexture().createView(),
+                clearColor: [0.0, 0.0, 0.0, 0.0],
+                loadOp: 'clear',
+                storeOp: 'store',
+            }]
+        });
+        pass.setPipeline(pipeline);
+        pass.draw(3);
+        pass.end();
+
+        device.queue.submit([encoder.finish()]);
+
+        requestAnimationFrame(frame);
+    }
+
+    spector2.traceFrame().then(async (trace) => {
+        // Trace the frame and set up the replay.
+        console.log(trace);
+        spector2.revertEntryPoints();
+        const replay = await loadReplay(trace);
+        console.log(replay);
+
+        ui.init();
+        ui.addReplay(replay);
+
+        // Go through each command, and show the presented texture of the trace on the capture canvas.
+        const captureCanvas = document.getElementById('captureCanvas');
+        const context = captureCanvas.getContext('webgpu');
+
+        for (const c of replay.commands) {
+            replay.execute(c);
+
+            if (c.name === 'present') {
+                const textureState = c.args.texture;
+                const device = textureState.device.webgpuObject;
+
+                captureCanvas.width = textureState.size.width;
+                captureCanvas.height = textureState.size.height;
+                context.configure({
+                    device,
+                    usage: GPUTextureUsage.COPY_DST,
+                    format: textureState.format,
+                    alphaMode: 'opaque',
+                });
+
+                const encoder = device.createCommandEncoder();
+                encoder.copyTextureToTexture(
+                    {texture: textureState.webgpuObject},
+                    {texture: context.getCurrentTexture()},
+                    textureState.size
+                );
+                device.queue.submit([encoder.finish()]);
+                // TODO: should probably have this generate
+                // an imagebitmap and pass in that instead?
+                ui.setResult(captureCanvas);
+            }
+        }
+    });
+
+    requestAnimationFrame(frame);
+}
+run();
     </script>
   </body>
 </html>
