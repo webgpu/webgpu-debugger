@@ -1,0 +1,7 @@
+.spector2-mini {
+  position: fixed;
+  right: 0;
+  top: 0;
+  background-color: var(--spector2-bg-color);
+  color: var(--spector2-color);
+}

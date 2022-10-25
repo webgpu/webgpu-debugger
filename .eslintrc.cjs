@@ -99,6 +99,8 @@ module.exports = {
         strict: [2, 'function'],
         yoda: [2, 'never'],
         '@typescript-eslint/no-empty-function': 'off',
+        '@typescript-eslint/no-explicit-any': 'off', // TODO: Reenable this and figure out how to fix code.
+        '@typescript-eslint/no-non-null-assertion': 'off',
     },
     overrides: [
         {

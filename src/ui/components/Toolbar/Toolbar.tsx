@@ -1,12 +1,12 @@
-import React from 'react';
+import React, { useContext } from 'react';
+import { UIStateContext } from '../../contexts/UIStateContext';
 
 export default function Toolbar() {
-  return (
-    <div className="spector2-toolbar">
-      <button>capture</button>
-      <button>play</button>
-      <button>rewind</button>
-      <button>step</button>
-    </div>
-  );
+    const uiState = useContext(UIStateContext);
+    return (
+        <div className="spector2-toolbar">
+            <button onClick={uiState.capture}>🔴</button>
+            <button onClick={uiState.toggleUI}>⌃</button>
+        </div>
+    );
 }

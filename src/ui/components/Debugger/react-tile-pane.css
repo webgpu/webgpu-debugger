@@ -19,14 +19,14 @@
 .react-tile-pane-tabMoving {
   padding: 0.3em 1em;
   border-radius: 4px;
-  background-color: var(--tab-moving-bg-color);
+  background-color: var(--spector2-tab-moving-bg-color);
 }
 
 .react-tile-pane-tabInner {
   height: 100%;
   display: flex;
   align-items: center;
-  background-color: var(--tab-bar-bg-color);
+  background-color: var(--spector2-tab-bar-bg-color);
 }
 .react-tile-pane-tabInnerOff {
   height: 100%;
@@ -66,12 +66,12 @@
 
 .react-tile-pane-Bar {
   cursor: ew-resize;
-  background-color: var(--tab-splitter-bg-color);
+  background-color: var(--spector2-tab-splitter-bg-color);
   width: 4px;
   height: 4px;
 }
 .react-tile-pane-Bar:hover {
-  background: var(--tab-move-hover-color);
+  background: var(--spector2-tab-move-hover-color);
   height: 6px;
   width: 6px;
 }

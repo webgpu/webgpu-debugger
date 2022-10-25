@@ -1,0 +1,17 @@
+
+.spector2-debugger {
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--spector2-bg-color);
+  color: var(--spector2-color);
+}
+
+.spector2-viz {
+  height: 100%;
+  overflow: auto;
+}

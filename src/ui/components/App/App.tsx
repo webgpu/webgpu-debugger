@@ -1,75 +1,34 @@
-import React, { useState } from 'react';
-import {
-  createTilePanes,
-  DraggableTitle,
-  TileBranchSubstance,
-  TileContainer,
-  TileProvider,
-  TilePane,
-} from 'react-tile-pane';
-import Toolbar from '../Toolbar/Toolbar';
-
-import BufferVis from '../../views/BufferVis/BufferVis';
-import FramesVis from '../../views/FramesVis/FramesVis';
-import ResultVis from '../../views/ResultVis/ResultVis';
-import StepsVis from '../../views/StepsVis/StepsVis';
-
-import Pane from '../Pane/Pane';
-import {uiState} from '../../contexts/UIStateContext';
-
+import React from 'react';
+import Debugger from '../Debugger/Debugger';
+import MiniUI from '../MiniUI/MiniUI';
+import { uiState, UIStateContext } from '../../contexts/UIStateContext';
 import './App.css';
-import './react-tile-pane.css';
 
-const paneList: TilePane[] = [];
-const names: Record<string, any> = {};  // TODO: Figure out what this maps to
-
-let nextPaneId = 0;
-function addPane(componentFn: (data: any) => JSX.Element, data: any) {
-  const temp: Record<string, React.ReactNode> = {};
-  const paneId = `pane${nextPaneId++}`;
-  uiState.setPaneViewType(paneId, componentFn, data);
-  temp[paneId] = <Pane id={paneId} />
-  const [pList, nameOb] = createTilePanes(temp);
-  paneList.push(...pList);
-  Object.assign(names, nameOb);
-};
-
-addPane(FramesVis, ['frame1', 'frame2']);
-addPane(StepsVis, null);
-addPane(ResultVis, null);
-addPane(BufferVis, null);
-
-const rootPane: TileBranchSubstance = {
-  children: [
-    { children: [names.pane0]},
-    {
-      isRow: true,
-      grow: 5,
-      children: [
-        { children: names.pane1 },
-        {
-          children: [
-            { children: names.pane2 },
-            { children: names.pane3 },
-          ]
-        },
-      ],
-    },
-  ],
+interface IState {
+    id: number;
 }
 
-const App: React.FC = () => {
-  return (
-    <div className="spector2">
-      <Toolbar/>
-      <TileProvider tilePanes={paneList} rootNode={rootPane}>
-          <div className="spector2-tiles" style={{ border: '#afafaf solid 2px', width: '100%', height: '100%' }}>
-            <TileContainer />
-          </div>
-        {/* <DraggableTitle name={names.banana}>Drag this banana🍌</DraggableTitle> */}
-      </TileProvider>
-    </div>
-  )
-}
+class App extends React.Component<null, IState> {
+    declare context: React.ContextType<typeof UIStateContext>;
 
-export default App
+    constructor(props: null) {
+        super(props);
+        this.state = { id: 0 };
+    }
+    componentDidMount(): void {
+        // TODO: remove. This is only here to make this component re-render
+        this.context.setRenderHackFn(() => {
+            this.setState({ id: performance.now() });
+        });
+    }
+    render() {
+        return (
+            <UIStateContext.Provider value={uiState}>
+                <div className="spector2">{uiState.fullUI ? <Debugger /> : <MiniUI />}</div>
+            </UIStateContext.Provider>
+        );
+    }
+}
+App.contextType = UIStateContext;
+
+export default App;

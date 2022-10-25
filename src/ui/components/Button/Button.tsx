@@ -1,7 +1,7 @@
-import React, {type FC } from "react"
-import { ButtonPropTypes } from "./ButtonPropTypes"
+import React, { type FC } from 'react';
+import { ButtonPropTypes } from './ButtonPropTypes';
 
-import "./Button.css"
+import './Button.css';
 
 /**
  * A Button that takes label text as a mandatory prop
@@ -18,29 +18,28 @@ import "./Button.css"
  * @param {boolean} isDarkMode - default `false`
  * @returns Button
  */
-const Button: FC<ButtonPropTypes> = (props) => {
-	const {
-		label,
-		size = "md",
-		type = "button",
-		btnType = "primary",
-		className,
-		onClick,
-		shape = "default",
-		styles,
-		isDarkMode = false,
-	} = props
-	return (
-		<button
-			type={type}
-			className={`button ${size} ${btnType} ${shape} ${
-				isDarkMode === true && `dark`
-			} ${className}`}
-			style={styles}
-			onClick={onClick}>
-			{label}
-		</button>
-	)
-}
+const Button: FC<ButtonPropTypes> = props => {
+    const {
+        label,
+        size = 'md',
+        type = 'button',
+        btnType = 'primary',
+        className,
+        onClick,
+        shape = 'default',
+        styles,
+        isDarkMode = false,
+    } = props;
+    return (
+        <button
+            type={type}
+            className={`button ${size} ${btnType} ${shape} ${isDarkMode === true && `dark`} ${className}`}
+            style={styles}
+            onClick={onClick}
+        >
+            {label}
+        </button>
+    );
+};
 
-export default Button
+export default Button;

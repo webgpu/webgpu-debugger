@@ -1,5 +1,5 @@
-import React from "react";
+import React from 'react';
 
 export default function BufferVis() {
-  return (<div className="spector2-viz">buffer data</div>);
+    return <div className="spector2-viz">buffer data</div>;
 }

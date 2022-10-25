@@ -1,43 +1,30 @@
 :root {
-  --bg-color: white;
-  --color: black;
-  --tab-moving-bg-color: #f5ffd3;
-  --tab-bar-bg-color: #eee;
-  --tab-splitter-bg-color: #b6b6b6;
-  --tab-move-hover-color: #7dd0db;
-  --spector2-step-even-bg-color: #eee;
+  --spector2-bg-color: white;
+  --spector2-color: black;
+  --spector2-tab-moving-bg-color: #f5ffd3;
+  --spector2-tab-bar-bg-color: #eee;
+  --spector2-tab-splitter-bg-color: #b6b6b6;
+  --spector2-tab-move-hover-color: #7dd0db;
+  --spector2-cmd-selected-bg-color: #46C;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg-color: #333;
-    --color: white;
-    --tab-bar-bg-color: #555;
-    --spector2-step-even-bg-color: #222;
+    --spector2-bg-color: #333;
+    --spector2-color: white;
+    --spector2-tab-bar-bg-color: #555;
+    --spector2-cmd-arg-bg-color: #444;
+    --spector2-cmd-selected-bg-color: #468;
   }
 }
 
 .spector2 {
-  position: fixed;
   font-family: monospace;
   font-size: medium;
-  right: 0;
-  top: 0;
-  width: 50%;
-  height: 100%;
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  background-color: var(--bg-color);
-  color: var(--color);
 }
 .spector2 * {
   box-sizing: inherit;
   font-family: inherit;
   font-size: inherit;
-}
-
-.spector2-viz {
-  height: 100%;
-  overflow: auto;
 }
