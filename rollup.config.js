@@ -10,7 +10,36 @@ import serve from "rollup-plugin-serve";
 
 const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
 
+const plugins = [
+  resolve({
+    browser: true,
+  }),
+  typescript({ tsconfig: "./tsconfig.json" }),
+];
+
 export default [
+  {
+    input: "src/capture/registry.ts",
+    output: [
+      {
+        file: "dist/capture.js",
+        format: "esm",
+        sourcemap: true,
+      },
+    ],
+    plugins,
+  },
+  {
+    input: "src/replay/lib.ts",
+    output: [
+      {
+        file: "dist/replay.js",
+        format: "esm",
+        sourcemap: true,
+      },
+    ],
+    plugins,
+  },
   {
     input: "src/ui/index.ts",
     output: [
@@ -52,8 +81,6 @@ export default [
         extract: "styles.css",
       }),
       serve({
-        open: true,
-        openPage: '/example/',
         verbose: true,
         contentBase: [""],
         host: "localhost",

@@ -4,7 +4,7 @@ import {
   CommandArgs,
   QueueSubmitArgs,
   Replay,
-} from "../../../replay/lib";
+} from "../../fudge";
 
 import "./StepsVis.css";
 

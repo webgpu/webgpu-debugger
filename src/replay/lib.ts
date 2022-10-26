@@ -1,10 +1,10 @@
-async function loadReplay(trace) {
+export async function loadReplay(trace) {
     const replay = new Replay();
     await replay.load(trace);
     return replay;
 }
 
-class Replay {
+export class Replay {
     constructor() {
     }
 

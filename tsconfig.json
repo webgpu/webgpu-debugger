@@ -13,7 +13,8 @@
     "forceConsistentCasingInFileNames": true,
     "declaration": true,
     "declarationDir": "types",
-    "emitDeclarationOnly": true
+    "emitDeclarationOnly": true,
+    "typeRoots": [ "./node_modules/@webgpu/types", "./node_modules/@types"],
   },
   "exclude": ["node_modules", "**/*stories", "**/*types"]
 }

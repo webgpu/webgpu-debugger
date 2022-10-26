@@ -2,8 +2,6 @@
 <html>
 <head>
     <title>Bones and Morph Babylon.js scene for development.</title>
-    <script src="../capture/registry.js"></script>
-    <script src="../replay/lib.js"></script>
 
     <script src="https://assets.babylonjs.com/generated/Assets.js"></script>
     <script src="https://preview.babylonjs.com/ammo.js"></script>
@@ -31,7 +29,10 @@
 <canvas id="renderCanvas"></canvas>
 <canvas id="captureCanvas" width=1 height=1></canvas>
 
-<script>
+<script type="module">
+import {spector2} from "/dist/capture.js";
+import {loadReplay} from "/dist/replay.js";
+
 async function createEngine(canvas) { 
     const engine = new BABYLON.WebGPUEngine(canvas);
     await engine.initAsync();
@@ -75,9 +76,7 @@ async function runBabylonScene() {
 
     await scene.whenReadyAsync(true);
 }
-</script>
 
-<script>
 async function run() {
     await runBabylonScene();
 

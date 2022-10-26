@@ -1,7 +1,7 @@
 import React from "react";
 import StepsVis from "../views/StepsVis/StepsVis";
 import ResultVis from "../views/ResultVis/ResultVis";
-import { Replay } from "../../replay/lib";
+import { Replay } from "../fudge";
 
 export type PaneComponent = React.FunctionComponent<{ data: any; }> | React.ComponentClass<{ data: any; }>;
 type ViewData = {
