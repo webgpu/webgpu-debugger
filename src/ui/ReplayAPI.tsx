@@ -1,4 +1,4 @@
-import { Replay } from '../replay/lib';
+import { Replay } from './fudge';
 
 interface ReplayAPI {
     /**
