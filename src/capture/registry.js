@@ -1291,9 +1291,9 @@ class TextureState extends BaseState {
             const encoder = this.device.webgpuObject.createCommandEncoder();
 
             for (let mip = 0; mip < this.mipLevelCount; mip++) {
-                const width = Math.max(1, this.size.width >> mip);
-                const height = Math.max(1, this.size.height >> mip);
-                const depthOrArrayLayers = this.size.depthOrArrayLayers; // TODO support 3D.
+                const width = Math.max(1, (this.size.width || 1) >> mip);
+                const height = Math.max(1, (this.size.height || 1) >> mip);
+                const depthOrArrayLayers = (this.size.depthOrArrayLayers || 1); // TODO support 3D.
                 const bytesPerRow = align(width * formatInfo.blockByteSize, kBytesPerRowAlignment);
                 const bufferSize = bytesPerRow * height * depthOrArrayLayers;
 
