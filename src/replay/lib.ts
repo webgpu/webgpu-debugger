@@ -1,3 +1,5 @@
+import { dimensionsFromGPUExtent3D } from "../lib/utils";
+
 export async function loadReplay(trace) {
     const replay = new Replay();
     await replay.load(trace);
@@ -529,9 +531,10 @@ class ReplayTexture extends ReplayObject {
         for (const subresource of initialData) {
             const data = this.replay.getData(subresource.data);
             const mip = subresource.mipLevel;
-            const width = Math.max(1, this.size.width >> mip);
-            const height = Math.max(1, this.size.height >> mip);
-            const depthOrArrayLayers = this.size.depthOrArrayLayers; // TODO support 3D.
+            const [w, h, d] = dimensionsFromGPUExtent3D(this.size);
+            const width = Math.max(1, w >> mip);
+            const height = Math.max(1, h >> mip);
+            const depthOrArrayLayers = d; // TODO support 3D.
 
             this.device.webgpuObject.queue.writeTexture({
                 texture: this.webgpuObject,

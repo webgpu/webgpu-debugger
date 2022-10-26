@@ -1,3 +1,5 @@
+import { dimensionsFromGPUExtent3D } from "../lib/utils";
+
 class ObjectRegistry {
     constructor() {
         this.dataMap = new WeakMap();
@@ -1292,9 +1294,10 @@ class TextureState extends BaseState {
             const encoder = this.device.webgpuObject.createCommandEncoder();
 
             for (let mip = 0; mip < this.mipLevelCount; mip++) {
-                const width = Math.max(1, this.size.width >> mip);
-                const height = Math.max(1, this.size.height >> mip);
-                const depthOrArrayLayers = this.size.depthOrArrayLayers; // TODO support 3D.
+                const [w, h, d] = dimensionsFromGPUExtent3D(this.size);
+                const width = Math.max(1, w >> mip);
+                const height = Math.max(1, h >> mip);
+                const depthOrArrayLayers = d;
                 const bytesPerRow = align(width * formatInfo.blockByteSize, kBytesPerRowAlignment);
                 const bufferSize = bytesPerRow * height * depthOrArrayLayers;
 
