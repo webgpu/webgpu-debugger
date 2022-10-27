@@ -102,7 +102,7 @@ module.exports = {
     },
     overrides: [
         {
-            files: ['*.ts', '*.tsx'],
+            files: ['*.ts', '*.tsx', 'src/samples/**/*', 'example/**/*'],
             rules: {
                 'no-undef': 'off',
             },
