@@ -30,6 +30,7 @@
 <body>
 <canvas id="renderCanvas"></canvas>
 <canvas id="captureCanvas" width=1 height=1></canvas>
+<button id="nextCommandButton">Next Command</button>
 
 <script>
 async function createEngine(canvas) { 
@@ -83,20 +84,23 @@ async function run() {
 
     spector2.traceFrame().then(async (trace) => {
         // Trace the frame and set up the replay.
-        console.log(trace);
         spector2.revertEntryPoints();
         const replay = await loadReplay(trace);
-        console.log(replay);
+        const allCommands = Array.from(replay.iterateCommands());
+        console.log(allCommands);
 
-        // Go through each command, and show the presented texture of the trace on the capture canvas.
+        // Go through each command, and show the hack texture.
         const captureCanvas = document.getElementById('captureCanvas');
         const context = captureCanvas.getContext('webgpu');
 
-        for (const c of replay.commands) {
-            replay.execute(c);
+        let i = 0;
+        document.getElementById('nextCommandButton').onclick = () => {
+            const command = allCommands[i];
+            replay.replayTo(command.path);
 
-            if (c.name === 'present') {
-                const textureState = c.args.texture;
+            console.log(command.command.name);
+            if (replay.textureStateToShow) {
+                const textureState = replay.textureStateToShow;
                 const device = textureState.device.webgpuObject;
 
                 captureCanvas.width = textureState.size.width;
@@ -116,7 +120,9 @@ async function run() {
                 );
                 device.queue.submit([encoder.finish()]);
             }
-        }
+
+            i++
+        };
     });
 }
 

@@ -108,6 +108,11 @@ class Replay {
                     c.texture = this.textures[c.textureSerial];
                     delete c.textureSerial;
                     break;
+                case 'bufferUpdateData':
+                case 'bufferUnmap':
+                    c.buffer = this.buffers[c.bufferSerial];
+                    delete c.bufferSerial;
+                    break;
                 default:
                     console.assert(false, `Unhandled command type '${c.name}'`);
             }
@@ -157,6 +162,55 @@ class Replay {
                 console.assert(false, `Unhandled command type '${c.name}'`);
         }
     }
+
+    *iterateCommands() {
+        // Return index, command
+        for (let i = 0; i < this.commands.length; i++) {
+            const c = this.commands[i];
+            switch (c.name) {
+                case 'queueWriteBuffer':
+                case 'queueWriteTexture':
+                case 'present':
+                case 'textureDestroy':
+                case 'bufferUpdateData':
+                case 'bufferUnmap':
+                    yield {path: [i], command : c};
+                    break;
+
+                case 'queueSubmit':
+                    for (let j in c.args.commandBuffers) {
+                        yield* c.args.commandBuffers[j].iterateCommands([i, j]);
+                    }
+                    break;
+
+                default:
+                    console.assert(false, `Unhandled command type '${c.name}'`);
+            }
+        }
+    }
+
+    endPath() {
+        return [this.commands.length];
+    }
+
+    replayTo(path) {
+        // TODO resetState
+        path = path.slice();
+        const replayLevel = path.shift();
+        for (let i = 0; i <= replayLevel; i++) {
+            const c = this.commands[i];
+            if (c.name == 'queueSubmit') {
+                if (i == replayLevel) {
+                    c.queue.replaySubmitTo(path, c.args.commandBuffers);
+                } else {
+                    c.queue.executeSubmit(c.args.commandBuffers);
+                }
+            } else {
+                // TODO fold executeCommand here.
+                this.execute(c);
+            }
+        }
+    }
 }
 
 class ReplayObject {
@@ -176,10 +230,184 @@ class ReplayAdapter extends ReplayObject {
     }
 }
 
+class ReplayRenderPass extends ReplayObject {
+    constructor(replay, desc) {
+        super(replay, desc);
+        this.commands = [];
+    }
+
+    consumeCommands(beginRenderPassCommand, commandIterator) {
+        console.assert(this.commands.length === 0);
+        this.commands.push(beginRenderPassCommand);
+
+        for (const command of commandIterator) {
+            const c = window.structuredClone(command);
+            switch (c.name) {
+                case 'endPass':
+                    this.commands.push(c);
+                    return;
+
+                case 'setBindGroup':
+                    c.args.bindGroup = this.replay.bindGroups[c.args.bindGroupSerial];
+                    delete c.args.bindGroupSerial;
+                    break;
+                case 'setIndexBuffer':
+                    c.args.buffer = this.replay.buffers[c.args.bufferSerial];
+                    delete c.args.bufferSerial;
+                    break;
+                case 'setPipeline':
+                    c.args.pipeline = this.replay.renderPipelines[c.args.pipelineSerial];
+                    delete c.args.pipelineSerial;
+                    break;
+                case 'setVertexBuffer':
+                    c.args.buffer = this.replay.buffers[c.args.bufferSerial];
+                    delete c.args.bufferSerial;
+                    break;
+                case 'draw':
+                case 'drawIndexed':
+                    break;
+                case 'setViewport':
+                case 'pushDebugGroup':
+                case 'popDebugGroup':
+                    break;
+                default:
+                    console.assert(false, `Unhandled render pass command type '${c.name}'`);
+            }
+            this.commands.push(c);
+        }
+
+        console.assert(false, `BeginRenderPass command doesn't have an associated EndPass.`);
+    }
+
+    encodeIn(encoder) {
+        this.encodeUpTo([this.commands.length - 1], encoder);
+    }
+
+    encodeUpTo(path, encoder) {
+        const commandIndex = path.shift();
+        if (commandIndex == 0) {
+            return;
+        }
+
+        console.assert(this.commands[0].name === 'beginRenderPass');
+        console.assert(this.commands[this.commands.length - 1].name === 'endPass');
+
+        const renderPassDesc = this.commands[0].args;
+        const renderPass = encoder.beginRenderPass(renderPassDesc);
+        let renderPassEnded = false;
+
+        if (commandIndex != this.commands.length) {
+            for (const a of (renderPassDesc.colorAttachments ?? [])) {
+                if (a.storeOp === 'discard') {
+                    console.warning('Don\'t know how to turn discard into stores yet')
+                }
+            }
+            const ds = renderPassDesc.depthStencilAttachment;
+            if (ds) {
+                if (ds.stencilStoreOp === 'discard' || ds.depthStoreOp === 'discard') {
+                    console.warning('Don\'t know how to turn discard into stores yet')
+                }
+            }
+        }
+
+        // HAAAAACK
+        const a = renderPassDesc.colorAttachments[0];
+        if (a.resolveTarget) {
+            this.replay.textureStateToShow = a.resolveTargetState.texture;
+        } else {
+            this.replay.textureStateToShow = a.viewState.texture;
+        }
+
+        for (let i = 1; i <= commandIndex; i++) {
+            const c = this.commands[i];
+            switch (c.name) {
+                case 'copyBufferToTexture':
+                    encoder.copyBufferToTexture(c.args.source, c.args.destination, c.args.copySize);
+                    break;
+                case 'copyTextureToTexture':
+                    encoder.copyTextureToTexture(c.args.source, c.args.destination, c.args.copySize);
+                    break;
+                case 'draw':
+                    renderPass.draw(c.args.vertexCount, c.args.instanceCount, c.args.firstVertex, c.args.firstInstance);
+                    break;
+                case 'drawIndexed':
+                    renderPass.drawIndexed(c.args.indexCount, c.args.instanceCount, c.args.firstIndex, c.args.baseVertex, c.args.firstInstance);
+                    break;
+                case 'endPass':
+                    renderPass.end();
+                    renderPassEnded = true;
+                    break;
+                case 'popDebugGroup':
+                    renderPass.popDebugGroup();
+                    break;
+                case 'pushDebugGroup':
+                    renderPass.pushDebugGroup(c.args.groupLabel);
+                    break;
+                case 'setBindGroup':
+                    renderPass.setBindGroup(c.args.index, c.args.bindGroup.webgpuObject, c.dynamicOffsets);
+                    break;
+                case 'setIndexBuffer':
+                    renderPass.setIndexBuffer(c.args.buffer.webgpuObject, c.args.indexFormat, c.args.offset, c.args.size);
+                    break;
+                case 'setPipeline':
+                    renderPass.setPipeline(c.args.pipeline.webgpuObject);
+                    break;
+                case 'setVertexBuffer':
+                    renderPass.setVertexBuffer(c.args.slot, c.args.buffer.webgpuObject, c.args.offset, c.args.size);
+                    break;
+                case 'setViewport':
+                    renderPass.setViewport(c.args.x, c.args.y, c.args.width, c.args.height, c.args.minDepth, c.args.maxDepth);
+                    break;
+                default:
+                    console.assert(false, `Unhandled render pass command type '${c.name}'`);
+            }
+        }
+
+        if (!renderPassEnded) {
+            renderPass.end();
+        }
+    }
+
+    *iterateCommands([i, j, k]) {
+        for (let l = 0; l < this.commands.length; l++) {
+            const c = this.commands[l];
+            switch (c.name) {
+                case 'beginRenderPass':
+                case 'copyBufferToTexture':
+                case 'copyTextureToTexture':
+                case 'draw':
+                case 'drawIndexed':
+                case 'endPass':
+                case 'popDebugGroup':
+                case 'pushDebugGroup':
+                case 'setBindGroup':
+                case 'setIndexBuffer':
+                case 'setPipeline':
+                case 'setVertexBuffer':
+                case 'setViewport':
+                    yield {path: [i, j, k, l], command: c};
+                    break;
+                default:
+                    console.assert(false, `Unhandled render pass command type '${c.name}'`);
+            }
+        }
+    }
+}
+
 class ReplayCommandBuffer extends ReplayObject {
     constructor(replay, desc) {
         super(replay, desc);
-        this.commands = desc.commands.map(command => {
+        this.commands = [];
+
+        const commandIterator = desc.commands.values();
+        this.consumeCommands(commandIterator);
+        console.assert(commandIterator.next().done);
+    }
+
+    consumeCommands(commandIterator) {
+        console.assert(this.commands.length === 0);
+
+        for (const command of commandIterator) {
             const c = window.structuredClone(command);
             switch (c.name) {
                 case 'beginRenderPass': {
@@ -214,24 +442,12 @@ class ReplayCommandBuffer extends ReplayObject {
                         delete c.args.occlusionQuerySetSerial;
                     }
 
-                    break;
+                    // Special case, add a pseudo-command that's a whole render pass command.
+                    const rp = new ReplayRenderPass(this.replay, c.args);
+                    rp.consumeCommands(c, commandIterator);
+                    this.commands.push({name: 'renderPass', renderPass: rp});
+                    continue;
                 }
-                case 'setBindGroup':
-                    c.args.bindGroup = this.replay.bindGroups[c.args.bindGroupSerial];
-                    delete c.args.bindGroupSerial;
-                    break;
-                case 'setIndexBuffer':
-                    c.args.buffer = this.replay.buffers[c.args.bufferSerial];
-                    delete c.args.bufferSerial;
-                    break;
-                case 'setPipeline':
-                    c.args.pipeline = this.replay.renderPipelines[c.args.pipelineSerial];
-                    delete c.args.pipelineSerial;
-                    break;
-                case 'setVertexBuffer':
-                    c.args.buffer = this.replay.buffers[c.args.bufferSerial];
-                    delete c.args.bufferSerial;
-                    break;
                 case 'copyBufferToTexture':
                     c.args.source.bufferState = this.replay.buffers[c.args.source.bufferSerial];
                     c.args.source.buffer = c.args.source.bufferState.webgpuObject;
@@ -248,26 +464,31 @@ class ReplayCommandBuffer extends ReplayObject {
                     c.args.destination.texture = c.args.destination.textureState.webgpuObject;
                     delete c.args.destination.texture;
                     break;
-                case 'setViewport':
-                case 'draw':
-                case 'drawIndexed':
-                case 'endPass':
                 case 'pushDebugGroup':
                 case 'popDebugGroup':
                     break;
                 default:
-                    console.assert(false, `Unhandled command type '${c.name}'`);
+                    console.assert(false, `Unhandled command encoder command '${c.name}'`);
             }
-            return c;
-        });
+            this.commands.push(c);
+        }
     }
 
     encodeIn(encoder) {
-        let renderPass = null;
-        for (const c of this.commands) {
+        this.encodeUpTo([this.commands.length - 1], encoder);
+    }
+
+    encodeUpTo(path, encoder) {
+        const commandIndex = path.shift();
+        for (let i = 0; i <= commandIndex; i++) {
+            const c = this.commands[i];
             switch (c.name) {
-                case 'beginRenderPass':
-                    renderPass = encoder.beginRenderPass(c.args);
+                case 'renderPass':
+                    if (i === commandIndex) {
+                        c.renderPass.encodeUpTo(path, encoder);
+                    } else {
+                        c.renderPass.encodeIn(encoder);
+                    }
                     break;
                 case 'copyBufferToTexture':
                     encoder.copyBufferToTexture(c.args.source, c.args.destination, c.args.copySize);
@@ -275,47 +496,34 @@ class ReplayCommandBuffer extends ReplayObject {
                 case 'copyTextureToTexture':
                     encoder.copyTextureToTexture(c.args.source, c.args.destination, c.args.copySize);
                     break;
-                case 'draw':
-                    renderPass.draw(c.args.vertexCount, c.args.instanceCount, c.args.firstVertex, c.args.firstInstance);
-                    break;
-                case 'drawIndexed':
-                    renderPass.drawIndexed(c.args.indexCount, c.args.instanceCount, c.args.firstIndex, c.args.baseVertex, c.args.firstInstance);
-                    break;
-                case 'endPass':
-                    renderPass.end();
-                    renderPass = null;
-                    break;
                 case 'popDebugGroup':
-                    if (renderPass !== undefined) {
-                        renderPass.popDebugGroup();
-                    } else {
-                        encoder.popDebugGroup();
-                    }
+                    encoder.popDebugGroup();
                     break;
                 case 'pushDebugGroup':
-                    if (renderPass !== undefined) {
-                        renderPass.pushDebugGroup(c.args.groupLabel);
-                    } else {
-                        encoder.pushDebugGroup(c.args.groupLabel);
-                    }
-                    break;
-                case 'setBindGroup':
-                    renderPass.setBindGroup(c.args.index, c.args.bindGroup.webgpuObject, c.dynamicOffsets);
-                    break;
-                case 'setIndexBuffer':
-                    renderPass.setIndexBuffer(c.args.buffer.webgpuObject, c.args.indexFormat, c.args.offset, c.args.size);
-                    break;
-                case 'setPipeline':
-                    renderPass.setPipeline(c.args.pipeline.webgpuObject);
-                    break;
-                case 'setVertexBuffer':
-                    renderPass.setVertexBuffer(c.args.slot, c.args.buffer.webgpuObject, c.args.offset, c.args.size);
-                    break;
-                case 'setViewport':
-                    renderPass.setViewport(c.args.x, c.args.y, c.args.width, c.args.height, c.args.minDepth, c.args.maxDepth);
+                    encoder.pushDebugGroup(c.args.groupLabel);
                     break;
                 default:
-                    console.assert(false, `Unhandled command type '${c.name}'`);
+                    console.assert(false, `Unhandled command encoder command type '${c.name}'`);
+            }
+        }
+    }
+
+    *iterateCommands([i, j]) {
+        for (let k = 0; k < this.commands.length; k++) {
+            const c = this.commands[k];
+            switch (c.name) {
+                case 'renderPass':
+                    yield* c.renderPass.iterateCommands([i, j, k]);
+                    break;
+
+                case 'copyBufferToTexture':
+                case 'copyTextureToTexture':
+                case 'popDebugGroup':
+                case 'pushDebugGroup':
+                    yield {path: [i, j, k], command: c};
+                    break;
+                default:
+                    console.assert(false, `Unhandled command encoder command type '${c.name}'`);
             }
         }
     }
@@ -429,6 +637,16 @@ class ReplayQueue extends ReplayObject {
         for (const commandBuffer of commandBuffers) {
             commandBuffer.encodeIn(encoder);
         }
+        this.webgpuObject.submit([encoder.finish()]);
+    }
+
+    replaySubmitTo(path, commandBuffers) {
+        const commandBufferIndex = path.shift();
+        const encoder = this.device.webgpuObject.createCommandEncoder();
+        for (let i = 0; i < commandBufferIndex - 1; i++) {
+            commandBuffers[commandBufferIndex].encodeIn(encoder);
+        }
+        commandBuffers[commandBufferIndex].encodeUpTo(path, encoder);
         this.webgpuObject.submit([encoder.finish()]);
     }
 }

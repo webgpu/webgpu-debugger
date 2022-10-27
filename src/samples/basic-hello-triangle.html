@@ -109,6 +109,10 @@ async function run() {
                 device.queue.submit([encoder.finish()]);
             }
         }
+
+        for (const c of replay.iterateCommands()) {
+            console.log(c);
+        }
     });
 
     requestAnimationFrame(frame);
