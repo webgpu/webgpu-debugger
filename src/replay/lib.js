@@ -105,8 +105,8 @@ class Replay {
                     delete c.args.textureSerial;
                     break;
                 case 'textureDestroy':
-                    c.args.texture = this.textures[c.args.textureSerial];
-                    delete c.args.textureSerial;
+                    c.texture = this.textures[c.textureSerial];
+                    delete c.textureSerial;
                     break;
                 default:
                     console.assert(false, `Unhandled command type '${c.name}'`);
