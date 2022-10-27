@@ -99,4 +99,12 @@ module.exports = {
         strict: [2, 'function'],
         yoda: [2, 'never'],
     },
+    overrides: [
+        {
+            files: ['*.ts', '*.tsx'],
+            rules: {
+                'no-undef': 'off',
+            },
+        },
+    ],
 };
