@@ -98,6 +98,7 @@ module.exports = {
         'space-unary-ops': [2, { words: true, nonwords: false }],
         strict: [2, 'function'],
         yoda: [2, 'never'],
+        '@typescript-eslint/no-empty-function': 'off',
     },
     overrides: [
         {
