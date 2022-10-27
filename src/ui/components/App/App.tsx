@@ -1,17 +1,20 @@
 import React from 'react';
 import Debugger from '../Debugger/Debugger';
 import MiniUI from '../MiniUI/MiniUI';
-import { uiState, UIStateContext } from '../../contexts/UIStateContext';
+import { UIStateHelper, UIStateContext } from '../../contexts/UIStateContext';
 import './App.css';
 
+interface IProps {
+    uiState: UIStateHelper;
+}
 interface IState {
     id: number;
 }
 
-class App extends React.Component<null, IState> {
+class App extends React.Component<IProps, IState> {
     declare context: React.ContextType<typeof UIStateContext>;
 
-    constructor(props: null) {
+    constructor(props: IProps) {
         super(props);
         this.state = { id: 0 };
     }
@@ -22,6 +25,7 @@ class App extends React.Component<null, IState> {
         });
     }
     render() {
+        const { uiState } = this.props;
         return (
             <UIStateContext.Provider value={uiState}>
                 <div className="spector2">{uiState.fullUI ? <Debugger /> : <MiniUI />}</div>
