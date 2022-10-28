@@ -1152,11 +1152,11 @@ class RenderPipelineState extends BaseState {
         const result = {
             deviceSerial: this.device.traceSerial,
             layout: this.layout,
-            vertex: this.vertex,
+            vertex: {...this.vertex},
             primitive: this.primitive,
             multisample: this.multisample,
             depthStencil: this.depthStencil,
-            fragment: this.fragment,
+            fragment: {...this.fragment},
         };
 
         if (result.layout !== 'auto') {
