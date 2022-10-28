@@ -5,8 +5,7 @@ export async function loadReplay(trace) {
 }
 
 export class Replay {
-    constructor() {
-    }
+    constructor() {}
 
     async load(trace) {
         async function recreateObjectsAsync(replay, Class, descMap) {
@@ -135,7 +134,11 @@ export class Replay {
 
             case 'queueWriteBuffer': {
                 const dataBuf = this.getData(command.args.data);
-                command.queue.webgpuObject.writeBuffer(command.args.buffer.webgpuObject, command.args.bufferOffset, dataBuf);
+                command.queue.webgpuObject.writeBuffer(
+                    command.args.buffer.webgpuObject,
+                    command.args.bufferOffset,
+                    dataBuf
+                );
                 break;
             }
 
@@ -144,7 +147,7 @@ export class Replay {
                 command.queue.webgpuObject.writeTexture(
                     command.args.destination,
                     dataBuf,
-                    {... command.args.dataLayout, offset: 0},
+                    { ...command.args.dataLayout, offset: 0 },
                     command.args.size
                 );
                 break;
@@ -199,8 +202,8 @@ export class Replay {
         const replayLevel = path.shift();
         for (let i = 0; i <= replayLevel; i++) {
             const c = this.commands[i];
-            if (c.name == 'queueSubmit') {
-                if (i == replayLevel) {
+            if (c.name === 'queueSubmit') {
+                if (i === replayLevel) {
                     c.queue.replaySubmitTo(path, c.args.commandBuffers);
                 } else {
                     c.queue.executeSubmit(c.args.commandBuffers);
@@ -216,7 +219,7 @@ export class Replay {
 class ReplayObject {
     constructor(replay, desc) {
         this.replay = replay;
-        this.label = desc.label ?? "";
+        this.label = desc.label ?? '';
     }
 }
 
@@ -285,7 +288,7 @@ class ReplayRenderPass extends ReplayObject {
 
     encodeUpTo(path, encoder) {
         const commandIndex = path.shift();
-        if (commandIndex == 0) {
+        if (commandIndex === 0) {
             return;
         }
 
@@ -296,16 +299,16 @@ class ReplayRenderPass extends ReplayObject {
         const renderPass = encoder.beginRenderPass(renderPassDesc);
         let renderPassEnded = false;
 
-        if (commandIndex != this.commands.length) {
-            for (const a of (renderPassDesc.colorAttachments ?? [])) {
+        if (commandIndex !== this.commands.length) {
+            for (const a of renderPassDesc.colorAttachments ?? []) {
                 if (a.storeOp === 'discard') {
-                    console.warning('Don\'t know how to turn discard into stores yet')
+                    console.warning("Don't know how to turn discard into stores yet");
                 }
             }
             const ds = renderPassDesc.depthStencilAttachment;
             if (ds) {
                 if (ds.stencilStoreOp === 'discard' || ds.depthStoreOp === 'discard') {
-                    console.warning('Don\'t know how to turn discard into stores yet')
+                    console.warning("Don't know how to turn discard into stores yet");
                 }
             }
         }
@@ -331,7 +334,13 @@ class ReplayRenderPass extends ReplayObject {
                     renderPass.draw(c.args.vertexCount, c.args.instanceCount, c.args.firstVertex, c.args.firstInstance);
                     break;
                 case 'drawIndexed':
-                    renderPass.drawIndexed(c.args.indexCount, c.args.instanceCount, c.args.firstIndex, c.args.baseVertex, c.args.firstInstance);
+                    renderPass.drawIndexed(
+                        c.args.indexCount,
+                        c.args.instanceCount,
+                        c.args.firstIndex,
+                        c.args.baseVertex,
+                        c.args.firstInstance
+                    );
                     break;
                 case 'endPass':
                     renderPass.end();
@@ -347,7 +356,12 @@ class ReplayRenderPass extends ReplayObject {
                     renderPass.setBindGroup(c.args.index, c.args.bindGroup.webgpuObject, c.dynamicOffsets);
                     break;
                 case 'setIndexBuffer':
-                    renderPass.setIndexBuffer(c.args.buffer.webgpuObject, c.args.indexFormat, c.args.offset, c.args.size);
+                    renderPass.setIndexBuffer(
+                        c.args.buffer.webgpuObject,
+                        c.args.indexFormat,
+                        c.args.offset,
+                        c.args.size
+                    );
                     break;
                 case 'setPipeline':
                     renderPass.setPipeline(c.args.pipeline.webgpuObject);
@@ -356,7 +370,14 @@ class ReplayRenderPass extends ReplayObject {
                     renderPass.setVertexBuffer(c.args.slot, c.args.buffer.webgpuObject, c.args.offset, c.args.size);
                     break;
                 case 'setViewport':
-                    renderPass.setViewport(c.args.x, c.args.y, c.args.width, c.args.height, c.args.minDepth, c.args.maxDepth);
+                    renderPass.setViewport(
+                        c.args.x,
+                        c.args.y,
+                        c.args.width,
+                        c.args.height,
+                        c.args.minDepth,
+                        c.args.maxDepth
+                    );
                     break;
                 default:
                     console.assert(false, `Unhandled render pass command type '${c.name}'`);
@@ -385,7 +406,7 @@ class ReplayRenderPass extends ReplayObject {
                 case 'setPipeline':
                 case 'setVertexBuffer':
                 case 'setViewport':
-                    yield {path: [i, j, k, l], command: c};
+                    yield { path: [i, j, k, l], command: c };
                     break;
                 default:
                     console.assert(false, `Unhandled render pass command type '${c.name}'`);
@@ -445,7 +466,7 @@ class ReplayCommandBuffer extends ReplayObject {
                     // Special case, add a pseudo-command that's a whole render pass command.
                     const rp = new ReplayRenderPass(this.replay, c.args);
                     rp.consumeCommands(c, commandIterator);
-                    this.commands.push({name: 'renderPass', renderPass: rp});
+                    this.commands.push({ name: 'renderPass', renderPass: rp });
                     continue;
                 }
                 case 'copyBufferToTexture':
@@ -520,7 +541,7 @@ class ReplayCommandBuffer extends ReplayObject {
                 case 'copyTextureToTexture':
                 case 'popDebugGroup':
                 case 'pushDebugGroup':
-                    yield {path: [i, j, k], command: c};
+                    yield { path: [i, j, k], command: c };
                     break;
                 default:
                     console.assert(false, `Unhandled command encoder command type '${c.name}'`);
@@ -532,7 +553,7 @@ class ReplayCommandBuffer extends ReplayObject {
 class ReplayBuffer extends ReplayObject {
     constructor(replay, desc) {
         super(replay, desc);
-        this.device = this.replay.devices[desc.deviceSerial]
+        this.device = this.replay.devices[desc.deviceSerial];
         this.usage = desc.usage;
         this.size = desc.size;
         console.assert(desc.state === 'unmapped' || desc.state === 'mapped-at-creation');
@@ -557,7 +578,7 @@ class ReplayBindGroup extends ReplayObject {
         this.webgpuObject = this.device.webgpuObject.createBindGroup({
             layout: this.replay.bindGroupLayouts[desc.layoutSerial].webgpuObject,
             entries: desc.entries.map(e => {
-                const entry = {binding: e.binding};
+                const entry = { binding: e.binding };
                 if (e.textureViewSerial !== undefined) {
                     entry.resource = this.replay.textureViews[e.textureViewSerial].webgpuObject;
                 } else if (e.samplerSerial !== undefined) {
@@ -609,7 +630,7 @@ class ReplayDevice extends ReplayObject {
 class ReplayPipelineLayout extends ReplayObject {
     constructor(replay, desc) {
         super(replay, desc);
-        this.device = this.replay.devices[desc.deviceSerial]
+        this.device = this.replay.devices[desc.deviceSerial];
         this.webgpuObject = this.device.webgpuObject.createPipelineLayout({
             bindGroupLayouts: desc.bindGroupLayoutsSerial.map(s => this.replay.bindGroupLayouts[s].webgpuObject),
         });
@@ -628,7 +649,7 @@ class ReplayQuerySet extends ReplayObject {
 class ReplayQueue extends ReplayObject {
     constructor(replay, desc) {
         super(replay, desc);
-        this.device = this.replay.devices[desc.deviceSerial]
+        this.device = this.replay.devices[desc.deviceSerial];
         this.webgpuObject = this.device.webgpuObject.queue;
     }
 
@@ -678,7 +699,7 @@ class ReplayRenderPipeline extends ReplayObject {
         if (desc.fragment !== undefined) {
             localDesc.fragment = {
                 module: fsModule,
-                ...desc.fragment
+                ...desc.fragment,
             };
         }
         this.webgpuObject = await this.device.createRenderPipelineAsync(localDesc);
@@ -736,7 +757,7 @@ class ReplayTexture extends ReplayObject {
             return;
         }
         if (this.dimension !== '2d') {
-            console.warn('No support for dimension != \'2d\' texture initial data.');
+            console.warn("No support for dimension != '2d' texture initial data.");
             return;
         }
         //if (kTextureFormatInfo[this.format].type !== 'color') {
@@ -751,11 +772,14 @@ class ReplayTexture extends ReplayObject {
             const height = Math.max(1, this.size.height >> mip);
             const depthOrArrayLayers = this.size.depthOrArrayLayers; // TODO support 3D.
 
-            this.device.webgpuObject.queue.writeTexture({
-                texture: this.webgpuObject,
-                mipLevel: mip,
-            }, data, {bytesPerRow: subresource.bytesPerRow, rowsPerImage: height},
-                {width, height, depthOrArrayLayers}
+            this.device.webgpuObject.queue.writeTexture(
+                {
+                    texture: this.webgpuObject,
+                    mipLevel: mip,
+                },
+                data,
+                { bytesPerRow: subresource.bytesPerRow, rowsPerImage: height },
+                { width, height, depthOrArrayLayers }
             );
         }
     }
