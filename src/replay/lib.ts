@@ -214,6 +214,10 @@ export class Replay {
             }
         }
     }
+
+    getState() {
+        return this.state;
+    }
 }
 
 class ReplayObject {
@@ -313,6 +317,31 @@ class ReplayRenderPass extends ReplayObject {
             }
         }
 
+        console.assert(
+            renderPassDesc.colorAttachments[0]?.viewState,
+            'Computing render pass size currently requires the first color attachment to always be set.'
+        );
+        const firstAttachment = renderPassDesc.colorAttachments[0].viewState;
+        console.assert(firstAttachment.baseMipLevel === 0);
+        const state = {
+            viewport: {
+                x: 0,
+                y: 0,
+                width: firstAttachment.texture.size.width,
+                height: firstAttachment.texture.size.height,
+                minDepth: 0.0,
+                maxDepth: 1.0,
+            },
+            colorAttachments: renderPassDesc.colorAttachments.map(a => {
+                return { view: a.viewState, resolveTarget: a.resolveTargetState };
+            }),
+            depthStencilAttachment: { view: renderPassDesc.depthStencilAttachment?.viewState },
+            pipeline: null,
+            bindGroups: [],
+            vertexBuffers: [],
+            indexBuffer: { buffer: null, offset: 0, size: 0 },
+        };
+
         // HAAAAACK
         const a = renderPassDesc.colorAttachments[0];
         if (a.resolveTarget) {
@@ -324,12 +353,6 @@ class ReplayRenderPass extends ReplayObject {
         for (let i = 1; i <= commandIndex; i++) {
             const c = this.commands[i];
             switch (c.name) {
-                case 'copyBufferToTexture':
-                    encoder.copyBufferToTexture(c.args.source, c.args.destination, c.args.copySize);
-                    break;
-                case 'copyTextureToTexture':
-                    encoder.copyTextureToTexture(c.args.source, c.args.destination, c.args.copySize);
-                    break;
                 case 'draw':
                     renderPass.draw(c.args.vertexCount, c.args.instanceCount, c.args.firstVertex, c.args.firstInstance);
                     break;
@@ -354,6 +377,7 @@ class ReplayRenderPass extends ReplayObject {
                     break;
                 case 'setBindGroup':
                     renderPass.setBindGroup(c.args.index, c.args.bindGroup.webgpuObject, c.dynamicOffsets);
+                    state.bindGroups[c.args.index] = { group: c.args.bindGroup, dynamicOffsets: c.dynamicOffsets };
                     break;
                 case 'setIndexBuffer':
                     renderPass.setIndexBuffer(
@@ -362,12 +386,19 @@ class ReplayRenderPass extends ReplayObject {
                         c.args.offset,
                         c.args.size
                     );
+                    state.indexBuffer = { buffer: c.args.buffer, offset: c.args.offset, size: c.args.size };
                     break;
                 case 'setPipeline':
                     renderPass.setPipeline(c.args.pipeline.webgpuObject);
+                    state.pipeline = c.args.pipeline;
                     break;
                 case 'setVertexBuffer':
                     renderPass.setVertexBuffer(c.args.slot, c.args.buffer.webgpuObject, c.args.offset, c.args.size);
+                    state.vertexBuffers[c.args.slot] = {
+                        buffer: c.args.buffer,
+                        offset: c.args.offset,
+                        size: c.args.size,
+                    };
                     break;
                 case 'setViewport':
                     renderPass.setViewport(
@@ -378,6 +409,7 @@ class ReplayRenderPass extends ReplayObject {
                         c.args.minDepth,
                         c.args.maxDepth
                     );
+                    state.viewport = { ...c.args };
                     break;
                 default:
                     console.assert(false, `Unhandled render pass command type '${c.name}'`);
@@ -385,6 +417,7 @@ class ReplayRenderPass extends ReplayObject {
         }
 
         if (!renderPassEnded) {
+            this.replay.state = state;
             renderPass.end();
         }
     }
@@ -789,6 +822,7 @@ class ReplayTextureView extends ReplayObject {
     constructor(replay, desc) {
         super(replay, desc);
         this.texture = this.replay.textures[desc.textureSerial];
+        this.baseMipLevel = desc.baseMipLevel ?? 0;
         this.webgpuObject = this.texture.webgpuObject.createView({
             format: desc.format,
             dimension: desc.dimension,

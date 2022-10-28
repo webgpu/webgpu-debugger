@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>Bones and Morph Babylon.js scene for development.</title>
 
@@ -25,107 +26,111 @@
         }
     </style>
 </head>
+
 <body>
-<canvas id="renderCanvas"></canvas>
-<canvas id="captureCanvas" width=1 height=1></canvas>
-<button id="nextCommandButton">Next Command</button>
+    <canvas id="renderCanvas"></canvas>
+    <canvas id="captureCanvas" width=1 height=1></canvas>
+    <button id="nextCommandButton">Next Command</button>
 
-<script type="module">
-import {spector2} from "/dist/capture.js";
-import {loadReplay} from "/dist/replay.js";
+    <script type="module">
+        import { spector2 } from "/dist/capture.js";
+        import { loadReplay } from "/dist/replay.js";
 
-async function createEngine(canvas) { 
-    const engine = new BABYLON.WebGPUEngine(canvas);
-    await engine.initAsync();
-    return engine;
-};
-
-async function createScene(engine) {
-    // Create a scene.
-    const scene = new BABYLON.Scene(engine);
-
-    // Create a default skybox with an environment.
-    const hdrTexture = new BABYLON.CubeTexture("https://playground.babylonjs.com/textures/environment.env", scene);
-    const currentSkybox = scene.createDefaultSkybox(hdrTexture, true, 1000, 0.7);
-
-    // Append glTF model to scene.
-    await BABYLON.SceneLoader.AppendAsync("https://models.babylonjs.com/", "alien.glb", scene);
-
-    // Create a default arc rotate camera and light.
-    scene.createDefaultCameraOrLight(true, true, true);
-
-    // The default camera looks at the back of the asset.
-    // Rotate the camera by 180 degrees to the front of the asset.
-    scene.activeCamera.alpha += Math.PI;
-
-    return scene;
-};
-
-async function runBabylonScene() {
-    const canvas = document.getElementById("renderCanvas");
-    const engine = await createEngine(canvas);
-    const scene = await createScene(engine);
-
-    engine.runRenderLoop(() => {
-        scene.render();
-    });
-
-    // Resize
-    window.addEventListener("resize", function () {
-        engine.resize();
-    });
-
-    await scene.whenReadyAsync(true);
-}
-
-async function run() {
-    await runBabylonScene();
-
-    spector2.traceFrame().then(async (trace) => {
-        // Trace the frame and set up the replay.
-        spector2.revertEntryPoints();
-        const replay = await loadReplay(trace);
-        const allCommands = Array.from(replay.iterateCommands());
-        console.log(allCommands);
-
-        // Go through each command, and show the hack texture.
-        const captureCanvas = document.getElementById('captureCanvas');
-        const context = captureCanvas.getContext('webgpu');
-
-        let i = 0;
-        document.getElementById('nextCommandButton').onclick = () => {
-            const command = allCommands[i];
-            replay.replayTo(command.path);
-
-            console.log(command.command.name);
-            if (replay.textureStateToShow) {
-                const textureState = replay.textureStateToShow;
-                const device = textureState.device.webgpuObject;
-
-                captureCanvas.width = textureState.size.width;
-                captureCanvas.height = textureState.size.height;
-                context.configure({
-                    device,
-                    usage: GPUTextureUsage.COPY_DST,
-                    format: textureState.format,
-                    alphaMode: 'opaque',
-                });
-
-                const encoder = device.createCommandEncoder();
-                encoder.copyTextureToTexture(
-                    {texture: textureState.webgpuObject},
-                    {texture: context.getCurrentTexture()},
-                    textureState.size
-                );
-                device.queue.submit([encoder.finish()]);
-            }
-
-            i++
+        async function createEngine(canvas) {
+            const engine = new BABYLON.WebGPUEngine(canvas);
+            await engine.initAsync();
+            return engine;
         };
-    });
-}
 
-run();
-</script>
+        async function createScene(engine) {
+            // Create a scene.
+            const scene = new BABYLON.Scene(engine);
+
+            // Create a default skybox with an environment.
+            const hdrTexture = new BABYLON.CubeTexture("https://playground.babylonjs.com/textures/environment.env", scene);
+            const currentSkybox = scene.createDefaultSkybox(hdrTexture, true, 1000, 0.7);
+
+            // Append glTF model to scene.
+            await BABYLON.SceneLoader.AppendAsync("https://models.babylonjs.com/", "alien.glb", scene);
+
+            // Create a default arc rotate camera and light.
+            scene.createDefaultCameraOrLight(true, true, true);
+
+            // The default camera looks at the back of the asset.
+            // Rotate the camera by 180 degrees to the front of the asset.
+            scene.activeCamera.alpha += Math.PI;
+
+            return scene;
+        };
+
+        async function runBabylonScene() {
+            const canvas = document.getElementById("renderCanvas");
+            const engine = await createEngine(canvas);
+            const scene = await createScene(engine);
+
+            engine.runRenderLoop(() => {
+                scene.render();
+            });
+
+            // Resize
+            window.addEventListener("resize", function () {
+                engine.resize();
+            });
+
+            await scene.whenReadyAsync(true);
+        }
+
+        async function run() {
+            await runBabylonScene();
+
+            spector2.traceFrame().then(async (trace) => {
+                // Trace the frame and set up the replay.
+                spector2.revertEntryPoints();
+                const replay = await loadReplay(trace);
+                const allCommands = Array.from(replay.iterateCommands());
+
+                // Go through each command, and show the hack texture.
+                const captureCanvas = document.getElementById('captureCanvas');
+                const context = captureCanvas.getContext('webgpu');
+
+                let i = 0;
+                document.getElementById('nextCommandButton').onclick = () => {
+                    const command = allCommands[i];
+                    replay.replayTo(command.path);
+                    console.log(command.command.name);
+                    if (replay.getState()) {
+                        console.log(replay.getState());
+                    }
+
+                    if (replay.textureStateToShow) {
+                        const textureState = replay.textureStateToShow;
+                        const device = textureState.device.webgpuObject;
+
+                        captureCanvas.width = textureState.size.width;
+                        captureCanvas.height = textureState.size.height;
+                        context.configure({
+                            device,
+                            usage: GPUTextureUsage.COPY_DST,
+                            format: textureState.format,
+                            alphaMode: 'opaque',
+                        });
+
+                        const encoder = device.createCommandEncoder();
+                        encoder.copyTextureToTexture(
+                            { texture: textureState.webgpuObject },
+                            { texture: context.getCurrentTexture() },
+                            textureState.size
+                        );
+                        device.queue.submit([encoder.finish()]);
+                    }
+
+                    i++
+                };
+            });
+        }
+
+        run();
+    </script>
 </body>
+
 </html>
