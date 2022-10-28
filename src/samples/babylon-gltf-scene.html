@@ -30,25 +30,25 @@
 <canvas id="captureCanvas" width=1 height=1></canvas>
 
 <script type="module">
-import {spector2} from "/dist/capture.js";
-import {loadReplay} from "/dist/replay.js";
+import { spector2 } from '/dist/capture.js';
+import { loadReplay } from '/dist/replay.js';
 
-async function createEngine(canvas) { 
+async function createEngine(canvas) {
     const engine = new BABYLON.WebGPUEngine(canvas);
     await engine.initAsync();
     return engine;
-};
+}
 
 async function createScene(engine) {
     // Create a scene.
     const scene = new BABYLON.Scene(engine);
 
     // Create a default skybox with an environment.
-    const hdrTexture = new BABYLON.CubeTexture("https://playground.babylonjs.com/textures/environment.env", scene);
+    const hdrTexture = new BABYLON.CubeTexture('https://playground.babylonjs.com/textures/environment.env', scene);
     const currentSkybox = scene.createDefaultSkybox(hdrTexture, true, 1000, 0.7);
 
     // Append glTF model to scene.
-    await BABYLON.SceneLoader.AppendAsync("https://playground.babylonjs.com/scenes/BoomBox/", "BoomBox.gltf", scene);
+    await BABYLON.SceneLoader.AppendAsync('https://playground.babylonjs.com/scenes/BoomBox/', 'BoomBox.gltf', scene);
 
     // Create a default arc rotate camera and light.
     scene.createDefaultCameraOrLight(true, true, true);
@@ -58,10 +58,10 @@ async function createScene(engine) {
     scene.activeCamera.alpha += Math.PI;
 
     return scene;
-};
+}
 
 async function runBabylonScene() {
-    const canvas = document.getElementById("renderCanvas");
+    const canvas = document.getElementById('renderCanvas');
     const engine = await createEngine(canvas);
     const scene = await createScene(engine);
 
@@ -70,7 +70,7 @@ async function runBabylonScene() {
     });
 
     // Resize
-    window.addEventListener("resize", function () {
+    window.addEventListener('resize', function () {
         engine.resize();
     });
 
@@ -80,7 +80,7 @@ async function runBabylonScene() {
 async function run() {
     await runBabylonScene();
 
-    spector2.traceFrame().then(async (trace) => {
+    spector2.traceFrame().then(async trace => {
         // Trace the frame and set up the replay.
         console.log(trace);
         spector2.revertEntryPoints();
@@ -109,8 +109,8 @@ async function run() {
 
                 const encoder = device.createCommandEncoder();
                 encoder.copyTextureToTexture(
-                    {texture: textureState.webgpuObject},
-                    {texture: context.getCurrentTexture()},
+                    { texture: textureState.webgpuObject },
+                    { texture: context.getCurrentTexture() },
                     textureState.size
                 );
                 device.queue.submit([encoder.finish()]);

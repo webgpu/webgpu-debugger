@@ -7,14 +7,14 @@
 <canvas id="renderCanvas" width=400 height=400></canvas>
 <canvas id="captureCanvas" width=1 height=1></canvas>
 <script type="module">
-import {spector2} from "/dist/capture.js";
-import {loadReplay} from "/dist/replay.js";
+import { spector2 } from '/dist/capture.js';
+import { loadReplay } from '/dist/replay.js';
 
 async function run() {
     const adapter = await navigator.gpu.requestAdapter();
     const device = await adapter.requestDevice();
 
-    const context = document.getElementById("renderCanvas").getContext('webgpu');
+    const context = document.getElementById('renderCanvas').getContext('webgpu');
     const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
     context.configure({
         device,
@@ -51,19 +51,21 @@ async function run() {
         fragment: {
             module,
             entryPoint: 'fs',
-            targets: [{format: presentationFormat}],
+            targets: [{ format: presentationFormat }],
         },
     });
 
     function frame() {
         const encoder = device.createCommandEncoder();
         const pass = encoder.beginRenderPass({
-            colorAttachments: [{
-                view: context.getCurrentTexture().createView(),
-                clearValue: [0.0, 0.0, 0.0, 0.0],
-                loadOp: 'clear',
-                storeOp: 'store',
-            }]
+            colorAttachments: [
+                {
+                    view: context.getCurrentTexture().createView(),
+                    clearValue: [0.0, 0.0, 0.0, 0.0],
+                    loadOp: 'clear',
+                    storeOp: 'store',
+                },
+            ],
         });
         pass.setPipeline(pipeline);
         pass.draw(3);
@@ -74,7 +76,7 @@ async function run() {
         requestAnimationFrame(frame);
     }
 
-    spector2.traceFrame().then(async (trace) => {
+    spector2.traceFrame().then(async trace => {
         // Trace the frame and set up the replay.
         console.log(trace);
         spector2.revertEntryPoints();
@@ -103,8 +105,8 @@ async function run() {
 
                 const encoder = device.createCommandEncoder();
                 encoder.copyTextureToTexture(
-                    {texture: textureState.webgpuObject},
-                    {texture: context.getCurrentTexture()},
+                    { texture: textureState.webgpuObject },
+                    { texture: context.getCurrentTexture() },
                     textureState.size
                 );
                 device.queue.submit([encoder.finish()]);

@@ -30,97 +30,104 @@
 <canvas id="captureCanvas" width=1 height=1></canvas>
 
 <script type="module">
-import {spector2} from "/dist/capture.js";
-import {loadReplay} from "/dist/replay.js";
+import { spector2 } from '/dist/capture.js';
+import { loadReplay } from '/dist/replay.js';
 
-async function createEngine(canvas) { 
+async function createEngine(canvas) {
     const engine = new BABYLON.WebGPUEngine(canvas);
     await engine.initAsync();
     return engine;
-};
+}
 
 async function createScene(engine) {
     const scene = new BABYLON.Scene(engine);
 
-	// Setup environment
-	const camera = new BABYLON.ArcRotateCamera("Camera", 0, 0.8, 90, BABYLON.Vector3.Zero(), scene);
-	camera.lowerBetaLimit = 0.1;
-	camera.upperBetaLimit = (Math.PI / 2) * 0.9;
-	camera.lowerRadiusLimit = 1;
-	camera.upperRadiusLimit = 150;
-	camera.attachControl(engine.getRenderingCanvas(), true);
+    // Setup environment
+    const camera = new BABYLON.ArcRotateCamera('Camera', 0, 0.8, 90, BABYLON.Vector3.Zero(), scene);
+    camera.lowerBetaLimit = 0.1;
+    camera.upperBetaLimit = (Math.PI / 2) * 0.9;
+    camera.lowerRadiusLimit = 1;
+    camera.upperRadiusLimit = 150;
+    camera.attachControl(engine.getRenderingCanvas(), true);
 
-	// light1
-	//var light = new BABYLON.DirectionalLight("dir01", new BABYLON.Vector3(1, -1, 1), scene);
-	const light = new BABYLON.SpotLight("spotLight", new BABYLON.Vector3(-40, 40, -40), new BABYLON.Vector3(1, -1, 1), Math.PI / 5, 30, scene);
-	light.position = new BABYLON.Vector3(-40, 40, -40);
+    // light1
+    //var light = new BABYLON.DirectionalLight("dir01", new BABYLON.Vector3(1, -1, 1), scene);
+    const light = new BABYLON.SpotLight(
+        'spotLight',
+        new BABYLON.Vector3(-40, 40, -40),
+        new BABYLON.Vector3(1, -1, 1),
+        Math.PI / 5,
+        30,
+        scene
+    );
+    light.position = new BABYLON.Vector3(-40, 40, -40);
 
-	// Shadows
-	const shadowGenerator = new BABYLON.ShadowGenerator(1024, light);
-	//shadowGenerator.bias = 0.0001;
-	light.shadowMaxZ = 130;
-	light.shadowMinZ = 10;
+    // Shadows
+    const shadowGenerator = new BABYLON.ShadowGenerator(1024, light);
+    //shadowGenerator.bias = 0.0001;
+    light.shadowMaxZ = 130;
+    light.shadowMinZ = 10;
     light.intensity = 1500;
-	shadowGenerator.usePercentageCloserFiltering = true;
-	shadowGenerator.setDarkness(0.5);
+    shadowGenerator.usePercentageCloserFiltering = true;
+    shadowGenerator.setDarkness(0.5);
 
-    const material = new BABYLON.PBRMaterial("ground", scene);
-	material.metallic = 0;
+    const material = new BABYLON.PBRMaterial('ground', scene);
+    material.metallic = 0;
     material.roughness = 0.8;
 
-	// Ground
-	const ground = BABYLON.Mesh.CreateGround("ground", 200, 200, 100, scene, false);
-	ground.material = material;
-	
-	const b = BABYLON.Mesh.CreateBox("box", 1, scene, false);
-	b.scaling.y = 20;
-	b.position.y = 10;
-	b.position.x = -10;
-	b.position.z = -10;
+    // Ground
+    const ground = BABYLON.Mesh.CreateGround('ground', 200, 200, 100, scene, false);
+    ground.material = material;
+
+    const b = BABYLON.Mesh.CreateBox('box', 1, scene, false);
+    b.scaling.y = 20;
+    b.position.y = 10;
+    b.position.x = -10;
+    b.position.z = -10;
     b.material = material;
 
-	const b1 = BABYLON.Mesh.CreateBox("box", 1, scene, false);
-	b1.scaling.y = 10;
-	b1.position.y = 5;
-	b1.position.x = -0;
-	b1.position.z = -10;
+    const b1 = BABYLON.Mesh.CreateBox('box', 1, scene, false);
+    b1.scaling.y = 10;
+    b1.position.y = 5;
+    b1.position.x = -0;
+    b1.position.z = -10;
     b1.material = material;
 
-	const b2 = BABYLON.Mesh.CreateBox("box", 1, scene, false);
-	b2.scaling.y = 10;
-	b2.position.y = 5;
-	b2.position.x = -10;
-	b2.position.z = -0;
+    const b2 = BABYLON.Mesh.CreateBox('box', 1, scene, false);
+    b2.scaling.y = 10;
+    b2.position.y = 5;
+    b2.position.x = -10;
+    b2.position.z = -0;
     b2.material = material;
 
-	shadowGenerator.addShadowCaster(b);
-	shadowGenerator.addShadowCaster(b1);
-	shadowGenerator.addShadowCaster(b2);
-	ground.receiveShadows = true;
+    shadowGenerator.addShadowCaster(b);
+    shadowGenerator.addShadowCaster(b1);
+    shadowGenerator.addShadowCaster(b2);
+    ground.receiveShadows = true;
 
-	// Animations
-	let alpha = 0;
-	let add = true;
-	scene.registerBeforeRender(function () {
-		if (!add) {
-			return;
-		}
+    // Animations
+    let alpha = 0;
+    let add = true;
+    scene.registerBeforeRender(function () {
+        if (!add) {
+            return;
+        }
 
-		b.position.y = (Math.cos(alpha) * 0.5 + 0.5) * 20;
-		alpha += 0.05;
-	});
+        b.position.y = (Math.cos(alpha) * 0.5 + 0.5) * 20;
+        alpha += 0.05;
+    });
 
-	document.onkeydown = (event)=>{
-		if (event.keyCode === 32) {
-			add = !add;
-		}
-	}
+    document.onkeydown = event => {
+        if (event.keyCode === 32) {
+            add = !add;
+        }
+    };
 
-	return scene;
+    return scene;
 }
 
 async function runBabylonScene() {
-    const canvas = document.getElementById("renderCanvas");
+    const canvas = document.getElementById('renderCanvas');
     const engine = await createEngine(canvas);
     const scene = await createScene(engine);
 
@@ -129,7 +136,7 @@ async function runBabylonScene() {
     });
 
     // Resize
-    window.addEventListener("resize", function () {
+    window.addEventListener('resize', function () {
         engine.resize();
     });
 
@@ -139,7 +146,7 @@ async function runBabylonScene() {
 async function run() {
     await runBabylonScene();
 
-    spector2.traceFrame().then(async (trace) => {
+    spector2.traceFrame().then(async trace => {
         // Trace the frame and set up the replay.
         console.log(trace);
         spector2.revertEntryPoints();
@@ -168,8 +175,8 @@ async function run() {
 
                 const encoder = device.createCommandEncoder();
                 encoder.copyTextureToTexture(
-                    {texture: textureState.webgpuObject},
-                    {texture: context.getCurrentTexture()},
+                    { texture: textureState.webgpuObject },
+                    { texture: context.getCurrentTexture() },
                     textureState.size
                 );
                 device.queue.submit([encoder.finish()]);

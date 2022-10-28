@@ -7,13 +7,13 @@
 <canvas id="renderCanvas" width=400 height=400></canvas>
 <canvas id="captureCanvas" width=1 height=1></canvas>
 <script type="module">
-import {spector2} from "/dist/capture.js";
-import {loadReplay} from "/dist/replay.js";
+import { spector2 } from '/dist/capture.js';
+import { loadReplay } from '/dist/replay.js';
 async function run() {
     const adapter = await navigator.gpu.requestAdapter();
     const device = await adapter.requestDevice();
 
-    const context = document.getElementById("renderCanvas").getContext('webgpu');
+    const context = document.getElementById('renderCanvas').getContext('webgpu');
     const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
     context.configure({
         device,
@@ -48,8 +48,8 @@ async function run() {
     });
 
     const uniformBuffer = device.createBuffer({
-      size: (16 + 4) * 4,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        size: (16 + 4) * 4,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
     const uniformValues = new Float32Array(16 + 4);
     const matrix = uniformValues.subarray(0, 16);
@@ -64,30 +64,28 @@ async function run() {
         fragment: {
             module,
             entryPoint: 'fs',
-            targets: [{format: presentationFormat}],
+            targets: [{ format: presentationFormat }],
         },
     });
 
     const bindGroup = device.createBindGroup({
-      layout: pipeline.getBindGroupLayout(0),
-      entries: [
-        { binding: 0, resource: { buffer: uniformBuffer } },
-      ],
+        layout: pipeline.getBindGroupLayout(0),
+        entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
     });
 
-    const hsl = (h, s, l) => `hsl(${h * 360 | 0}, ${s * 100}%, ${l * 100 | 0}%)`;
+    const hsl = (h, s, l) => `hsl(${(h * 360) | 0}, ${s * 100}%, ${(l * 100) | 0}%)`;
     const cssColorToRGBA8 = (() => {
-      const canvas = document.createElement('canvas');
+        const canvas = document.createElement('canvas');
 
-      canvas.width = 1; 
-      canvas.height = 1;
-      const ctx = canvas.getContext('2d', {willReadFrequently: true});
-      return cssColor => {
-        ctx.clearRect(0, 0, 1, 1);
-        ctx.fillStyle = cssColor;
-        ctx.fillRect(0, 0, 1, 1);
-        return Array.from(ctx.getImageData(0, 0, 1, 1).data);
-      };
+        canvas.width = 1;
+        canvas.height = 1;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        return cssColor => {
+            ctx.clearRect(0, 0, 1, 1);
+            ctx.fillStyle = cssColor;
+            ctx.fillRect(0, 0, 1, 1);
+            return Array.from(ctx.getImageData(0, 0, 1, 1).data);
+        };
     })();
     const cssColorToRGBA = cssColor => cssColorToRGBA8(cssColor).map(v => v / 255);
     const hslToRGBA = (h, s, l) => cssColorToRGBA(hsl(h, s, l));
@@ -98,13 +96,8 @@ async function run() {
         {
             const angle = time;
             const c = Math.cos(angle);
-            const s = Math.sin(angle)
-            matrix.set([
-               c, s, 0, 0,
-              -s, c, 0, 0,
-               0, 0, 1, 0,
-               0, 0, 0, 1,
-            ]);
+            const s = Math.sin(angle);
+            matrix.set([c, s, 0, 0, -s, c, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
         }
 
         const hue = time * 0.1;
@@ -114,12 +107,14 @@ async function run() {
 
         const encoder = device.createCommandEncoder();
         const pass = encoder.beginRenderPass({
-            colorAttachments: [{
-                view: context.getCurrentTexture().createView(),
-                clearValue: hslToRGBA(hue + 0.5, 1, 0.5),
-                loadOp: 'clear',
-                storeOp: 'store',
-            }],
+            colorAttachments: [
+                {
+                    view: context.getCurrentTexture().createView(),
+                    clearValue: hslToRGBA(hue + 0.5, 1, 0.5),
+                    loadOp: 'clear',
+                    storeOp: 'store',
+                },
+            ],
         });
         pass.setPipeline(pipeline);
         pass.setBindGroup(0, bindGroup);
@@ -131,7 +126,7 @@ async function run() {
         requestAnimationFrame(frame);
     }
 
-    spector2.traceFrame().then(async (trace) => {
+    spector2.traceFrame().then(async trace => {
         // Trace the frame and set up the replay.
         console.log(trace);
         spector2.revertEntryPoints();
@@ -160,8 +155,8 @@ async function run() {
 
                 const encoder = device.createCommandEncoder();
                 encoder.copyTextureToTexture(
-                    {texture: textureState.webgpuObject},
-                    {texture: context.getCurrentTexture()},
+                    { texture: textureState.webgpuObject },
+                    { texture: context.getCurrentTexture() },
                     textureState.size
                 );
                 device.queue.submit([encoder.finish()]);
