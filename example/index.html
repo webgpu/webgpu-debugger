@@ -11,49 +11,58 @@
     <script type="module">
 import ui from '../dist/index.js';
 ui.registerAPI({
-    captureFrame() {
-        spector2.traceFrame().then(async trace => {
-            // Trace the frame and set up the replay.
-            console.log(trace);
-            spector2.revertEntryPoints();
-            const replay = await loadReplay(trace);
-            console.log(replay);
+    playTo(replay, id) {
+        // TBD: reply the given 'replay' to the specified id
+        console.log(replay, id);
+    },
+    startCapture() {
+        // TBD: Capture until stop capture is called
+    },
+    endCapture() {
+        // TBD: Stop Capturing
+    },
+    async captureFrame() {
+        const trace = await spector2.traceFrame();
+        // Trace the frame and set up the replay.
+        console.log(trace);
+        spector2.revertEntryPoints();
+        const replay = await loadReplay(trace);
+        console.log(replay);
 
-            ui.addReplay(replay);
+        ui.addReplay(replay);
 
-            // Go through each command, and show the presented texture of the trace on the capture canvas.
-            const captureCanvas = document.getElementById('captureCanvas');
-            const context = captureCanvas.getContext('webgpu');
+        // Go through each command, and show the presented texture of the trace on the capture canvas.
+        const captureCanvas = document.getElementById('captureCanvas');
+        const context = captureCanvas.getContext('webgpu');
 
-            for (const c of replay.commands) {
-                replay.execute(c);
+        for (const c of replay.commands) {
+            replay.execute(c);
 
-                if (c.name === 'present') {
-                    const textureState = c.args.texture;
-                    const device = textureState.device.webgpuObject;
+            if (c.name === 'present') {
+                const textureState = c.args.texture;
+                const device = textureState.device.webgpuObject;
 
-                    captureCanvas.width = textureState.size.width;
-                    captureCanvas.height = textureState.size.height;
-                    context.configure({
-                        device,
-                        usage: GPUTextureUsage.COPY_DST,
-                        format: textureState.format,
-                        alphaMode: 'opaque',
-                    });
+                captureCanvas.width = textureState.size.width;
+                captureCanvas.height = textureState.size.height;
+                context.configure({
+                    device,
+                    usage: GPUTextureUsage.COPY_DST,
+                    format: textureState.format,
+                    alphaMode: 'opaque',
+                });
 
-                    const encoder = device.createCommandEncoder();
-                    encoder.copyTextureToTexture(
-                        { texture: textureState.webgpuObject },
-                        { texture: context.getCurrentTexture() },
-                        textureState.size
-                    );
-                    device.queue.submit([encoder.finish()]);
-                    // TODO: should probably have this generate
-                    // an imagebitmap and pass in that instead?
-                    ui.setResult(captureCanvas);
-                }
+                const encoder = device.createCommandEncoder();
+                encoder.copyTextureToTexture(
+                    { texture: textureState.webgpuObject },
+                    { texture: context.getCurrentTexture() },
+                    textureState.size
+                );
+                device.queue.submit([encoder.finish()]);
+                // TODO: should probably have this generate
+                // an imagebitmap and pass in that instead?
+                ui.setResult(captureCanvas);
             }
-        });
+        }
     },
 });
 
@@ -95,14 +104,6 @@ async function run() {
         `,
     });
 
-    const uniformBuffer = device.createBuffer({
-        size: (16 + 4) * 4,
-        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
-    const uniformValues = new Float32Array(16 + 4);
-    const matrix = uniformValues.subarray(0, 16);
-    const color = uniformValues.subarray(16, 20);
-
     const pipeline = device.createRenderPipeline({
         layout: 'auto',
         vertex: {
@@ -116,10 +117,28 @@ async function run() {
         },
     });
 
-    const bindGroup = device.createBindGroup({
-        layout: pipeline.getBindGroupLayout(0),
-        entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+    const roundUpToMultipleOf = (v, r) => (((v + r - 1) / r) | 0) * r;
+
+    const numTriangles = 6;
+    const uniformSizeInFloats = 16 + 4;
+    const uniformSizeInBytes = uniformSizeInFloats * 4;
+    const uniformBlockSizeBytes = roundUpToMultipleOf(uniformSizeInBytes, 256);
+    const uniformBuffers = device.createBuffer({
+        size: uniformBlockSizeBytes * numTriangles,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
+    const uniformValues = new Float32Array((uniformBlockSizeBytes / 4) * numTriangles);
+    const triangles = [];
+    for (let i = 0; i < numTriangles; ++i) {
+        const offset = (i * uniformBlockSizeBytes) / 4;
+        const matrix = uniformValues.subarray(offset, offset + 16);
+        const color = uniformValues.subarray(offset + 16, offset + 20);
+        const bindGroup = device.createBindGroup({
+            layout: pipeline.getBindGroupLayout(0),
+            entries: [{ binding: 0, resource: { buffer: uniformBuffers, offset: offset * 4 } }],
+        });
+        triangles.push({ matrix, color, bindGroup });
+    }
 
     const hsl = (h, s, l) => `hsl(${(h * 360) | 0}, ${s * 100}%, ${(l * 100) | 0}%)`;
     const cssColorToRGBA8 = (() => {
@@ -140,18 +159,20 @@ async function run() {
 
     function frame(time) {
         time *= 0.001;
-
-        {
-            const angle = time;
-            const c = Math.cos(angle);
-            const s = Math.sin(angle);
-            matrix.set([c, s, 0, 0, -s, c, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
-        }
-
         const hue = time * 0.1;
-        color.set(hslToRGBA(hue, 1, 0.5));
 
-        device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
+        triangles.forEach(({ matrix, color }, i) => {
+            {
+                const angle = time + i * 0.2;
+                const c = Math.cos(angle);
+                const s = Math.sin(angle);
+                matrix.set([c, s, 0, 0, -s, c, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+            }
+
+            color.set(hslToRGBA(hue + i * 0.05, 1, 0.5));
+        });
+
+        device.queue.writeBuffer(uniformBuffers, 0, uniformValues);
 
         const encoder = device.createCommandEncoder();
         const pass = encoder.beginRenderPass({
@@ -165,8 +186,10 @@ async function run() {
             ],
         });
         pass.setPipeline(pipeline);
-        pass.setBindGroup(0, bindGroup);
-        pass.draw(3);
+        for (const { bindGroup } of triangles) {
+            pass.setBindGroup(0, bindGroup);
+            pass.draw(3);
+        }
         pass.end();
 
         device.queue.submit([encoder.finish()]);

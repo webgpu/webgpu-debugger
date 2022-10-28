@@ -83,6 +83,10 @@ export class UIStateHelper {
         this.setPaneViewType(paneId, ResultVis, canvas);
     };
 
+    playTo(replay: Replay, id: number[]) {
+        this.replayAPI?.playTo(replay, id);
+    }
+
     // This is a hack to get react to render.
     // TODO: fix so not needed
     setRenderHackFn = (fn: (number: number) => void) => {

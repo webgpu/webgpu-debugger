@@ -1,5 +1,6 @@
 import React, { useState, useContext } from 'react';
-import { Command, CommandArgs, QueueSubmitArgs, Replay } from '../../../replay/lib';
+import { Command, CommandArgs, QueueSubmitArgs, RenderPassArgs, Replay } from '../../../replay/lib';
+import { UIStateContext } from '../../contexts/UIStateContext';
 import { classNames } from '../../lib/css';
 
 import './StepsVis.css';
@@ -66,6 +67,29 @@ function Args({ args }: { args: CommandArgs }) {
     );
 }
 
+function RenderPass({ command, commandId }: { command: Command; commandId: number[] }) {
+    const stepsContextData = useContext(StepsContext)!;
+    const isCurrent = arrayEqual(commandId, stepsContextData.state.currentStep);
+    const { name, renderPass: rp } = command as any; // TODO: fix!
+    const rpArgs: RenderPassArgs = rp as RenderPassArgs;
+    const commands = rpArgs.commands;
+
+    return (
+        <React.Fragment>
+            <div
+                className={classNames('spector2-cmd', `spector2-cmd-indent-${commandId.length}`, {
+                    'spector2-cmd-selected': isCurrent,
+                })}
+                onClick={() => stepsContextData.playTo(commandId)}
+            >
+                <div>›</div>
+                <div className="spector2-cmd-name">{name}</div>
+            </div>
+            <Commands commands={commands} commandId={commandId} />
+        </React.Fragment>
+    );
+}
+
 function QueueSubmit({ command, commandId }: { command: Command; commandId: number[] }) {
     const stepsContextData = useContext(StepsContext)!;
     const isCurrent = arrayEqual(commandId, stepsContextData.state.currentStep);
@@ -90,10 +114,7 @@ function QueueSubmit({ command, commandId }: { command: Command; commandId: numb
                         <div className={`spector2-cmd spector2-cmd-indent-${commandId.length + 1}`} key={`cb${ndx}`}>
                             CommandBuffer: #{ndx}
                         </div>
-                        {cb.commands.map((c, cNdx) => {
-                            const id = `cb${ndx}_${cNdx}`;
-                            return <Command key={id} id={id} command={c} commandId={[...commandId, ndx, cNdx]} />;
-                        })}
+                        <Commands commands={cb.commands} commandId={[...commandId, ndx]} />
                     </React.Fragment>
                 );
             })}
@@ -119,8 +140,11 @@ function GenericCommand({ command, commandId }: { command: Command; commandId: n
 
 function Command({ command, id, commandId }: { command: Command; id: string; commandId: number[] }) {
     const { name } = command;
-    // MEH! I feel like this should/could be generic.
+    // TODO: I feel like this should/could be generic.
     switch (name) {
+        // TODO: we shouldn't need 2 types here.
+        case 'renderPass':
+            return <RenderPass key={`qs${id}`} command={command} commandId={commandId} />;
         case 'queueSubmit':
             return <QueueSubmit key={`qs${id}`} command={command} commandId={commandId} />;
         default:
@@ -128,22 +152,30 @@ function Command({ command, id, commandId }: { command: Command; id: string; com
     }
 }
 
+function Commands({ commands, commandId }: { commands: Command[]; commandId: number[] }) {
+    return (
+        <React.Fragment>
+            {commands.map((c, ndx) => (
+                <Command key={`f${ndx}`} id={ndx.toString()} command={c} commandId={[...commandId, ndx]} />
+            ))}
+        </React.Fragment>
+    );
+}
+
 export default function StepsVis({ data }: { data: Replay }) {
+    const uiState = useContext(UIStateContext);
     const [state, setState] = useState<StepsState>({
         currentStep: [],
     });
     const playTo = (step: number[]) => {
         setState({ currentStep: step });
+        uiState.playTo(data, step);
     };
 
     return (
         <div className="spector2-viz">
             <StepsContext.Provider value={{ state, playTo }}>
-                {data
-                    ? data.commands.map((c, ndx) => (
-                          <Command key={`f${ndx}`} id={ndx.toString()} command={c} commandId={[ndx]} />
-                      ))
-                    : 'no replay'}
+                {data ? <Commands commands={data.commands} commandId={[]} /> : 'no replay'}
             </StepsContext.Provider>
         </div>
     );
