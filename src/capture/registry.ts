@@ -55,7 +55,7 @@ class ObjectRegistry {
     }
 }
 
-class Spector2 {
+export class Spector2 {
     constructor() {
         function replacePrototypeOf(c, registry) {
             let originalProto = {};
@@ -284,6 +284,7 @@ class Spector2 {
 }
 
 let spector2 = new Spector2();
+export {spector2};
 
 class BaseState {
     constructor(desc) {
