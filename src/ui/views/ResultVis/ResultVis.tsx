@@ -14,8 +14,12 @@ const draw = (ctx: CanvasRenderingContext2D, srcCanvas: HTMLCanvasElement) => {
     } else {
         const { width, height } = ctx.canvas;
         ctx.clearRect(0, 0, width, height);
+        ctx.font = 'bold 24px monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = 'white';
+        ctx.strokeText('no result', width / 2, height / 2);
         ctx.fillText('no result', width / 2, height / 2);
     }
 };

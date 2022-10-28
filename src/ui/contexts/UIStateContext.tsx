@@ -2,30 +2,13 @@ import React from 'react';
 import StepsVis from '../views/StepsVis/StepsVis';
 import ResultVis from '../views/ResultVis/ResultVis';
 import { Replay } from '../../replay/lib';
+import ReplayAPI from '../ReplayAPI';
 
 export type PaneComponent = React.FunctionComponent<{ data: any }> | React.ComponentClass<{ data: any }>;
 type ViewData = {
     component: PaneComponent;
     data: unknown;
 };
-
-export interface ReplayAPI {
-    captureFrame: () => void;
-    startCapture: () => void;
-    endCapture: () => void;
-    getBufferData: (buffer: GPUBuffer, offset: number, size: number) => Promise<ArrayBuffer>;
-    getTextureData: (
-        texture: GPUTexture,
-        level: number,
-        x: number,
-        y: number,
-        z: number,
-        width: number,
-        height: number,
-        depth: number
-    ) => Promise<ArrayBuffer>;
-    getTextureImage: (texture: GPUTexture, level: number) => Promise<ImageBitmap>;
-}
 
 export class UIStateHelper {
     paneIdToViewType: Record<string, ViewData> = {};
@@ -80,11 +63,16 @@ export class UIStateHelper {
 
     addReplay = (replay: Replay) => {
         this.replays.push(replay);
+        this.setReplay(replay);
+    };
+
+    setReplay = (replay: Replay) => {
         const paneId = this.getMostRecent(StepsVis);
         if (!paneId) {
             throw new Error('TODO: add pane of this type');
         }
         this.setPaneViewType(paneId, StepsVis, replay);
+        this.setFullUI(true);
     };
 
     setResult = (canvas: HTMLCanvasElement) => {

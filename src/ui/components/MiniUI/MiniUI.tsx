@@ -7,7 +7,7 @@ const MiniUI: React.FC = () => {
     const uiState = useContext(UIStateContext);
     return (
         <div className="spector2-mini">
-            <button>🔴</button>
+            <button onClick={uiState.capture}>🔴</button>
             <button onClick={uiState.toggleUI}>⌄</button>
         </div>
     );

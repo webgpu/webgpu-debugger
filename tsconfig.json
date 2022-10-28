@@ -12,6 +12,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "declaration": true,
+    "noErrorTruncation": true,
     "declarationDir": "types",
     "emitDeclarationOnly": true,
     "typeRoots": [

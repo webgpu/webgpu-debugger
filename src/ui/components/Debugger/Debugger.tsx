@@ -13,6 +13,13 @@ import { uiState } from '../../contexts/UIStateContext';
 import './Debugger.css';
 import './react-tile-pane.css';
 
+// react-tile-pane refers to panes by id
+// we what we do is make each new pain with a new id `pane<id>`
+//
+// Separately we associate in the uiState we associate that id
+// with a component and a piece of data so we can put that component
+// in that pane with that data
+
 const paneList: TilePane[] = [];
 const names: Record<string, any> = {}; // TODO: Figure out what this maps to
 
