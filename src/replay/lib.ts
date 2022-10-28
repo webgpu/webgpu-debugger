@@ -174,11 +174,11 @@ export class Replay {
                 case 'textureDestroy':
                 case 'bufferUpdateData':
                 case 'bufferUnmap':
-                    yield {path: [i], command : c};
+                    yield { path: [i], command: c };
                     break;
 
                 case 'queueSubmit':
-                    for (let j in c.args.commandBuffers) {
+                    for (let j = 0; j < c.args.commandBuffers.length; j++) {
                         yield* c.args.commandBuffers[j].iterateCommands([i, j]);
                     }
                     break;
@@ -475,16 +475,16 @@ class ReplayCommandBuffer extends ReplayObject {
     }
 
     encodeIn(encoder) {
-        this.encodeUpTo([this.commands.length - 1], encoder);
+        this.encodeUpTo([this.commands.length - 1], encoder, true);
     }
 
-    encodeUpTo(path, encoder) {
+    encodeUpTo(path, encoder, full = false) {
         const commandIndex = path.shift();
         for (let i = 0; i <= commandIndex; i++) {
             const c = this.commands[i];
             switch (c.name) {
                 case 'renderPass':
-                    if (i === commandIndex) {
+                    if (i === commandIndex && !full) {
                         c.renderPass.encodeUpTo(path, encoder);
                     } else {
                         c.renderPass.encodeIn(encoder);
@@ -644,7 +644,7 @@ class ReplayQueue extends ReplayObject {
         const commandBufferIndex = path.shift();
         const encoder = this.device.webgpuObject.createCommandEncoder();
         for (let i = 0; i < commandBufferIndex - 1; i++) {
-            commandBuffers[commandBufferIndex].encodeIn(encoder);
+            commandBuffers[i].encodeIn(encoder);
         }
         commandBuffers[commandBufferIndex].encodeUpTo(path, encoder);
         this.webgpuObject.submit([encoder.finish()]);
