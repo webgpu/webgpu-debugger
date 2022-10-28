@@ -4,7 +4,6 @@ import resolve from '@rollup/plugin-node-resolve';
 import typescript from '@rollup/plugin-typescript';
 import fs from 'fs';
 import postcss from 'rollup-plugin-postcss';
-import dts from 'rollup-plugin-dts';
 import livereload from 'rollup-plugin-livereload';
 import serve from 'rollup-plugin-serve';
 
@@ -76,7 +75,7 @@ export default [
                 include: /node_modules/,
                 requireReturnsDefault: 'auto', // <---- this solves default issue
             }),
-            typescript({ tsconfig: './tsconfig.json', sourceRoot: '/src/ui' }),
+            typescript({ tsconfig: './tsconfig.json', sourceRoot: '/src' }),
             postcss({
                 minimize: true,
                 sourceMap: true,

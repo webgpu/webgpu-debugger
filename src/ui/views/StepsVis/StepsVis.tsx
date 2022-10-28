@@ -163,13 +163,13 @@ function Commands({ commands, commandId }: { commands: Command[]; commandId: num
 }
 
 export default function StepsVis({ data }: { data: Replay }) {
-    const uiState = useContext(UIStateContext);
+    const { helper } = useContext(UIStateContext);
     const [state, setState] = useState<StepsState>({
         currentStep: [],
     });
     const playTo = (step: number[]) => {
         setState({ currentStep: step });
-        uiState.playTo(data, step);
+        helper.playTo(data, step);
     };
 
     return (

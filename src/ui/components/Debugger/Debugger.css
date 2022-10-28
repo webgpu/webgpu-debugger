@@ -1,4 +1,3 @@
-
 .spector2-debugger {
   position: fixed;
   right: 0;
@@ -14,4 +13,10 @@
 .spector2-viz {
   height: 100%;
   overflow: auto;
+}
+
+.spector2-tiles {
+  border: #afafaf solid 2px;
+  width: 100%;
+  height: 100%;
 }

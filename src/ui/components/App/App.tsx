@@ -1,38 +1,40 @@
 import React from 'react';
 import Debugger from '../Debugger/Debugger';
 import MiniUI from '../MiniUI/MiniUI';
-import { UIStateHelper, UIStateContext } from '../../contexts/UIStateContext';
+import { createUIState, UIProps, UIState, UIStateContext } from '../../contexts/UIStateContext';
+
+import BufferVis from '../../views/BufferVis/BufferVis';
+import FramesVis from '../../views/FramesVis/FramesVis';
+import ResultVis from '../../views/ResultVis/ResultVis';
+import StepsVis from '../../views/StepsVis/StepsVis';
+
 import './App.css';
 
-interface IProps {
-    uiState: UIStateHelper;
-}
-interface IState {
-    id: number;
-}
-
-class App extends React.Component<IProps, IState> {
-    declare context: React.ContextType<typeof UIStateContext>;
-
-    constructor(props: IProps) {
+class App extends React.Component<UIProps, UIState> {
+    constructor(props: UIProps) {
         super(props);
-        this.state = { id: 0 };
-    }
-    componentDidMount(): void {
-        // TODO: remove. This is only here to make this component re-render
-        this.context.setRenderHackFn(() => {
-            this.setState({ id: performance.now() });
+        const { uiStateHelper } = props;
+        this.state = createUIState({
+            paneIdToViewType: {
+                pane0: { component: FramesVis, data: ['frame1', 'frame2'] },
+                pane1: { component: StepsVis, data: null },
+                pane2: { component: ResultVis, data: null },
+                pane3: { component: BufferVis, data: null },
+            },
         });
+        uiStateHelper.setStateFn = (...args) => {
+            this.setState(...args);
+        };
     }
     render() {
-        const { uiState } = this.props;
+        const { uiStateHelper } = this.props;
+        uiStateHelper.updateState(this.state);
         return (
-            <UIStateContext.Provider value={uiState}>
-                <div className="spector2">{uiState.fullUI ? <Debugger /> : <MiniUI />}</div>
+            <UIStateContext.Provider value={{ helper: uiStateHelper }}>
+                <div className="spector2">{this.state.fullUI ? <Debugger /> : <MiniUI />}</div>
             </UIStateContext.Provider>
         );
     }
 }
-App.contextType = UIStateContext;
 
 export default App;

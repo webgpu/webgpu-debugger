@@ -4,11 +4,11 @@ import { UIStateContext } from '../../contexts/UIStateContext';
 import './MiniUI.css';
 
 const MiniUI: React.FC = () => {
-    const uiState = useContext(UIStateContext);
+    const { helper } = useContext(UIStateContext);
     return (
         <div className="spector2-mini">
-            <button onClick={uiState.capture}>🔴</button>
-            <button onClick={uiState.toggleUI}>⌄</button>
+            <button onClick={helper.capture}>🔴</button>
+            <button onClick={helper.toggleUI}>⌄</button>
         </div>
     );
 };

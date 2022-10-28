@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './components/App/App';
-import { uiState } from './contexts/UIStateContext';
+import { uiStateHelper } from './contexts/UIStateContext';
 import ReplayAPI from './ReplayAPI';
 import DebuggerAPI from './DebuggerAPI';
 
@@ -17,19 +17,19 @@ function init() {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     const root = ReactDOM.createRoot(elem);
-    root.render(<App uiState={uiState} />);
+    root.render(<App uiStateHelper={uiStateHelper} />);
 }
 
 const debuggerAPI: DebuggerAPI = {
     registerAPI(api: ReplayAPI) {
         init();
-        uiState.registerAPI(api);
+        uiStateHelper.registerAPI(api);
     },
     addReplay(replay: any) {
-        uiState.addReplay(replay);
+        uiStateHelper.addReplay(replay);
     },
     setResult(canvas: HTMLCanvasElement) {
-        uiState.setResult(canvas);
+        uiStateHelper.setResult(canvas);
     },
 };
 

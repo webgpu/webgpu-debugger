@@ -1,43 +1,35 @@
 import React from 'react';
-import { createTilePanes, TileBranchSubstance, TileContainer, TileProvider, TilePane } from 'react-tile-pane';
+import { createTilePanes, TileBranchSubstance, TileContainer, TileProvider } from 'react-tile-pane';
 import Toolbar from '../Toolbar/Toolbar';
 
-import BufferVis from '../../views/BufferVis/BufferVis';
-import FramesVis from '../../views/FramesVis/FramesVis';
-import ResultVis from '../../views/ResultVis/ResultVis';
-import StepsVis from '../../views/StepsVis/StepsVis';
-
 import Pane from '../Pane/Pane';
-import { uiState } from '../../contexts/UIStateContext';
 
 import './Debugger.css';
 import './react-tile-pane.css';
 
 // react-tile-pane refers to panes by id
-// we what we do is make each new pain with a new id `pane<id>`
+// we what we do is make each new pane with a new id `pane<id>`
 //
-// Separately we associate in the uiState we associate that id
+// Separately, in the uiState, we associate that id
 // with a component and a piece of data so we can put that component
 // in that pane with that data
 
-const paneList: TilePane[] = [];
-const names: Record<string, any> = {}; // TODO: Figure out what this maps to
-
-let nextPaneId = 0;
-function addPane(componentFn: (data: any) => React.ReactElement, data: any) {
-    const temp: Record<string, React.ReactNode> = {};
-    const paneId = `pane${nextPaneId++}`;
-    uiState.setPaneViewType(paneId, componentFn, data);
-    temp[paneId] = <Pane id={paneId} />;
-    const [pList, nameOb] = createTilePanes(temp);
-    paneList.push(...pList);
-    Object.assign(names, nameOb);
-}
-
-addPane(FramesVis, ['frame1', 'frame2']);
-addPane(StepsVis, null);
-addPane(ResultVis, null);
-addPane(BufferVis, null);
+// TODO: Make it so the user can add more panes. I had some code that added
+// panes on demand but ending up switching to code that just makes N panes
+// and then ideally these panes would be stored on unused-pane list.
+//
+// It bugs me that these 3 things, paneList, names, and rootPane are
+// global. I think they could go into the component but as the component is
+// created and destroyed they'd lose their state.
+const maxPanes = 10;
+const [paneList, names] = createTilePanes(
+    Object.fromEntries(
+        new Array(maxPanes).fill(0).map((_, ndx) => {
+            const paneId = `pane${ndx}`;
+            return [paneId, <Pane key={paneId} id={paneId} />];
+        })
+    )
+);
 
 const rootPane: TileBranchSubstance = {
     children: [
@@ -60,7 +52,7 @@ const Debugger: React.FC = () => {
         <div className="spector2-debugger">
             <Toolbar />
             <TileProvider tilePanes={paneList} rootNode={rootPane}>
-                <div className="spector2-tiles" style={{ border: '#afafaf solid 2px', width: '100%', height: '100%' }}>
+                <div className="spector2-tiles">
                     <TileContainer />
                 </div>
                 {/* <DraggableTitle name={names.banana}>Drag this banana🍌</DraggableTitle> */}

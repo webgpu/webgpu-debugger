@@ -10,27 +10,74 @@ type ViewData = {
     data: unknown;
 };
 
+export type PaneIdToViewType = Record<string, ViewData>;
+
+export type UIState = {
+    paneIdToViewType: PaneIdToViewType;
+    fullUI: boolean;
+    replays: Replay[];
+};
+
+export type SetStateArgs = Partial<UIState>;
+
+export function createUIState(state: SetStateArgs = {}): UIState {
+    return {
+        ...{
+            paneIdToViewType: {},
+            fullUI: false,
+            replays: [],
+        },
+        ...state,
+    };
+}
+
+export interface UIProps {
+    uiStateHelper: UIStateHelper;
+}
+
+export type UIStateSetterFn = <K extends keyof UIState>(
+    state:
+        | UIState
+        | ((prevState: Readonly<UIState>, props: Readonly<UIProps>) => UIState | Pick<UIState, K> | null)
+        | Pick<UIState, K>
+        | null,
+    callback?: (() => void) | undefined
+) => void;
+
 export class UIStateHelper {
-    paneIdToViewType: Record<string, ViewData> = {};
+    setStateFn: UIStateSetterFn = () => {};
+    state: Readonly<UIState> = createUIState();
+    stateUpdateQueued = false;
+
+    setState: UIStateSetterFn = (state: any) => {
+        if (!this.stateUpdateQueued) {
+            this.stateUpdateQueued = true;
+            queueMicrotask(() => {
+                this.stateUpdateQueued = false;
+                this.setStateFn(this.state);
+            });
+        }
+        Object.assign(this.state, state);
+    };
+
+    updateState = (state: UIState) => {
+        if (this.stateUpdateQueued) {
+            console.warn('!!!!! Ugh!! Attempt to update more state before previous state has been submitted');
+        }
+        this.state = { ...state };
+    };
+
     // map of PaneComponents to lru paneIds where the first
     // entry is the most recently used view of that type.
     mruViewsByType: Map<PaneComponent, string[]> = new Map();
-    fullUI = false;
     replayAPI?: ReplayAPI;
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    hackRenderFn: (v: number) => void = (_: number) => {};
-    render = () => {
-        this.hackRenderFn(performance.now());
-    };
-
     setFullUI = (full: boolean) => {
-        this.fullUI = full;
-        this.render();
+        this.setState({ fullUI: full });
     };
 
     toggleUI = () => {
-        this.setFullUI(!this.fullUI);
+        this.setFullUI(!this.state.fullUI);
     };
 
     capture = () => {
@@ -41,7 +88,7 @@ export class UIStateHelper {
         this.replayAPI = api;
     }
 
-    setMostRecent = (component: PaneComponent, paneId: string) => {
+    setMostRecentPaneIdForComponentType = (component: PaneComponent, paneId: string) => {
         this.mruViewsByType.set(component, this.mruViewsByType.get(component) || []);
         const mru = this.mruViewsByType.get(component)!;
         const ndx = mru.indexOf(paneId);
@@ -51,23 +98,33 @@ export class UIStateHelper {
         mru.unshift(paneId);
     };
 
-    getMostRecent = (component: PaneComponent): string | undefined => {
+    getMostRecentPaneIdForComponentType = (component: PaneComponent): string | undefined => {
+        // This is a hack: See Debugger.tsx
+        if (!this.mruViewsByType.get(component)) {
+            for (const [paneId, viewData] of Object.entries(this.state.paneIdToViewType)) {
+                this.setMostRecentPaneIdForComponentType(viewData.component, paneId);
+            }
+        }
         const mru = this.mruViewsByType.get(component)!;
         return mru.length ? mru[0] : undefined;
     };
 
     setPaneViewType = (paneId: string, component: PaneComponent, data: any): void => {
-        this.paneIdToViewType[paneId] = { component, data };
-        this.setMostRecent(component, paneId);
+        const paneIdToViewType = { ...this.state.paneIdToViewType };
+        paneIdToViewType[paneId] = { component, data };
+        this.setState({ paneIdToViewType });
+        this.setMostRecentPaneIdForComponentType(component, paneId);
     };
 
     addReplay = (replay: Replay) => {
-        this.replays.push(replay);
+        this.setState({
+            replays: [...this.state.replays, replay],
+        });
         this.setReplay(replay);
     };
 
     setReplay = (replay: Replay) => {
-        const paneId = this.getMostRecent(StepsVis);
+        const paneId = this.getMostRecentPaneIdForComponentType(StepsVis);
         if (!paneId) {
             throw new Error('TODO: add pane of this type');
         }
@@ -76,7 +133,7 @@ export class UIStateHelper {
     };
 
     setResult = (canvas: HTMLCanvasElement) => {
-        const paneId = this.getMostRecent(ResultVis);
+        const paneId = this.getMostRecentPaneIdForComponentType(ResultVis);
         if (!paneId) {
             throw new Error('TODO: add pane of this type');
         }
@@ -86,15 +143,13 @@ export class UIStateHelper {
     playTo(replay: Replay, id: number[]) {
         this.replayAPI?.playTo(replay, id);
     }
-
-    // This is a hack to get react to render.
-    // TODO: fix so not needed
-    setRenderHackFn = (fn: (number: number) => void) => {
-        this.hackRenderFn = fn;
-    };
-
-    replays: Replay[] = [];
 }
 
-export const uiState = new UIStateHelper();
-export const UIStateContext = React.createContext(uiState);
+type UIContextData = {
+    helper: UIStateHelper;
+};
+
+export const uiStateHelper = new UIStateHelper();
+export const UIStateContext = React.createContext<UIContextData>({
+    helper: uiStateHelper,
+});
