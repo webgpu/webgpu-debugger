@@ -18,7 +18,7 @@ const plugins = [
 
 export default [
     {
-        input: 'src/capture/registry.ts',
+        input: 'src/capture/index.ts',
         output: [
             {
                 file: 'dist/capture.js',
@@ -29,7 +29,7 @@ export default [
         plugins,
     },
     {
-        input: 'src/replay/lib.ts',
+        input: 'src/replay/index.ts',
         output: [
             {
                 file: 'dist/replay.js',
