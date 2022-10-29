@@ -137,25 +137,56 @@ export class Spector2 {
             spector2.registerObjectIn('adapters', adapter, new AdapterState(options)); // TODO deep copy options
             return adapter;
         };
+
+        // Save everything we wrapped for re-wrapping
+        this.wrappers = {
+            classes: [
+                { Class: GPUAdapter, proto: this.adapterProto, wrappers: {} },
+                { Class: GPUBuffer, proto: this.bufferProto, wrappers: {} },
+                { Class: GPUCommandEncoder, proto: this.commandEncoderProto, wrappers: {} },
+                { Class: GPUCanvasContext, proto: this.canvasContextProto, wrappers: {} },
+                { Class: GPUDevice, proto: this.deviceProto, wrappers: {} },
+                { Class: GPUQuerySet, proto: this.querySetProto, wrappers: {} },
+                { Class: GPUQueue, proto: this.queueProto, wrappers: {} },
+                { Class: GPURenderPassEncoder, proto: this.renderPassEncoderProto, wrappers: {} },
+                { Class: GPURenderPipeline, proto: this.renderPipelineProto, wrappers: {} },
+                { Class: GPUTexture, proto: this.textureProto, wrappers: {} },
+            ],
+            getContextWrapper: HTMLCanvasElement.prototype.getContext,
+            requestAdaptorWrapper: GPU.prototype.requestAdapter,
+        };
+
+        const saveEntryPoints = ({ Class, proto, wrappers }) => {
+            for (const name in proto) {
+                wrappers[name] = Class.prototype[name];
+            }
+        };
+
+        this.wrappers.classes.forEach(saveEntryPoints);
+    }
+
+    wrapEntryPoints() {
+        const setEntryPointsToWrappers = ({ Class, proto, wrappers }) => {
+            for (const name in proto) {
+                Class.prototype[name] = wrappers[name];
+            }
+        };
+
+        this.wrappers.classes.forEach(setEntryPointsToWrappers);
+
+        HTMLCanvasElement.prototype.getContext = this.wrappers.getContextWrapper;
+        GPU.prototype.requestAdaptor = this.wrappers.requestAdaptorWrapper;
     }
 
     // For now we don't support all entrypoints, which breaks the replay, here's a method to put regular entrypoints back.
     revertEntryPoints() {
-        function revertEntryPoints(Class, proto) {
+        const revertEntryPoints = ({ Class, proto }) => {
             for (const name in proto) {
                 Class.prototype[name] = proto[name];
             }
-        }
-        revertEntryPoints(GPUAdapter, this.adapterProto);
-        revertEntryPoints(GPUBuffer, this.bufferProto);
-        revertEntryPoints(GPUCommandEncoder, this.commandEncoderProto);
-        revertEntryPoints(GPUCanvasContext, this.canvasContextProto);
-        revertEntryPoints(GPUDevice, this.deviceProto);
-        revertEntryPoints(GPUQuerySet, this.querySetProto);
-        revertEntryPoints(GPUQueue, this.queueProto);
-        revertEntryPoints(GPURenderPassEncoder, this.renderPassEncoderProto);
-        revertEntryPoints(GPURenderPipeline, this.renderPipelineProto);
-        revertEntryPoints(GPUTexture, this.textureProto);
+        };
+
+        this.wrappers.classes.forEach(revertEntryPoints);
 
         HTMLCanvasElement.prototype.getContext = this.canvasGetContext;
         GPU.prototype.requestAdapter = this.gpuRequestAdapter;
