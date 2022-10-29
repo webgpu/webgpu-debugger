@@ -1,4 +1,4 @@
-import { Replay } from '../replay/lib';
+import { Replay } from '../replay';
 import ReplayAPI from './ReplayAPI';
 
 interface DebuggerAPI {

@@ -2,8 +2,8 @@
   "name": "spector2",
   "version": "0.0.1",
   "description": "WebGPU debugger",
-  "main": "dist/index-cjs.js",
-  "module": "dist/index.js",
+  "main": "dist/spector2-cjs.js",
+  "module": "dist/spector2.js",
   "type": "module",
   "scripts": {
     "rollup-watch": "rollup -c -w",

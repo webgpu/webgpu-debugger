@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react';
-import { Command, CommandArgs, QueueSubmitArgs, RenderPassArgs, Replay } from '../../fudge';
+import { Command, CommandArgs, QueueSubmitArgs, RenderPassArgs, Replay } from '../../../replay';
 import { UIStateContext } from '../../contexts/UIStateContext';
 import { classNames } from '../../lib/css';
 

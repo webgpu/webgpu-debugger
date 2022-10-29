@@ -4,7 +4,7 @@ It exists because lib.js is not typescript
 so it's casually describing the parts of
 the replay code that the UI is accessing.
 */
-
+/*
 export type CommandArgs = Record<string, any>;
 
 export type Command = {
@@ -27,3 +27,4 @@ export type QueueSubmitArgs = {
 export type RenderPassArgs = {
     commands: Command[];
 };
+*/

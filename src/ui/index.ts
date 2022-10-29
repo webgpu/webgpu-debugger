@@ -1,1 +1,1 @@
-export { default } from './main';
+import './main';

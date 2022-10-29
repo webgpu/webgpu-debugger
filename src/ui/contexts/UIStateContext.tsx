@@ -2,7 +2,7 @@ import React from 'react';
 import StepsVis from '../views/StepsVis/StepsVis';
 import ResultVis from '../views/ResultVis/ResultVis';
 import ReplayAPI from '../ReplayAPI';
-import { Replay } from '../fudge';
+import { Replay } from '../../replay';
 
 export type PaneComponent = React.FunctionComponent<{ data: any }> | React.ComponentClass<{ data: any }>;
 type ViewData = {
@@ -84,8 +84,8 @@ export class UIStateHelper {
         this.replayAPI?.captureFrame();
     };
 
-    registerAPI(api: ReplayAPI) {
-        this.replayAPI = api;
+    registerAPI(api: Partial<ReplayAPI>) {
+        this.replayAPI = api as ReplayAPI;
     }
 
     setMostRecentPaneIdForComponentType = (component: PaneComponent, paneId: string) => {
