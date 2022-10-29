@@ -79,7 +79,6 @@ export default [
             postcss({
                 minimize: true,
                 sourceMap: true,
-                extract: 'styles.css',
             }),
             serve({
                 open: true,
