@@ -75,7 +75,10 @@ export default [
                 include: /node_modules/,
                 requireReturnsDefault: 'auto', // <---- this solves default issue
             }),
-            typescript({ tsconfig: './tsconfig.json', sourceRoot: '/src' }),
+            typescript({
+                tsconfig: './tsconfig.json',
+                sourceRoot: '/src',
+            }),
             postcss({
                 minimize: true,
                 sourceMap: true,

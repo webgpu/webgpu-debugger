@@ -6,6 +6,8 @@ export default function Toolbar() {
     return (
         <div className="spector2-toolbar">
             <button onClick={helper.capture}>🔴</button>
+            <button>Load</button>
+            <button>Save</button>
             <button onClick={helper.toggleUI}>⌃</button>
         </div>
     );

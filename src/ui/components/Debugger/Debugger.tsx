@@ -40,7 +40,7 @@ const rootPane: TileBranchSubstance = {
             children: [
                 { children: names.pane1 },
                 {
-                    children: [{ children: names.pane2 }, { children: names.pane3 }],
+                    children: [{ children: names.pane2 }, { children: names.pane3 }, { children: names.pane4 }],
                 },
             ],
         },

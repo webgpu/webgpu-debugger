@@ -3,9 +3,10 @@ import Debugger from '../Debugger/Debugger';
 import MiniUI from '../MiniUI/MiniUI';
 import { createUIState, UIProps, UIState, UIStateContext } from '../../contexts/UIStateContext';
 
-import BufferVis from '../../views/BufferVis/BufferVis';
 import FramesVis from '../../views/FramesVis/FramesVis';
+import ObjectVis from '../../views/ObjectVis/ObjectVis';
 import ResultVis from '../../views/ResultVis/ResultVis';
+import StateVis from '../../views/StateVis/StateVis';
 import StepsVis from '../../views/StepsVis/StepsVis';
 
 import './App.css';
@@ -19,7 +20,8 @@ class App extends React.Component<UIProps, UIState> {
                 pane0: { component: FramesVis, data: ['frame1', 'frame2'] },
                 pane1: { component: StepsVis, data: null },
                 pane2: { component: ResultVis, data: null },
-                pane3: { component: BufferVis, data: null },
+                pane3: { component: StateVis, data: null },
+                pane4: { component: ObjectVis, data: null },
             },
         });
         uiStateHelper.setStateFn = (...args) => {

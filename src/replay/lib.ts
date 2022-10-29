@@ -4,7 +4,6 @@ let requestUnwrappedAdapter: RequestAdapterFn;
 
 export async function loadReplay(trace, requestUnwrappedAdapterFn: RequestAdapterFn) {
     requestUnwrappedAdapter = requestUnwrappedAdapterFn;
-
     const replay = new Replay();
     await replay.load(trace);
     return replay;
@@ -182,6 +181,7 @@ export class Replay {
 
             case 'present':
                 // Nothing to do?
+                this.state = { currentTexture: command.args.texture }; // TOOD: hack-remove
                 break;
 
             case 'textureDestroy':
@@ -223,7 +223,8 @@ export class Replay {
         return [this.commands.length];
     }
 
-    replayTo(path) {
+    async replayTo(path) {
+        this.state = {}; // TODO: hack, remove
         // TODO resetState
         path = path.slice();
         const replayLevel = path.shift();
@@ -240,6 +241,7 @@ export class Replay {
                 this.execute(c);
             }
         }
+        return this.state; // TODO: hack, remove
     }
 
     getState() {
@@ -278,6 +280,7 @@ export class ReplayRenderPass extends ReplayObject {
             const c = window.structuredClone(command);
             switch (c.name) {
                 case 'endPass':
+                    this.state = {}; // TODO: hack, remove
                     this.commands.push(c);
                     return;
 
@@ -492,6 +495,7 @@ export class ReplayCommandBuffer extends ReplayObject {
             const c = window.structuredClone(command);
             switch (c.name) {
                 case 'beginRenderPass': {
+                    this.state = { currentRenderPassDescriptor: c.args }; // TODO: hack, remove
                     for (const a of c.args.colorAttachments) {
                         a.viewState = this.replay.textureViews[a.viewSerial];
                         a.view = a.viewState.webgpuObject;

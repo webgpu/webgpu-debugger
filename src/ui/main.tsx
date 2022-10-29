@@ -2,8 +2,8 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './components/App/App';
 import { uiStateHelper } from './contexts/UIStateContext';
-import { spector2 as capture } from '../capture';
-import { loadReplay, Replay } from '../replay';
+import { spector2 as capture, requestUnwrappedAdapter, requestUnwrappedWebGPUContext } from '../capture';
+import { loadReplay } from '../replay';
 
 let initialized = false;
 
@@ -36,40 +36,14 @@ uiStateHelper.registerAPI({
         const trace = await capture.traceFrame();
         // Trace the frame and set up the replay.
         console.log(trace);
-        capture.revertEntryPoints();
-        const replay = await loadReplay(trace);
+        const replay = await loadReplay(trace, requestUnwrappedAdapter);
         console.log(replay);
-
-        function getLastElementAndPushIndex(arr: any[], path: number[]) {
-            const lastNdx = arr.length - 1;
-            path.push(lastNdx);
-            return arr[lastNdx];
-        }
-
-        function getPathForLastStep(replay: Replay) {
-            const path: number[] = [];
-            const lastCmd = getLastElementAndPushIndex(replay.commands, path);
-            if (lastCmd.name === 'queueSubmit') {
-                const lastCB = getLastElementAndPushIndex(lastCmd.args.commandBuffers, path);
-                const lastCBCmd = getLastElementAndPushIndex(lastCB.commands, path);
-                if (lastCBCmd.name === 'renderPass') {
-                    getLastElementAndPushIndex(lastCBCmd.renderPass.commands, path);
-                }
-            }
-            return path;
-        }
 
         uiStateHelper.addReplay(replay);
 
-        const pathForLastStep = getPathForLastStep(replay);
-        console.log('path:', pathForLastStep);
-
-        //const state = await replay.replayTo(pathForLastStep);
-        //console.log(state);
-
         // Go through each command, and show the presented texture of the trace on the capture canvas.
         const captureCanvas = document.createElement('canvas');
-        const context = captureCanvas.getContext('webgpu')!;
+        const context = requestUnwrappedWebGPUContext(captureCanvas);
 
         for (const c of replay.commands) {
             replay.execute(c);
@@ -100,6 +74,6 @@ uiStateHelper.registerAPI({
             }
         }
 
-        capture.wrapEntryPoints();
+        //        capture.wrapEntryPoints();
     },
 });

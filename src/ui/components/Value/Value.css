@@ -1,0 +1,9 @@
+/* A value that when clicked will open a pane to view the value */
+.spector2-value-vis {
+  color: var(--spector2-clickable-color);
+  cursor: pointer;
+  font-weight: bold;
+}
+
+
+.spector2-value-key-value {}

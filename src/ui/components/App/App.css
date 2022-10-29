@@ -1,20 +1,24 @@
 :root {
   --spector2-bg-color: white;
   --spector2-color: black;
+  --spector2-clickable-color: #48F;
   --spector2-tab-moving-bg-color: #f5ffd3;
   --spector2-tab-bar-bg-color: #eee;
   --spector2-tab-splitter-bg-color: #b6b6b6;
   --spector2-tab-move-hover-color: #7dd0db;
   --spector2-cmd-selected-bg-color: #46C;
+  --spector2-table-cell-border-color: #888;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --spector2-bg-color: #333;
     --spector2-color: white;
+    --spector2-clickable-color: #8AF;
     --spector2-tab-bar-bg-color: #555;
     --spector2-cmd-arg-bg-color: #444;
     --spector2-cmd-selected-bg-color: #468;
+    --spector2-table-cell-border-color: #888;
   }
 }
 
@@ -23,8 +27,19 @@
   font-size: medium;
   box-sizing: border-box;
 }
+
 .spector2 * {
   box-sizing: inherit;
   font-family: inherit;
   font-size: inherit;
+}
+
+/* TODO: be more specific? These are for vales */
+.spector2 table {
+  border-collapse: collapse;
+  margin: -2px;
+}
+
+.spector2 td {
+  border: 1px solid var(--spector2-table-cell-border-color);
 }

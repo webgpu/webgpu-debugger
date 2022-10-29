@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from 'react';
 
 import './ResultVis.css';
 
-type Props = {
+type ResultsVisProps = {
     data: HTMLCanvasElement;
 };
 
@@ -24,7 +24,7 @@ const draw = (ctx: CanvasRenderingContext2D, srcCanvas: HTMLCanvasElement) => {
     }
 };
 
-const ResultVis = ({ data }: Props) => {
+const ResultVis = ({ data }: ResultsVisProps) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {

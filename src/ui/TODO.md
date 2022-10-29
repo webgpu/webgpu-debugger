@@ -1,5 +1,27 @@
 # UI Todo
 
+- [ ] Switch to holding both capture and replay?
+  - [ ] Put capture in blob? (premature optimization?)
+
+        once a capture is turned into a replay the capture is not needed
+        except to offer the user to save.
+
+  - [ ] Discard Replay if not in use and regenerate (premature optimization?)
+
+        If you have many replays they probably represent lots of data.
+        If you switch replays maybe the non-current ones should be discarded
+        and then they can be regenerated from the capture (which is stored in
+        a blob, can take no/less memory)
+
+- [ ] Load capture
+  - [ ] Load JSON
+  - [ ] Load Zip
+  - [ ] Load multiple JSON
+  - [ ] Load multiple from zip 
+  - [ ] Drag and Drop
+
+- [ ] Save Capture
+
 - [ ] Add a most recently active view for each type of view
 
       For example, when you click a buffer in the Steps view
@@ -8,7 +30,20 @@
 - [ ] Settings
   - [ ] Make it so you can pop out into separate window
 
-  - [ ] Choose whether it's an overlay or a sidebar
+  - [ ] Choose whether it's an overlay or a sidebar?
+
+        The difference. An overlay sits on top of the
+        content. A sidebar makes the content area smaller.
+
+        ```
+          No UI         Overlay       Sidebar
+        +---------+   +----+----+   +----+----+
+        |content  |   |cont| UI |   |cont| UI |
+        |         |   |    |    |   |en  |    |
+        +---------+   +----+----+   +----+----+
+        ```
+
+  - [ ] Choose sides (left, right, top, bottom)
 
   - [ ] Overlay it's over the content, Side bar it takes
         up a portion of the window so the content thinks

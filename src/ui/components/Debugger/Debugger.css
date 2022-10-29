@@ -2,7 +2,7 @@
   position: fixed;
   right: 0;
   top: 0;
-  width: 50%;
+  width: 90%;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -13,6 +13,7 @@
 .spector2-viz {
   height: 100%;
   overflow: auto;
+  margin: 5px;
 }
 
 .spector2-tiles {

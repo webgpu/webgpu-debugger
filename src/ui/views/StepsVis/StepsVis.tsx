@@ -1,6 +1,6 @@
-import React, { useState, useContext } from 'react';
-import { Command, CommandArgs, QueueSubmitArgs, RenderPassArgs, Replay } from '../../../replay';
-import { UIStateContext } from '../../contexts/UIStateContext';
+import React, { useState, useContext, useEffect } from 'react';
+import { Command, CommandArgs, QueueSubmitArgs, RenderPassArgs } from '../../../replay';
+import { ReplayInfo, UIStateContext } from '../../contexts/UIStateContext';
 import { classNames } from '../../lib/css';
 
 import './StepsVis.css';
@@ -162,20 +162,32 @@ function Commands({ commands, commandId }: { commands: Command[]; commandId: num
     );
 }
 
-export default function StepsVis({ data }: { data: Replay }) {
+interface StepsVisProps {
+    data: ReplayInfo;
+}
+
+export default function StepsVis({ data }: StepsVisProps) {
+    const { replay, lastPath } = data || {};
     const { helper } = useContext(UIStateContext);
     const [state, setState] = useState<StepsState>({
         currentStep: [],
     });
+
     const playTo = (step: number[]) => {
-        setState({ currentStep: step });
-        helper.playTo(data, step);
+        if (data) {
+            setState({ currentStep: step });
+            helper.playTo(replay, step);
+        }
     };
+
+    useEffect(() => {
+        playTo(lastPath);
+    }, [data]);
 
     return (
         <div className="spector2-viz">
             <StepsContext.Provider value={{ state, playTo }}>
-                {data ? <Commands commands={data.commands} commandId={[]} /> : 'no replay'}
+                {data ? <Commands commands={replay.commands} commandId={[]} /> : 'no replay'}
             </StepsContext.Provider>
         </div>
     );
