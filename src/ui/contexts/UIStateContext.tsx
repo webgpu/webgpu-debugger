@@ -1,8 +1,11 @@
 import React from 'react';
-import StepsVis from '../views/StepsVis/StepsVis';
-import ResultVis from '../views/ResultVis/ResultVis';
 import ReplayAPI from '../ReplayAPI';
 import { Replay } from '../../replay';
+import { getPathForLastStep } from '../lib/replay-utils';
+
+import StateVis from '../views/StateVis/StateVis';
+import StepsVis from '../views/StepsVis/StepsVis';
+import ResultVis from '../views/ResultVis/ResultVis';
 
 export type PaneComponent = React.FunctionComponent<{ data: any }> | React.ComponentClass<{ data: any }>;
 type ViewData = {
@@ -11,11 +14,15 @@ type ViewData = {
 };
 
 export type PaneIdToViewType = Record<string, ViewData>;
+export type ReplayInfo = {
+    replay: Replay;
+    lastPath: number[];
+};
 
 export type UIState = {
     paneIdToViewType: PaneIdToViewType;
     fullUI: boolean;
-    replays: Replay[];
+    replays: ReplayInfo[];
 };
 
 export type SetStateArgs = Partial<UIState>;
@@ -117,18 +124,20 @@ export class UIStateHelper {
     };
 
     addReplay = (replay: Replay) => {
+        const lastPath = getPathForLastStep(replay);
+        const replayInfo = { replay, lastPath };
         this.setState({
-            replays: [...this.state.replays, replay],
+            replays: [...this.state.replays, replayInfo],
         });
-        this.setReplay(replay);
+        this.setReplay(replayInfo);
     };
 
-    setReplay = (replay: Replay) => {
+    setReplay = (replayInfo: ReplayInfo) => {
         const paneId = this.getMostRecentPaneIdForComponentType(StepsVis);
         if (!paneId) {
             throw new Error('TODO: add pane of this type');
         }
-        this.setPaneViewType(paneId, StepsVis, replay);
+        this.setPaneViewType(paneId, StepsVis, replayInfo);
         this.setFullUI(true);
     };
 
@@ -140,8 +149,17 @@ export class UIStateHelper {
         this.setPaneViewType(paneId, ResultVis, canvas);
     };
 
-    playTo(replay: Replay, id: number[]) {
-        this.replayAPI?.playTo(replay, id);
+    setGPUState = (state: any) => {
+        const paneId = this.getMostRecentPaneIdForComponentType(StateVis);
+        if (!paneId) {
+            throw new Error('TODO: add pane of this type');
+        }
+        this.setPaneViewType(paneId, StateVis, state);
+    };
+
+    async playTo(replay: Replay, path: number[]) {
+        const gpuState = await replay.replayTo(path);
+        this.setGPUState(gpuState);
     }
 }
 

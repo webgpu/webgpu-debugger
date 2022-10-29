@@ -40,32 +40,7 @@ uiStateHelper.registerAPI({
         const replay = await loadReplay(trace);
         console.log(replay);
 
-        function getLastElementAndPushIndex(arr: any[], path: number[]) {
-            const lastNdx = arr.length - 1;
-            path.push(lastNdx);
-            return arr[lastNdx];
-        }
-
-        function getPathForLastStep(replay: Replay) {
-            const path: number[] = [];
-            const lastCmd = getLastElementAndPushIndex(replay.commands, path);
-            if (lastCmd.name === 'queueSubmit') {
-                const lastCB = getLastElementAndPushIndex(lastCmd.args.commandBuffers, path);
-                const lastCBCmd = getLastElementAndPushIndex(lastCB.commands, path);
-                if (lastCBCmd.name === 'renderPass') {
-                    getLastElementAndPushIndex(lastCBCmd.renderPass.commands, path);
-                }
-            }
-            return path;
-        }
-
         uiStateHelper.addReplay(replay);
-
-        const pathForLastStep = getPathForLastStep(replay);
-        console.log('path:', pathForLastStep);
-
-        //const state = await replay.replayTo(pathForLastStep);
-        //console.log(state);
 
         // Go through each command, and show the presented texture of the trace on the capture canvas.
         const captureCanvas = document.createElement('canvas');
