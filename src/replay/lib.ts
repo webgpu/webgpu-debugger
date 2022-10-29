@@ -4,7 +4,28 @@ export async function loadReplay(trace) {
     return replay;
 }
 
+export type CommandArgs = Record<string, any>;
+
+export type Command = {
+    name: string;
+    args: CommandArgs;
+};
+
+export type CommandBuffer = {
+    commands: Command[];
+};
+
+export type QueueSubmitArgs = {
+    commandBuffers: CommandBuffer[];
+};
+
+export type RenderPassArgs = {
+    commands: Command[];
+};
+
 export class Replay {
+    commands: Command[] = [];
+
     constructor() {}
 
     async load(trace) {
