@@ -1,4 +1,4 @@
-type RequestAdapterFn = (options: GPURequestAdapterOptions) => Promise<GPUAdap>;
+type RequestAdapterFn = (options: GPURequestAdapterOptions) => Promise<GPUAdapter>;
 
 let requestUnwrappedAdapter: RequestAdapterFn;
 
