@@ -1,4 +1,10 @@
-export async function loadReplay(trace) {
+type RequestAdapterFn = (options: GPURequestAdapterOptions) => Promise<GPUAdap>;
+
+let requestUnwrappedAdapter: RequestAdapterFn;
+
+export async function loadReplay(trace, requestUnwrappedAdapterFn: RequestAdapterFn) {
+    requestUnwrappedAdapter = requestUnwrappedAdapterFn;
+
     const replay = new Replay();
     await replay.load(trace);
     return replay;
@@ -254,7 +260,7 @@ class ReplayAdapter extends ReplayObject {
     }
 
     async recreate(desc) {
-        this.webgpuObject = await navigator.gpu.requestAdapter();
+        this.webgpuObject = await requestUnwrappedAdapter();
     }
 }
 

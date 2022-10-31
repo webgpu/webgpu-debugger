@@ -30,7 +30,7 @@
 <canvas id="captureCanvas" width=1 height=1></canvas>
 
 <script type="module">
-import { spector2 } from '/dist/capture.js';
+import { spector2, requestUnwrappedAdapter, requestUnwrappedWebGPUContext } from '/dist/capture.js';
 import { loadReplay } from '/dist/replay.js';
 
 async function createEngine(canvas) {
@@ -83,13 +83,12 @@ async function run() {
     spector2.traceFrame().then(async trace => {
         // Trace the frame and set up the replay.
         console.log(trace);
-        spector2.revertEntryPoints();
-        const replay = await loadReplay(trace);
+        const replay = await loadReplay(trace, requestUnwrappedAdapter);
         console.log(replay);
 
         // Go through each command, and show the presented texture of the trace on the capture canvas.
         const captureCanvas = document.getElementById('captureCanvas');
-        const context = captureCanvas.getContext('webgpu');
+        const context = requestUnwrappedWebGPUContext(captureCanvas);
 
         for (const c of replay.commands) {
             replay.execute(c);

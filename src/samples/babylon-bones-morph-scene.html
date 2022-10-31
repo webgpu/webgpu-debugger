@@ -33,8 +33,7 @@
     <button id="nextCommandButton">Next Command</button>
 
     <script type="module">
-        import { spector2 } from '/dist/capture.js';
-        import { loadReplay } from '/dist/replay.js';
+        import traceFrame from './traceFrame.js';
 
         async function createEngine(canvas) {
             const engine = new BABYLON.WebGPUEngine(canvas);
@@ -83,50 +82,7 @@
         async function run() {
             await runBabylonScene();
 
-            spector2.traceFrame().then(async trace => {
-                // Trace the frame and set up the replay.
-                spector2.revertEntryPoints();
-                const replay = await loadReplay(trace);
-                const allCommands = Array.from(replay.iterateCommands());
-
-                // Go through each command, and show the hack texture.
-                const captureCanvas = document.getElementById('captureCanvas');
-                const context = captureCanvas.getContext('webgpu');
-
-                let i = 0;
-                document.getElementById('nextCommandButton').onclick = () => {
-                    const command = allCommands[i];
-                    replay.replayTo(command.path);
-                    console.log(command.command.name);
-                    if (replay.getState()) {
-                        console.log(replay.getState());
-                    }
-
-                    if (replay.textureStateToShow) {
-                        const textureState = replay.textureStateToShow;
-                        const device = textureState.device.webgpuObject;
-
-                        captureCanvas.width = textureState.size.width;
-                        captureCanvas.height = textureState.size.height;
-                        context.configure({
-                            device,
-                            usage: GPUTextureUsage.COPY_DST,
-                            format: textureState.format,
-                            alphaMode: 'opaque',
-                        });
-
-                        const encoder = device.createCommandEncoder();
-                        encoder.copyTextureToTexture(
-                            { texture: textureState.webgpuObject },
-                            { texture: context.getCurrentTexture() },
-                            textureState.size
-                        );
-                        device.queue.submit([encoder.finish()]);
-                    }
-
-                    i++;
-                };
-            });
+            traceFrame();
         }
 
         run();
