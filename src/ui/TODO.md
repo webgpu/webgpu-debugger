@@ -45,12 +45,6 @@
 
   - [ ] Choose sides (left, right, top, bottom)
 
-  - [ ] Overlay it's over the content, Side bar it takes
-        up a portion of the window so the content thinks
-        the window is smaller (like devtools)
-
-  - [ ] Select overlay position (top, left, right, bottom)
-
   - [ ] Add option to wrap steps.
   
         Some lines will be long
@@ -59,7 +53,7 @@
 
 - [ ] Let user drag/size UI (right now hard coded to 50%)
 
-- [ ] Add Save/Load
+- [ ] Let use drag and drop a value representing an object to create a new pane
 
 - [ ] Add Icons for buttons
 
@@ -71,6 +65,5 @@
 
 - [ ] Make pane bars have drop down for view type
 
-- [ ] Make it save layout to local store
+- [ ] Make it save layout to local storage
 
-- [ ] Make keyboard dispatch to get keys from one level and
