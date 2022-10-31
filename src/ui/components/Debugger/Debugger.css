@@ -10,14 +10,36 @@
   color: var(--spector2-color);
 }
 
-.spector2-viz {
-  height: 100%;
+.spector2-vis {
   overflow: auto;
-  margin: 5px;
+  font-size: var(--spector2-font-size);
 }
 
-.spector2-tiles {
-  border: #afafaf solid 2px;
+.spector2-panes {
+  position: relative;
   width: 100%;
   height: 100%;
+}
+
+.flexlayout__layout {
+  --color-text: var(--spector2-color);
+  --color-background: var(--spector2-bg-color);
+  --color-base: var(--spector2-bg-color);
+
+  /* tab area color when inactive */
+  --color-1: var(--spector2-tab-bar-bg-color);
+  /* spitter color */
+  --color-2: var(--spector2-tab-splitter-bg-color);
+  /*#1a1a1a;*/
+  --color-3: green;
+  /*#262626;*/
+  /* tab color, tab area when inactive */
+  --color-4: var(--spector2-tab-bg-color);
+  /*#333333;*/
+  --color-5: blue;
+  /*#404040;*/
+  --color-6: magenta;
+  /*#4d4d4d;*/
+  font-size: xx-small;
+  --font-size: xx-small;
 }

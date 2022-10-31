@@ -36,7 +36,7 @@ const ResultVis = ({ data }: ResultsVisProps) => {
     }, [draw]);
 
     return (
-        <div className="spector2-viz">
+        <div className="spector2-vis">
             <canvas ref={canvasRef} />
         </div>
     );

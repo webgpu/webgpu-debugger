@@ -1,7 +1,8 @@
 {
   "cSpell.words": [
     "onwarn",
-    "spector"
+    "spector",
+    "tabset"
   ],
   "editor.formatOnSave": true,
   "eslint.format.enable": true,

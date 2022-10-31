@@ -4,7 +4,7 @@ import { ValueObject } from '../../../components/Value/Value';
 
 export default function PipelineVis({ data }: { data: ReplayRenderPipeline }) {
     return (
-        <div className="spector2-viz">
+        <div className="spector2-vis">
             <ValueObject data={data} />
         </div>
     );

@@ -18,6 +18,7 @@ import {
     ReplayTexture,
     ReplayTextureView,
 } from '../../../replay';
+import { TileContext } from '../../contexts/TileContext';
 import { UIStateContext, PaneComponent } from '../../contexts/UIStateContext';
 import BufferVis from '../../views/objectViews/BufferVis/BufferVis';
 import PipelineVis from '../../views/objectViews/PipelineVis/PipelineVis';
@@ -33,6 +34,7 @@ function PlaceHolder({ data }: { data: any }) {
 function makeVisValue(Class: Function, visComponent: PaneComponent, typeName: string) {
     return function VisValue({ data }: { data: ReplayBuffer }) {
         const { helper } = useContext(UIStateContext);
+        const freePaneId = helper.state.freePaneIds[0];
         return (
             <div
                 onClick={() => {
@@ -69,9 +71,10 @@ const s_replayClassToComponent = new Map<Function, ValueComponent>([
 
 const baseObjectProto = Object.getPrototypeOf({});
 
-export function ValueObject({ data }: Record<string, any>) {
+export function ValueObject({ depth, data }: { depth?: number; data: Record<string, any> }) {
+    const childDepth = (depth || 0) + 1;
     return (
-        <table className="spector2-value-object">
+        <table className={`spector2-value-object spector2-value-depth${depth}`}>
             <tbody>
                 {Object.entries(data).map(([key, value], ndx) => [
                     <tr className="spector2-value-key-value" key={'p${ndx}'}>
@@ -79,7 +82,7 @@ export function ValueObject({ data }: Record<string, any>) {
                             {key}:
                         </td>
                         <td>
-                            <Value key={`v${ndx}`} data={value} />
+                            <Value key={`v${ndx}`} depth={childDepth} data={value} />
                         </td>
                     </tr>,
                 ])}
@@ -88,15 +91,16 @@ export function ValueObject({ data }: Record<string, any>) {
     );
 }
 
-function ValueArray({ data }: { data: any[] }) {
+function ValueArray({ depth, data }: { depth?: number; data: any[] }) {
+    const childDepth = (depth || 0) + 1;
     return (
-        <table className="spector2-value-array">
+        <table className={`spector2-value-array spector2-value-depth${depth}`}>
             <tbody>
                 {data.map((v, ndx) => (
                     <tr key={`e${ndx}`}>
                         <td>{ndx}</td>
                         <td>
-                            <Value data={v} />
+                            <Value depth={childDepth} data={v} />
                         </td>
                     </tr>
                 ))}
@@ -105,7 +109,7 @@ function ValueArray({ data }: { data: any[] }) {
     );
 }
 
-export default function Value({ data }: { data: any }) {
+export default function Value({ depth, data }: { depth?: number; data: any }) {
     if (data === undefined) {
         return <div>undefined</div>;
     } else if (data === null) {
@@ -115,13 +119,13 @@ export default function Value({ data }: { data: any }) {
     } else if (typeof data === 'string') {
         return <div className="spector2-value-string">&quot;{data}&quot;</div>;
     } else if (Array.isArray(data)) {
-        return <ValueArray data={data} />;
+        return <ValueArray depth={depth} data={data} />;
     } else if (typeof data === 'function') {
         return <div className="spector2-value-function">{data.name}</div>;
     } else if (typeof data === 'object') {
         const proto = Object.getPrototypeOf(data);
         if (proto === baseObjectProto) {
-            return <ValueObject data={data} />;
+            return <ValueObject depth={depth} data={data} />;
         } else {
             const component = s_replayClassToComponent.get(proto.constructor);
             if (component) {

@@ -8,7 +8,7 @@ interface StateVisProps {
 
 export default function StateVis({ data }: StateVisProps) {
     return (
-        <div className="spector2-viz">
+        <div className="spector2-vis">
             <Value data={data} />
         </div>
     );

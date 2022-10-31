@@ -24,6 +24,7 @@ export type UIState = {
     paneIdToViewType: PaneIdToViewType;
     fullUI: boolean;
     replays: ReplayInfo[];
+    freePaneIds: string[];
 };
 
 export type SetStateArgs = Partial<UIState>;
@@ -34,6 +35,7 @@ export function createUIState(state: SetStateArgs = {}): UIState {
             paneIdToViewType: {},
             fullUI: false,
             replays: [],
+            freePaneIds: [],
         },
         ...state,
     };

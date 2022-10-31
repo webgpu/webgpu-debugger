@@ -5,7 +5,7 @@ export default function FramesVis() {
     const { helper } = useContext(UIStateContext);
 
     return (
-        <div className="spector2-viz">
+        <div className="spector2-vis">
             {helper.state.replays.map((replay, ndx) => (
                 <button
                     key={`b${ndx}`}

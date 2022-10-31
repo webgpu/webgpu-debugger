@@ -1,11 +1,13 @@
 import React from 'react';
-import { createTilePanes, TileBranchSubstance, TileContainer, TileProvider } from 'react-tile-pane';
 import Toolbar from '../Toolbar/Toolbar';
-
+import { maxPanes } from '../../globals';
 import Pane from '../Pane/Pane';
+import * as FlexLayout from '../../../3rdParty/FlexLayout/src/index';
 
+import '../../../3rdParty/FlexLayout/style/dark.css';
 import './Debugger.css';
-import './react-tile-pane.css';
+
+import { TileContext } from '../../contexts/TileContext';
 
 // react-tile-pane refers to panes by id
 // we what we do is make each new pane with a new id `pane<id>`
@@ -21,44 +23,131 @@ import './react-tile-pane.css';
 // It bugs me that these 3 things, paneList, names, and rootPane are
 // global. I think they could go into the component but as the component is
 // created and destroyed they'd lose their state.
-const maxPanes = 10;
-const [paneList, names] = createTilePanes(
-    Object.fromEntries(
-        new Array(maxPanes).fill(0).map((_, ndx) => {
-            const paneId = `pane${ndx}`;
-            return [paneId, <Pane key={paneId} id={paneId} />];
-        })
-    )
-);
 
-const rootPane: TileBranchSubstance = {
-    children: [
-        { children: [names.pane0] },
-        {
-            isRow: true,
-            grow: 5,
-            children: [
-                { children: names.pane1 },
-                {
-                    children: [{ children: names.pane2 }, { children: names.pane3 }, { children: names.pane4 }],
-                },
-            ],
-        },
-    ],
+const layout: FlexLayout.IJsonModel = {
+    global: {
+        splitterSize: 4,
+    },
+    borders: [],
+    layout: {
+        type: 'row',
+        children: [
+            {
+                type: 'row',
+                weight: 10,
+                children: [
+                    {
+                        type: 'tabset',
+                        weight: 10,
+                        children: [
+                            {
+                                type: 'tab',
+                                name: 'pane0',
+                                component: 'Pane',
+                            },
+                        ],
+                    },
+                    {
+                        type: 'row',
+                        weight: 90,
+                        children: [
+                            {
+                                type: 'tabset',
+                                weight: 50,
+                                children: [
+                                    {
+                                        type: 'tab',
+                                        name: 'pane1',
+                                        component: 'Pane',
+                                    },
+                                ],
+                            },
+                            {
+                                type: 'row',
+                                weight: 50,
+                                children: [
+                                    {
+                                        type: 'tabset',
+                                        weight: 34,
+                                        children: [
+                                            {
+                                                type: 'tab',
+                                                name: 'pane2',
+                                                component: 'Pane',
+                                            },
+                                        ],
+                                    },
+                                    {
+                                        type: 'tabset',
+                                        weight: 33,
+                                        children: [
+                                            {
+                                                type: 'tab',
+                                                name: 'pane3',
+                                                component: 'Pane',
+                                            },
+                                        ],
+                                    },
+                                    {
+                                        type: 'tabset',
+                                        weight: 33,
+                                        children: [
+                                            {
+                                                type: 'tab',
+                                                name: 'pane4',
+                                                component: 'Pane',
+                                            },
+                                        ],
+                                        active: true,
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                ],
+            },
+        ],
+    },
 };
 
-const Debugger: React.FC = () => {
-    return (
-        <div className="spector2-debugger">
-            <Toolbar />
-            <TileProvider tilePanes={paneList} rootNode={rootPane}>
-                <div className="spector2-tiles">
-                    <TileContainer />
+interface IState {
+    model: FlexLayout.Model;
+}
+
+class Debugger extends React.Component<any, IState> {
+    constructor(props: any) {
+        super(props);
+        this.state = { model: FlexLayout.Model.fromJson(layout) };
+    }
+    factory = (node: FlexLayout.TabNode) => {
+        const component = node.getComponent();
+        if (component === 'Pane') {
+            return <Pane id={node.getName()} />;
+        } else {
+            return <div>unknown tab component: (component)</div>;
+        }
+    };
+    render() {
+        return (
+            <div className="spector2-debugger">
+                <Toolbar />
+                <div>
+                    {/*
+                    <button
+                        onClick={() => {
+                            console.log(JSON.stringify(this.state.model!.toJson(), null, '\t'));
+                        }}
+                    >
+                        show model
+                    </button>
+                    */}
                 </div>
-                {/* <DraggableTitle name={names.banana}>Drag this banana🍌</DraggableTitle> */}
-            </TileProvider>
-        </div>
-    );
-};
+                <div className="spector2-panes">
+                    <FlexLayout.Layout model={this.state.model} factory={this.factory} />
+                </div>
+            </div>
+        );
+    }
+}
 
 export default Debugger;

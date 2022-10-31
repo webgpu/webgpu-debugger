@@ -185,7 +185,7 @@ export default function StepsVis({ data }: StepsVisProps) {
     }, [data]);
 
     return (
-        <div className="spector2-viz">
+        <div className="spector2-vis">
             <StepsContext.Provider value={{ state, playTo }}>
                 {data ? <Commands commands={replay.commands} commandId={[]} /> : 'no replay'}
             </StepsContext.Provider>
