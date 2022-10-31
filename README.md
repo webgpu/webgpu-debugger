@@ -10,16 +10,16 @@ WebGPU Debugger
   ```bash
   git clone https://github.com/Kangz/spector2.git
   cd spector2
-  npm init
+  npm ci
   ```
 
 ### Live development
 
 ```
-npm run start
+npm start
 ```
 
-It should open a browser to `http://localhost:3003`. Edits to the code *should* end up showing up live in the browser.
+It should open a browser to `http://localhost:3000/example/`. Edits to the code *should* end up showing up live in the browser.
 
 ## Building
 
@@ -27,16 +27,44 @@ It should open a browser to `http://localhost:3003`. Edits to the code *should* 
 npm run build
 ```
 
-This builds the library as an es6 module into `dist/index.js`.
+This builds 3 libraries.
 
-To use you'd do something like
+1. the `capture` library `dist/capture.js`
 
-```html
-<div id="spector2"></div>
-<script type="module">
-import spector2 from '../dist/index.js';
-spector2(document.querySelector('#spector2'));
-</script>
-```
+   usage:
+   
+   ```js
+   import { spector2 } from 'dist/capture.js
+   
+   ...
+     const trace = await spector2.traceFrame();
+   ```
 
-See `example/index.html`
+2. the `replay` library `dist/replay.js`
+
+   stand alone usage:
+   
+   ```js
+   TBD
+   ```
+
+   usage with capture
+   
+   ```js
+   TBD
+   ```
+   
+3. the 'debugger' in `dist/spector2.js`
+
+   usage:
+   
+   ```js
+   import `dist/spector2.js`;
+   ```
+   
+   or
+   
+   ```html
+   <script src="dist/spector2.js"></script>
+   ```
+
