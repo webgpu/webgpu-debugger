@@ -98,7 +98,6 @@ function addOriginalFunctionsToResult(result: any): any {
     for (const [fnName, origFn] of Object.entries(origFns)) {
         if (createFns && createFns.has(fnName)) {
             result[fnName] = function (...args: any[]) {
-                console.log('calling:', fnName);
                 const result = origFn.call(this, ...args);
                 if (isPromise(result)) {
                     return result.then(addOriginalFunctionsToResult);
