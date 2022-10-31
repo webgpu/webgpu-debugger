@@ -2,6 +2,7 @@ import React from 'react';
 import ReplayAPI from '../ReplayAPI';
 import { Replay } from '../../replay';
 import { getPathForLastStep } from '../lib/replay-utils';
+import { arrayRemoveElementByValue } from '../lib/array-utils';
 
 import StateVis from '../views/StateVis/StateVis';
 import StepsVis from '../views/StepsVis/StepsVis';
@@ -11,6 +12,7 @@ import ResultVis from '../views/ResultVis/ResultVis';
 export type PaneComponent = React.FunctionComponent<{ data: any }> | React.ComponentClass<{ data: any }>;
 type ViewData = {
     component: PaneComponent;
+    name: string;
     data: unknown;
 };
 
@@ -101,11 +103,15 @@ export class UIStateHelper {
     setMostRecentPaneIdForComponentType = (component: PaneComponent, paneId: string) => {
         this.mruViewsByType.set(component, this.mruViewsByType.get(component) || []);
         const mru = this.mruViewsByType.get(component)!;
-        const ndx = mru.indexOf(paneId);
-        if (ndx >= 0) {
-            mru.splice(ndx, 1);
-        }
+        arrayRemoveElementByValue(mru, paneId);
         mru.unshift(paneId);
+    };
+
+    setMostRecentPaneByPaneId = (paneId: string) => {
+        const viewType = this.state.paneIdToViewType[paneId];
+        if (viewType) {
+            this.setMostRecentPaneIdForComponentType(viewType.component, paneId);
+        }
     };
 
     getMostRecentPaneIdForComponentType = (component: PaneComponent): string | undefined => {
@@ -119,19 +125,56 @@ export class UIStateHelper {
         return mru.length ? mru[0] : undefined;
     };
 
-    setPaneViewType = (paneId: string, component: PaneComponent, data: any): void => {
+    setPaneViewType = (paneId: string, component: PaneComponent, name: string, data: any): void => {
         const paneIdToViewType = { ...this.state.paneIdToViewType };
-        paneIdToViewType[paneId] = { component, data };
+        paneIdToViewType[paneId] = { component, name, data };
         this.setState({ paneIdToViewType });
         this.setMostRecentPaneIdForComponentType(component, paneId);
     };
 
-    setObjectView = (component: PaneComponent, data: any) => {
+    deletePaneByPaneId(paneId: string) {
+        // remove from mru list
+        const viewType = this.state.paneIdToViewType[paneId]!;
+        const component = viewType.component;
+        const mru = this.mruViewsByType.get(component)!;
+        arrayRemoveElementByValue(mru, paneId);
+
+        // remove from paneIdToViewType list
+        const paneIdToViewType = { ...this.state.paneIdToViewType };
+        delete paneIdToViewType[paneId];
+
+        // add to freePaneIds
+        const freePaneIds = [paneId, ...this.state.freePaneIds];
+
+        this.setState({ paneIdToViewType, freePaneIds });
+    }
+
+    /**
+     * Called to find an existing view and change to to show
+     * this object.
+     * @param name Name to display in tab
+     * @param data Data for ObjectVis
+     */
+    setObjectView = (name: string, data: any) => {
         const paneId = this.getMostRecentPaneIdForComponentType(ObjectVis);
         if (!paneId) {
             throw new Error('TODO: add pane of this type');
         }
-        this.setPaneViewType(paneId, ObjectVis, data);
+        this.setPaneViewType(paneId, ObjectVis, name, data);
+    };
+
+    /**
+     * Called to add a new view
+     * @param name Name to display in tab
+     * @param data Data for ObjectVis
+     * @param freePaneId Id of unused Pane
+     */
+    addObjectView = (name: string, data: any, freePaneId: string) => {
+        this.setPaneViewType(freePaneId, ObjectVis, name, data);
+        // remove from freePaneIds
+        const freePaneIds = [...this.state.freePaneIds];
+        arrayRemoveElementByValue(freePaneIds, freePaneId);
+        this.setState({ freePaneIds });
     };
 
     addReplay = (replay: Replay) => {
@@ -148,7 +191,7 @@ export class UIStateHelper {
         if (!paneId) {
             throw new Error('TODO: add pane of this type');
         }
-        this.setPaneViewType(paneId, StepsVis, replayInfo);
+        this.setPaneViewType(paneId, StepsVis, 'Steps', replayInfo);
         this.setFullUI(true);
     };
 
@@ -157,7 +200,7 @@ export class UIStateHelper {
         if (!paneId) {
             throw new Error('TODO: add pane of this type');
         }
-        this.setPaneViewType(paneId, ResultVis, canvas);
+        this.setPaneViewType(paneId, ResultVis, 'Result', canvas);
     };
 
     setGPUState = (state: any) => {
@@ -166,7 +209,7 @@ export class UIStateHelper {
             throw new Error('TODO: add pane of this type');
         }
         console.log(state);
-        this.setPaneViewType(paneId, StateVis, state);
+        this.setPaneViewType(paneId, StateVis, 'State', state);
     };
 
     async playTo(replay: Replay, path: number[]) {

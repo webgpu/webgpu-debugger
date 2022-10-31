@@ -1,28 +1,24 @@
 import React from 'react';
 import Toolbar from '../Toolbar/Toolbar';
-import { maxPanes } from '../../globals';
 import Pane from '../Pane/Pane';
 import * as FlexLayout from '../../../3rdParty/FlexLayout/src/index';
 
+import { TileContext } from '../../contexts/TileContext';
+import { uiStateHelper } from '../../contexts/UIStateContext';
+
 import '../../../3rdParty/FlexLayout/style/dark.css';
 import './Debugger.css';
+import { Action } from '../../../3rdParty/FlexLayout/src/index';
 
-import { TileContext } from '../../contexts/TileContext';
-
-// react-tile-pane refers to panes by id
+// We started with react-tile-pane. It refers to panes by id
 // we what we do is make each new pane with a new id `pane<id>`
 //
 // Separately, in the uiState, we associate that id
 // with a component and a piece of data so we can put that component
 // in that pane with that data
-
-// TODO: Make it so the user can add more panes. I had some code that added
-// panes on demand but ending up switching to code that just makes N panes
-// and then ideally these panes would be stored on unused-pane list.
 //
-// It bugs me that these 3 things, paneList, names, and rootPane are
-// global. I think they could go into the component but as the component is
-// created and destroyed they'd lose their state.
+// We switched to FlexLayout but have not refactored the code from
+// this paneId stuff.
 
 const layout: FlexLayout.IJsonModel = {
     global: {
@@ -115,9 +111,12 @@ interface IState {
 }
 
 class Debugger extends React.Component<any, IState> {
+    layoutRef?: React.RefObject<FlexLayout.Layout>;
+
     constructor(props: any) {
         super(props);
         this.state = { model: FlexLayout.Model.fromJson(layout) };
+        this.layoutRef = React.createRef();
     }
     factory = (node: FlexLayout.TabNode) => {
         const component = node.getComponent();
@@ -126,6 +125,57 @@ class Debugger extends React.Component<any, IState> {
         } else {
             return <div>unknown tab component: (component)</div>;
         }
+    };
+    onAddPaneViaDrag = (
+        event: React.MouseEvent | React.TouchEvent<HTMLButtonElement>,
+        name: string,
+        data: any,
+        freePaneId: string
+    ) => {
+        //event.stopPropagation();
+        //event.preventDefault();
+        this.layoutRef!.current!.addTabWithDragAndDrop(
+            undefined,
+            {
+                component: 'Pane',
+                name: freePaneId,
+            },
+            () => {
+                // This is sketchy
+                uiStateHelper.addObjectView(name, data, freePaneId);
+            }
+        );
+    };
+    onAction = (action: FlexLayout.Action) => {
+        console.log(action);
+        const { type, data } = action;
+        switch (type) {
+            case 'FlexLayout_DeleteTab':
+                const tabNode = this.state.model.getNodeById(data.node) as FlexLayout.TabNode;
+                if (tabNode) {
+                    uiStateHelper.deletePaneByPaneId(tabNode.getName());
+                }
+        }
+        return action;
+    };
+    onModelChange = () => {
+        // When a pane become active, update the pane mru lists.
+        const tabset = this.state.model.getActiveTabset();
+        if (tabset) {
+            const node = tabset.getSelectedNode() as FlexLayout.TabNode;
+            uiStateHelper.setMostRecentPaneByPaneId(node.getName());
+        }
+    };
+    onRenderTab = (node: FlexLayout.TabNode, renderValues: FlexLayout.ITabRenderValues) => {
+        const paneId = node.getName();
+        const viewType = uiStateHelper.state.paneIdToViewType[paneId];
+        const name = viewType ? viewType.name : '*unknown*';
+        renderValues.content = name;
+        // renderValues.content = (<InnerComponent/>);
+        // renderValues.content += " *";
+        // renderValues.leading = <img style={{width:"1em", height:"1em"}}src="images/folder.svg"/>;
+        // renderValues.name = "tab " + node.getId(); // name used in overflow menu
+        // renderValues.buttons.push(<img style={{width:"1em", height:"1em"}} src="images/folder.svg"/>);
     };
     render() {
         return (
@@ -143,7 +193,16 @@ class Debugger extends React.Component<any, IState> {
                     */}
                 </div>
                 <div className="spector2-panes">
-                    <FlexLayout.Layout model={this.state.model} factory={this.factory} />
+                    <TileContext.Provider value={{ onAddPaneViaDrag: this.onAddPaneViaDrag }}>
+                        <FlexLayout.Layout
+                            ref={this.layoutRef}
+                            model={this.state.model}
+                            factory={this.factory}
+                            onAction={this.onAction}
+                            onModelChange={this.onModelChange}
+                            onRenderTab={this.onRenderTab}
+                        />
+                    </TileContext.Provider>
                 </div>
             </div>
         );

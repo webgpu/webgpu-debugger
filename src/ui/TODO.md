@@ -1,5 +1,8 @@
 # UI Todo
 
+- [ ] If they don't already, every resources should get a number (1, 2, 3), otherwise, if the user
+      does not label them they all show up the same
+
 - [ ] Buffer view
 
   - [ ] show as grid of values with options for N values per row, as u8, i8, u16, float, etc....

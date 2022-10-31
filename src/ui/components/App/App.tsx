@@ -18,11 +18,11 @@ class App extends React.Component<UIProps, UIState> {
         const { uiStateHelper } = props;
 
         const paneIdToViewType: PaneIdToViewType = {
-            pane0: { component: FramesVis, data: null },
-            pane1: { component: StepsVis, data: null },
-            pane2: { component: ResultVis, data: null },
-            pane3: { component: StateVis, data: null },
-            pane4: { component: ObjectVis, data: null },
+            pane0: { component: FramesVis, name: 'Frames', data: null },
+            pane1: { component: StepsVis, name: 'Steps', data: null },
+            pane2: { component: ResultVis, name: 'Result', data: null },
+            pane3: { component: StateVis, name: 'State', data: null },
+            pane4: { component: ObjectVis, name: 'Data', data: null },
         };
 
         const freePaneIds: string[] = [];

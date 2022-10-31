@@ -1,8 +1,13 @@
 {
   "cSpell.words": [
+    "Corentin",
+    "flexlayout",
     "onwarn",
     "spector",
-    "tabset"
+    "tabbar",
+    "tabset",
+    "textbox",
+    "Wallez"
   ],
   "editor.formatOnSave": true,
   "eslint.format.enable": true,

@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React from 'react';
 import Value from '../../components/Value/Value';
 
 /* it's not clear what this is ATM. */

@@ -19,9 +19,7 @@ import {
     ReplayTextureView,
 } from '../../../replay';
 import { TileContext } from '../../contexts/TileContext';
-import { UIStateContext, PaneComponent } from '../../contexts/UIStateContext';
-import BufferVis from '../../views/objectViews/BufferVis/BufferVis';
-import PipelineVis from '../../views/objectViews/PipelineVis/PipelineVis';
+import { UIStateContext } from '../../contexts/UIStateContext';
 
 import './Value.css';
 
@@ -31,25 +29,28 @@ function PlaceHolder({ data }: { data: any }) {
     return <div>placeholder{`<${Object.getPrototypeOf(data).constructor.name}>`}</div>;
 }
 
-function makeVisValue(Class: Function, visComponent: PaneComponent, typeName: string) {
-    return function VisValue({ data }: { data: ReplayBuffer }) {
+function makeVisValue(Class: Function, typeName: string) {
+    return function VisValue({ data }: { data: any }) {
         const { helper } = useContext(UIStateContext);
+        const { onAddPaneViaDrag } = useContext(TileContext);
         const freePaneId = helper.state.freePaneIds[0];
+        const name = `${typeName}`;
         return (
             <div
-                onClick={() => {
-                    helper.setObjectView(visComponent, data);
-                }}
                 className={`spector2-value-vis spector-value-${typeName}`}
+                onClick={() => {
+                    helper.setObjectView(typeName, data);
+                }}
             >
                 {typeName}
+                <span onMouseDown={event => onAddPaneViaDrag(event, name, data, freePaneId)}>👁</span>
             </div>
         );
     };
 }
 
-const BufferValue = makeVisValue(ReplayBuffer, BufferVis, 'GPUBuffer');
-const RenderPipelineValue = makeVisValue(ReplayRenderPass, PipelineVis, 'GPURenderPipeline');
+const BufferValue = makeVisValue(ReplayBuffer, 'GPUBuffer');
+const RenderPipelineValue = makeVisValue(ReplayRenderPass, 'GPURenderPipeline');
 
 const s_replayClassToComponent = new Map<Function, ValueComponent>([
     [ReplayAdapter, PlaceHolder],
