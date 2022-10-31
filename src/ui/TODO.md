@@ -1,5 +1,26 @@
 # UI Todo
 
+- [ ] Buffer view
+
+  - [ ] show as grid of values with options for N values per row, as u8, i8, u16, float, etc....
+  - [ ] handle all buffers. Not all buffers can be mapped so need to copy those buffers. 
+        Also, not all buffers can be copied (or can they?), if not then need compute shader to copy?
+  - [ ] figure out how we can eventually show uniforms, vertices, etc. 
+        Compiling the shaders, looking up what they are bound to etc...
+  - [ ] Can we have a 3D view (to show wireframes of 3D data?) 
+
+- [ ] Texture view
+  - [ ] Show textures, let you pick mips or show all mips?
+  - [ ] Allow zooming
+  - [ ] allow inspecting colors under the cursor (show actual values)
+  - [ ] Magnifying glass
+  - [ ] handle all texture formats
+    - [ ] Formats that can't be put directly in a texture need to get rendered to a texture that can, 
+          or rendered directly into the canvas for the UI view.
+    - [ ] Need to handle int textures
+  - [ ] Add range/level type settings so you can view data that's not easily visualized
+  - [ ] Consider adding the ability add user created shader snippets to convert to something visualizable
+
 - [ ] Switch to holding both capture and replay?
   - [ ] Put capture in blob? (premature optimization?)
 
