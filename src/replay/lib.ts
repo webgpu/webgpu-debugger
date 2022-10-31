@@ -254,17 +254,17 @@ class ReplayObject {
     }
 }
 
-class ReplayAdapter extends ReplayObject {
+export class ReplayAdapter extends ReplayObject {
     constructor(replay, desc) {
         super(replay, desc);
     }
 
     async recreate(desc) {
-        this.webgpuObject = await requestUnwrappedAdapter();
+        this.webgpuObject = await requestUnwrappedAdapter(desc);
     }
 }
 
-class ReplayRenderPass extends ReplayObject {
+export class ReplayRenderPass extends ReplayObject {
     constructor(replay, desc) {
         super(replay, desc);
         this.commands = [];
@@ -475,7 +475,7 @@ class ReplayRenderPass extends ReplayObject {
     }
 }
 
-class ReplayCommandBuffer extends ReplayObject {
+export class ReplayCommandBuffer extends ReplayObject {
     constructor(replay, desc) {
         super(replay, desc);
         this.commands = [];
@@ -610,7 +610,7 @@ class ReplayCommandBuffer extends ReplayObject {
     }
 }
 
-class ReplayBuffer extends ReplayObject {
+export class ReplayBuffer extends ReplayObject {
     constructor(replay, desc) {
         super(replay, desc);
         this.device = this.replay.devices[desc.deviceSerial];
@@ -630,7 +630,7 @@ class ReplayBuffer extends ReplayObject {
     }
 }
 
-class ReplayBindGroup extends ReplayObject {
+export class ReplayBindGroup extends ReplayObject {
     constructor(replay, desc) {
         super(replay, desc);
         this.device = this.replay.devices[desc.deviceSerial];
@@ -656,7 +656,7 @@ class ReplayBindGroup extends ReplayObject {
     }
 }
 
-class ReplayBindGroupLayout extends ReplayObject {
+export class ReplayBindGroupLayout extends ReplayObject {
     constructor(replay, desc) {
         super(replay, desc);
         this.device = this.replay.devices[desc.deviceSerial];
@@ -676,7 +676,7 @@ class ReplayBindGroupLayout extends ReplayObject {
     }
 }
 
-class ReplayDevice extends ReplayObject {
+export class ReplayDevice extends ReplayObject {
     constructor(replay, desc) {
         super(replay, desc);
     }
@@ -687,7 +687,7 @@ class ReplayDevice extends ReplayObject {
     }
 }
 
-class ReplayPipelineLayout extends ReplayObject {
+export class ReplayPipelineLayout extends ReplayObject {
     constructor(replay, desc) {
         super(replay, desc);
         this.device = this.replay.devices[desc.deviceSerial];
@@ -697,7 +697,7 @@ class ReplayPipelineLayout extends ReplayObject {
     }
 }
 
-class ReplayQuerySet extends ReplayObject {
+export class ReplayQuerySet extends ReplayObject {
     constructor(replay, desc) {
         super(replay, desc);
         this.device = this.replay.devices[desc.deviceSerial];
@@ -706,7 +706,7 @@ class ReplayQuerySet extends ReplayObject {
     }
 }
 
-class ReplayQueue extends ReplayObject {
+export class ReplayQueue extends ReplayObject {
     constructor(replay, desc) {
         super(replay, desc);
         this.device = this.replay.devices[desc.deviceSerial];
@@ -732,7 +732,7 @@ class ReplayQueue extends ReplayObject {
     }
 }
 
-class ReplayRenderPipeline extends ReplayObject {
+export class ReplayRenderPipeline extends ReplayObject {
     constructor(replay, desc) {
         super(replay, desc);
     }
@@ -766,7 +766,7 @@ class ReplayRenderPipeline extends ReplayObject {
     }
 }
 
-class ReplaySampler extends ReplayObject {
+export class ReplaySampler extends ReplayObject {
     constructor(replay, desc) {
         super(replay, desc);
         this.device = this.replay.devices[desc.deviceSerial];
@@ -774,7 +774,7 @@ class ReplaySampler extends ReplayObject {
     }
 }
 
-class ReplayShaderModule extends ReplayObject {
+export class ReplayShaderModule extends ReplayObject {
     constructor(replay, desc) {
         super(replay, desc);
         const device = this.replay.devices[desc.deviceSerial];
@@ -784,7 +784,7 @@ class ReplayShaderModule extends ReplayObject {
     }
 }
 
-class ReplayTexture extends ReplayObject {
+export class ReplayTexture extends ReplayObject {
     constructor(replay, desc) {
         super(replay, desc);
         this.device = this.replay.devices[desc.deviceSerial];
@@ -845,7 +845,7 @@ class ReplayTexture extends ReplayObject {
     }
 }
 
-class ReplayTextureView extends ReplayObject {
+export class ReplayTextureView extends ReplayObject {
     constructor(replay, desc) {
         super(replay, desc);
         this.texture = this.replay.textures[desc.textureSerial];
