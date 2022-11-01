@@ -1,12 +1,15 @@
 .spector2-cmd-indent-1 {
   padding-left: 1em;
 }
+
 .spector2-cmd-indent-2 {
   padding-left: 2em;
 }
+
 .spector2-cmd-indent-3 {
   padding-left: 3em;
 }
+
 .spector2-cmd-indent-4 {
   padding-left: 4em;
 }
@@ -15,15 +18,21 @@
   text-indent: -1em;
   cursor: pointer;
 }
+
 .spector2-cmd>* {
   display: inline;
 }
+
 .spector2-cmd>*>* {
   display: inline;
 }
 
 .spector2-cmd-args {
   color: pink;
+}
+
+.spector2-cmd-arg>* {
+  display: inline;
 }
 
 .spector2-cmd-selected {

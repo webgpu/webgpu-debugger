@@ -1,5 +1,6 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { Command, CommandArgs, QueueSubmitArgs, RenderPassArgs } from '../../../replay';
+import Value, { canDisplayInline } from '../../components/Value/Value';
 import { ReplayInfo, UIStateContext } from '../../contexts/UIStateContext';
 import { classNames } from '../../lib/css';
 
@@ -45,7 +46,11 @@ function Arg({ k, v }: { k: string; v: any }) {
         return <div className="spector2-cmd-arg">[...]: {k}</div>;
     }
     if (typeof v === 'object') {
-        return <div className="spector2-cmd-arg">{v.constructor.name}</div>;
+        return (
+            <div className="spector2-cmd-arg">
+                {canDisplayInline(v) ? <Value data={v} /> : <div>{v.constructor.name}</div>}
+            </div>
+        );
     }
     return (
         <div className="spector2-cmd-arg">

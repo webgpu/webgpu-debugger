@@ -147,7 +147,6 @@ class Debugger extends React.Component<any, IState> {
         );
     };
     onAction = (action: FlexLayout.Action) => {
-        console.log(action);
         const { type, data } = action;
         switch (type) {
             case 'FlexLayout_DeleteTab':

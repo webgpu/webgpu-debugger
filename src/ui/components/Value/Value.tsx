@@ -25,68 +25,96 @@ import './Value.css';
 
 export type ValueComponent = React.FunctionComponent<any> | React.ComponentClass<any>;
 
+/*
 function PlaceHolder({ data }: { data: any }) {
     return <div>placeholder{`<${Object.getPrototypeOf(data).constructor.name}>`}</div>;
 }
+*/
 
 function makeVisValue(Class: Function, typeName: string) {
     return function VisValue({ data }: { data: any }) {
         const { helper } = useContext(UIStateContext);
         const { onAddPaneViaDrag } = useContext(TileContext);
         const freePaneId = helper.state.freePaneIds[0];
-        const name = `${typeName}`;
+        const name = `${typeName}${data.label ? `(${data.label})` : ''}`;
         return (
             <div
                 className={`spector2-value-vis spector-value-${typeName}`}
                 onClick={() => {
-                    helper.setObjectView(typeName, data);
+                    helper.setObjectView(name, data);
                 }}
             >
-                {typeName}
-                <span onMouseDown={event => onAddPaneViaDrag(event, name, data, freePaneId)}>👁</span>
+                {name}
+                <span
+                    title="drag to make new pane"
+                    onMouseDown={event => onAddPaneViaDrag(event, name, data, freePaneId)}
+                >
+                    👁
+                </span>
             </div>
         );
     };
 }
 
+const AdapterValue = makeVisValue(ReplayAdapter, 'GPUAdapter');
+const BindGroupLayoutValue = makeVisValue(ReplayBindGroupLayout, 'GPUBindGroupLayout');
+const BindGroupValue = makeVisValue(ReplayBindGroup, 'GPUBindGroup');
 const BufferValue = makeVisValue(ReplayBuffer, 'GPUBuffer');
-const RenderPipelineValue = makeVisValue(ReplayRenderPass, 'GPURenderPipeline');
+const CommandBufferValue = makeVisValue(ReplayCommandBuffer, 'GPUCommandBuffer');
+const DeviceValue = makeVisValue(ReplayDevice, 'GPUDevice');
+const PipelineLayoutValue = makeVisValue(ReplayPipelineLayout, 'GPUPipelineLayout');
+const QuerySetValue = makeVisValue(ReplayQuerySet, 'GPUQuerySet');
+const QueueValue = makeVisValue(ReplayQueue, 'GPUQueue');
+const RenderPassValue = makeVisValue(ReplayRenderPass, 'GPURenderPass');
+const RenderRenderPipelineValue = makeVisValue(ReplayRenderPass, 'GPURenderPipeline');
+const SamplerValue = makeVisValue(ReplaySampler, 'GPUSampler');
+const ShaderModuleValue = makeVisValue(ReplayShaderModule, 'GPUShaderModule');
+const TextureValue = makeVisValue(ReplayTexture, 'GPUTexture');
+const TextureViewValue = makeVisValue(ReplayTextureView, 'GPUTextureView');
 
 const s_replayClassToComponent = new Map<Function, ValueComponent>([
-    [ReplayAdapter, PlaceHolder],
-    [ReplayBindGroup, PlaceHolder],
-    [ReplayBindGroupLayout, PlaceHolder],
+    [ReplayAdapter, AdapterValue],
+    [ReplayBindGroup, BindGroupValue],
+    [ReplayBindGroupLayout, BindGroupLayoutValue],
     [ReplayBuffer, BufferValue],
-    [ReplayCommandBuffer, PlaceHolder],
-    [ReplayDevice, PlaceHolder],
-    [ReplayPipelineLayout, PlaceHolder],
-    [ReplayQuerySet, PlaceHolder],
-    [ReplayQueue, PlaceHolder],
-    [ReplayRenderPass, PlaceHolder],
-    [ReplayRenderPipeline, RenderPipelineValue],
-    [ReplaySampler, PlaceHolder],
-    [ReplayShaderModule, PlaceHolder],
-    [ReplayTexture, PlaceHolder],
-    [ReplayTextureView, PlaceHolder],
+    [ReplayCommandBuffer, CommandBufferValue],
+    [ReplayDevice, DeviceValue],
+    [ReplayPipelineLayout, PipelineLayoutValue],
+    [ReplayQuerySet, QuerySetValue],
+    [ReplayQueue, QueueValue],
+    [ReplayRenderPass, RenderPassValue],
+    [ReplayRenderPipeline, RenderRenderPipelineValue],
+    [ReplaySampler, SamplerValue],
+    [ReplayShaderModule, ShaderModuleValue],
+    [ReplayTexture, TextureValue],
+    [ReplayTextureView, TextureViewValue],
 ]);
 
+export const canDisplayInline = (v: any) => s_replayClassToComponent.has(Object.getPrototypeOf(v).constructor);
+
 const baseObjectProto = Object.getPrototypeOf({});
+
+const excludedProperties = new Set(['replay', 'webgpuObject']);
 
 export function ValueObject({ depth, data }: { depth?: number; data: Record<string, any> }) {
     const childDepth = (depth || 0) + 1;
     return (
         <table className={`spector2-value-object spector2-value-depth${depth}`}>
             <tbody>
-                {Object.entries(data).map(([key, value], ndx) => [
-                    <tr className="spector2-value-key-value" key={'p${ndx}'}>
-                        <td key={`k${ndx}`} className="spector2-value-key">
-                            {key}:
-                        </td>
-                        <td>
-                            <Value key={`v${ndx}`} depth={childDepth} data={value} />
-                        </td>
-                    </tr>,
-                ])}
+                {Object.entries(data).map(([key, value], ndx) =>
+                    excludedProperties.has(key) ? (
+                        <React.Fragment key={`p${ndx}`} />
+                    ) : (
+                        <tr className="spector2-value-key-value" key={`p${ndx}`}>
+                            <td key={`k${ndx}`} className="spector2-value-key">
+                                {key}:
+                            </td>
+                            <td>
+                                <Value key={`v${ndx}`} depth={childDepth} data={value} />
+                            </td>
+                        </tr>
+                    )
+                )}
             </tbody>
         </table>
     );

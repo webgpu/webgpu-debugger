@@ -21,6 +21,7 @@ async function run() {
     });
 
     const module = device.createShaderModule({
+        label: 'single colored triangle shaders',
         code: `
             struct Uniforms {
               matrix: mat4x4<f32>,
@@ -47,6 +48,7 @@ async function run() {
     });
 
     const pipeline = device.createRenderPipeline({
+        label: 'pipeline for triangles',
         layout: 'auto',
         vertex: {
             module,
@@ -66,6 +68,7 @@ async function run() {
     const uniformSizeInBytes = uniformSizeInFloats * 4;
     const uniformBlockSizeBytes = roundUpToMultipleOf(uniformSizeInBytes, 256);
     const uniformBuffers = device.createBuffer({
+        label: 'uniform buffer',
         size: uniformBlockSizeBytes * numTriangles,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
@@ -117,10 +120,15 @@ async function run() {
         device.queue.writeBuffer(uniformBuffers, 0, uniformValues);
 
         const encoder = device.createCommandEncoder();
+        const dstTexture = context.getCurrentTexture();
+        dstTexture.label = 'canvas texture';
+        const view = dstTexture.createView();
+        view.label = 'canvas texture view';
         const pass = encoder.beginRenderPass({
+            label: 'triangle render pass',
             colorAttachments: [
                 {
-                    view: context.getCurrentTexture().createView(),
+                    view,
                     clearValue: hslToRGBA(hue + 0.5, 1, 0.5),
                     loadOp: 'clear',
                     storeOp: 'store',

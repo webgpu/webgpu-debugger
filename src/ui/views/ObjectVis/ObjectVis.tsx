@@ -19,16 +19,43 @@ import {
     ReplayTexture,
     ReplayTextureView,
 } from '../../../replay';
+
+import AdapterVis from '../objectViews/AdapterVis/AdapterVis';
+import BindGroupLayoutVis from '../objectViews/BindGroupLayoutVis/BindGroupLayoutVis';
+import BindGroupVis from '../objectViews/BindGroupVis/BindGroupVis';
 import BufferVis from '../objectViews/BufferVis/BufferVis';
-import PipelineVis from '../objectViews/PipelineVis/PipelineVis';
+import CommandBufferVis from '../objectViews/CommandBufferVis/CommandBufferVis';
+import DeviceVis from '../objectViews/DeviceVis/DeviceVis';
+import PipelineLayoutVis from '../objectViews/PipelineLayoutVis/PipelineLayoutVis';
+import QuerySetVis from '../objectViews/QuerySetVis/QuerySetVis';
+import QueueVis from '../objectViews/QueueVis/QueueVis';
+import RenderPassVis from '../objectViews/RenderPassVis/RenderPassVis';
+import RenderPipelineVis from '../objectViews/RenderPipelineVis/RenderPipelineVis';
+import SamplerVis from '../objectViews/SamplerVis/SamplerVis';
+import ShaderModuleVis from '../objectViews/ShaderModuleVis/ShaderModuleVis';
+import TextureViewVis from '../objectViews/TextureViewVis/TextureViewVis';
+import TextureVis from '../objectViews/TextureVis/TextureVis';
 
 interface ObjectVisProps {
     data: any;
 }
 
 const s_objectClassToVis = new Map<Function, PaneComponent>([
+    [ReplayAdapter, AdapterVis],
+    [ReplayBindGroup, BindGroupVis],
+    [ReplayBindGroupLayout, BindGroupLayoutVis],
     [ReplayBuffer, BufferVis],
-    [ReplayRenderPipeline, PipelineVis],
+    [ReplayCommandBuffer, CommandBufferVis],
+    [ReplayDevice, DeviceVis],
+    [ReplayPipelineLayout, PipelineLayoutVis],
+    [ReplayQuerySet, QuerySetVis],
+    [ReplayQueue, QueueVis],
+    [ReplayRenderPass, RenderPassVis],
+    [ReplayRenderPipeline, RenderPipelineVis],
+    [ReplaySampler, SamplerVis],
+    [ReplayShaderModule, ShaderModuleVis],
+    [ReplayTexture, TextureVis],
+    [ReplayTextureView, TextureViewVis],
 ]);
 
 export default function ObjectVis({ data }: ObjectVisProps) {
@@ -40,6 +67,6 @@ export default function ObjectVis({ data }: ObjectVisProps) {
     return component ? (
         React.createElement(component, { data })
     ) : (
-        <div className="spector2-vis">unsupported object type: (ctor.name)</div>
+        <div className="spector2-vis">unsupported object type: {ctor.name}</div>
     );
 }
