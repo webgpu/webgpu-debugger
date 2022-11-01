@@ -171,14 +171,25 @@ function ValueArray({ depth, data }: { depth?: number; data: any[] }) {
     );
 }
 
+const identity = (v: number) => v.toString();
+
+export function ValueNumber({ data, format = identity }: { data: number; format?: (v: number) => string }) {
+    return Number.isNaN(data) ? (
+        <div className="spector2-value-nan">NaN</div>
+    ) : Number.isFinite(data) ? (
+        <div className="spector2-value-number">{format(data)}</div>
+    ) : (
+        <div className="spector2-value-inf">{data}</div>
+    );
+}
+
 export default function Value({ depth, data }: { depth?: number; data: any }) {
     if (data === undefined) {
         return <div className="spector2-value-undefined">undefined</div>;
     } else if (data === null) {
         return <div className="spector2-value-null">null</div>;
     } else if (typeof data === 'number') {
-        const className = Number.isNaN(data) ? 'spector2-value-nan' : 'spector2-value-number';
-        return <div className={className}>{data}</div>;
+        return <ValueNumber data={data} />;
     } else if (typeof data === 'string') {
         return <div className="spector2-value-string">&quot;{data}&quot;</div>;
     } else if (Array.isArray(data)) {

@@ -13,3 +13,7 @@
 .spector2-value-nan {
   color: var(--spector2-error-color);
 }
+
+.spector2-value-inf {
+  color: var(--spector2-warn-color);
+}

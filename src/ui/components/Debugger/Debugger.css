@@ -12,6 +12,7 @@
 
 .spector2-vis {
   font-size: var(--spector2-font-size);
+  height: 100%;
 }
 
 .spector2-panes {

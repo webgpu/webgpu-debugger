@@ -3,14 +3,7 @@ import { ReplayTexture } from '../../../../replay';
 import TextureLevelViewer from '../../../components/TextureLevelViewer/TextureLevelViewer';
 import { ValueObject } from '../../../components/Value/Value';
 
-const s_ranges: number[][] = [];
-
-function getRange(n: number) {
-    if (!s_ranges[n]) {
-        s_ranges[n] = new Array(n).fill(0).map((_, i) => i);
-    }
-    return s_ranges[n];
-}
+import { getRange } from '../../../lib/array-utils';
 
 export default function TextureVis({ data }: { data: ReplayTexture }) {
     return (
