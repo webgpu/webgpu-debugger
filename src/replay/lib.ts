@@ -250,6 +250,9 @@ export class Replay {
 }
 
 class ReplayObject {
+    replay: Replay;
+    label: string;
+
     constructor(replay, desc) {
         this.replay = replay;
         this.label = desc.label ?? '';
@@ -257,6 +260,8 @@ class ReplayObject {
 }
 
 export class ReplayAdapter extends ReplayObject {
+    webgpuObject?: GPUAdapter;
+
     constructor(replay, desc) {
         super(replay, desc);
     }
@@ -479,6 +484,8 @@ export class ReplayRenderPass extends ReplayObject {
 }
 
 export class ReplayCommandBuffer extends ReplayObject {
+    commands: Command[];
+
     constructor(replay, desc) {
         super(replay, desc);
         this.commands = [];
@@ -615,6 +622,11 @@ export class ReplayCommandBuffer extends ReplayObject {
 }
 
 export class ReplayBuffer extends ReplayObject {
+    device: ReplayDevice;
+    usage: GPUBufferUsage;
+    size: number;
+    webgpuObject: GPUBuffer;
+
     constructor(replay, desc) {
         super(replay, desc);
         this.device = this.replay.devices[desc.deviceSerial];
@@ -635,8 +647,13 @@ export class ReplayBuffer extends ReplayObject {
 }
 
 export class ReplayBindGroup extends ReplayObject {
+    device: ReplayDevice;
+    desc: GPUBindGroupDescriptor;
+    webgpuObject: GPUBindGroup;
+
     constructor(replay, desc) {
         super(replay, desc);
+        this.desc = desc;
         this.device = this.replay.devices[desc.deviceSerial];
 
         this.webgpuObject = this.device.webgpuObject.createBindGroup({
@@ -661,6 +678,10 @@ export class ReplayBindGroup extends ReplayObject {
 }
 
 export class ReplayBindGroupLayout extends ReplayObject {
+    device: ReplayDevice;
+    desc: GPUBindGroupLayoutDescriptor;
+    webgpuObject?: GPUBindGroupLayout;
+
     constructor(replay, desc) {
         super(replay, desc);
         this.device = this.replay.devices[desc.deviceSerial];
@@ -681,6 +702,8 @@ export class ReplayBindGroupLayout extends ReplayObject {
 }
 
 export class ReplayDevice extends ReplayObject {
+    webgpuObject?: GPUDevice;
+
     constructor(replay, desc) {
         super(replay, desc);
     }
@@ -692,6 +715,9 @@ export class ReplayDevice extends ReplayObject {
 }
 
 export class ReplayPipelineLayout extends ReplayObject {
+    device: ReplayDevice;
+    webgpuObject: GPUPipelineLayout;
+
     constructor(replay, desc) {
         super(replay, desc);
         this.device = this.replay.devices[desc.deviceSerial];
@@ -702,6 +728,9 @@ export class ReplayPipelineLayout extends ReplayObject {
 }
 
 export class ReplayQuerySet extends ReplayObject {
+    device: ReplayDevice;
+    webgpuObject: GPUQuerySet;
+
     constructor(replay, desc) {
         super(replay, desc);
         this.device = this.replay.devices[desc.deviceSerial];
@@ -711,6 +740,9 @@ export class ReplayQuerySet extends ReplayObject {
 }
 
 export class ReplayQueue extends ReplayObject {
+    device: ReplayDevice;
+    webgpuObject: GPUQueue;
+
     constructor(replay, desc) {
         super(replay, desc);
         this.device = this.replay.devices[desc.deviceSerial];
@@ -737,12 +769,17 @@ export class ReplayQueue extends ReplayObject {
 }
 
 export class ReplayRenderPipeline extends ReplayObject {
+    device: ReplayDevice;
+    desc: GPURenderPipelineDescriptor;
+    webgpuObject?: GPURenderPipeline;
+
     constructor(replay, desc) {
         super(replay, desc);
+        this.device = this.replay.devices[desc.deviceSerial];
+        this.desc = desc;
     }
 
     async recreate(desc) {
-        this.device = this.replay.devices[desc.deviceSerial].webgpuObject;
         const vsModule = this.replay.shaderModules[desc.vertex.moduleSerial].webgpuObject;
         const fsModule = this.replay.shaderModules[desc.fragment.moduleSerial].webgpuObject;
         const layout = desc.layout === 'auto' ? 'auto' : this.replay.pipelineLayouts[desc.layoutSerial].webgpuObject;
@@ -766,23 +803,33 @@ export class ReplayRenderPipeline extends ReplayObject {
                 ...desc.fragment,
             };
         }
-        this.webgpuObject = await this.device.createRenderPipelineAsync(localDesc);
+        this.webgpuObject = await this.device.webgpuObject.createRenderPipelineAsync(localDesc);
     }
 }
 
 export class ReplaySampler extends ReplayObject {
+    device: ReplayDevice;
+    desc: GPUSamplerDescriptor;
+    webgpuObject?: GPUSampler;
+
     constructor(replay, desc) {
         super(replay, desc);
+        this.desc = desc;
         this.device = this.replay.devices[desc.deviceSerial];
         this.webgpuObject = this.device.webgpuObject.createSampler(desc);
     }
 }
 
 export class ReplayShaderModule extends ReplayObject {
+    device: ReplayDevice;
+    desc: GPUSamplerDescriptor;
+    webgpuObject?: GPUShaderModule;
+
     constructor(replay, desc) {
         super(replay, desc);
-        const device = this.replay.devices[desc.deviceSerial];
-        this.webgpuObject = device.webgpuObject.createShaderModule({
+        this.device = this.replay.devices[desc.deviceSerial];
+        this.desc = desc;
+        this.webgpuObject = this.device.webgpuObject?.createShaderModule({
             code: desc.code,
         });
     }
@@ -857,8 +904,14 @@ export class ReplayTexture extends ReplayObject {
 }
 
 export class ReplayTextureView extends ReplayObject {
+    texture: ReplayTexture;
+    desc: GPUTextureViewDescriptor;
+    baseMipLevel: number;
+    webgpuObject?: GPUTextureView;
+
     constructor(replay, desc) {
         super(replay, desc);
+        this.desc = desc;
         this.texture = this.replay.textures[desc.textureSerial];
         this.baseMipLevel = desc.baseMipLevel ?? 0;
         this.webgpuObject = this.texture.webgpuObject.createView({
