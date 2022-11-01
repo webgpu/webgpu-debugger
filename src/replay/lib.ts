@@ -789,6 +789,13 @@ export class ReplayShaderModule extends ReplayObject {
 }
 
 export class ReplayTexture extends ReplayObject {
+    device: ReplayDevice;
+    size: GPUExtent3DDict;
+    format: string;
+    sampleCount: number;
+    mipLevelCount: number;
+    webgpuObject: GPUTexture;
+
     constructor(replay, desc) {
         super(replay, desc);
         this.device = this.replay.devices[desc.deviceSerial];
