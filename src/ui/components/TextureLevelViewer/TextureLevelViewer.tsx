@@ -1,6 +1,10 @@
-import React, { useRef, useEffect  } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { ReplayTexture } from '../../../replay';
-import { spector2 as capture } from '../../../capture';
+import {
+    getNonWrappedGPUDeviceFromWrapped,
+    requestUnwrappedWebGPUContext,
+    spector2 as capture,
+} from '../../../capture';
 
 interface Props {
     texture: ReplayTexture;
@@ -8,15 +12,16 @@ interface Props {
 }
 
 class TextureRenderer {
-    device : GPUDevice;
-    shaderModule : GPUShaderModule;
-    bindGroupLayout : GPUBindGroupLayout;
-    pipeline : GPURenderPipeline;
-    sampler : GPUSampler;
+    device: GPUDevice;
+    shaderModule: GPUShaderModule;
+    bindGroupLayout: GPUBindGroupLayout;
+    pipeline: GPURenderPipeline;
+    sampler: GPUSampler;
 
-    constructor(device : GPUDevice) {
+    constructor(device: GPUDevice) {
         this.device = device;
-        this.shaderModule = device.createShaderModule({ code: `
+        this.shaderModule = device.createShaderModule({
+            code: `
             var<private> pos : array<vec2<f32>, 4> = array<vec2<f32>, 4>(
                 vec2<f32>(-1.0, 1.0), vec2<f32>(1.0, 1.0),
                 vec2<f32>(-1.0, -1.0), vec2<f32>(1.0, -1.0)
@@ -43,75 +48,86 @@ class TextureRenderer {
             fn fragmentMain(@location(0) texCoord : vec2<f32>) -> @location(0) vec4<f32> {
                 return textureSample(img, imgSampler, texCoord);
             }
-        `});
+        `,
+        });
 
         this.bindGroupLayout = device.createBindGroupLayout({
-            entries: [{
-                binding: 0,
-                texture: {},
-                visibility: GPUShaderStage.FRAGMENT
-            }, {
-                binding: 1,
-                sampler: {},
-                visibility: GPUShaderStage.FRAGMENT
-            }]
+            entries: [
+                {
+                    binding: 0,
+                    texture: {},
+                    visibility: GPUShaderStage.FRAGMENT,
+                },
+                {
+                    binding: 1,
+                    sampler: {},
+                    visibility: GPUShaderStage.FRAGMENT,
+                },
+            ],
         });
 
         this.pipeline = device.createRenderPipeline({
             layout: device.createPipelineLayout({
-                bindGroupLayouts: [this.bindGroupLayout]
+                bindGroupLayouts: [this.bindGroupLayout],
             }),
             vertex: {
                 module: this.shaderModule,
-                entryPoint: 'vertexMain'
+                entryPoint: 'vertexMain',
             },
             primitive: {
-                topology: 'triangle-strip'
+                topology: 'triangle-strip',
             },
             fragment: {
                 module: this.shaderModule,
                 entryPoint: 'fragmentMain',
-                targets: [{
-                    format: navigator.gpu.getPreferredCanvasFormat(),
-                    blend: {
-                        color: {
-                            srcFactor: 'src-alpha',
-                            dstFactor: 'one-minus-src-alpha',
+                targets: [
+                    {
+                        format: navigator.gpu.getPreferredCanvasFormat(),
+                        blend: {
+                            color: {
+                                srcFactor: 'src-alpha',
+                                dstFactor: 'one-minus-src-alpha',
+                            },
+                            alpha: {
+                                srcFactor: 'one',
+                                dstFactor: 'zero',
+                            },
                         },
-                        alpha: {
-                            srcFactor: 'one',
-                            dstFactor: 'zero'
-                        }
-                    }
-                }]
-            }
+                    },
+                ],
+            },
         });
 
         this.sampler = device.createSampler({});
     }
 
-    render(context : GPUCanvasContext, texture : GPUTexture, mipLevel : number) {
+    render(context: GPUCanvasContext, texture: GPUTexture, mipLevel: number) {
         const textureBindGroup = this.device.createBindGroup({
             layout: this.bindGroupLayout,
-            entries: [{
-                binding: 0,
-                resource: texture.createView({
-                    baseMipLevel: mipLevel,
-                    mipLevelCount: 1
-                }),
-            }, {
-                binding: 1,
-                resource: this.sampler
-            }]
+            entries: [
+                {
+                    binding: 0,
+                    resource: texture.createView({
+                        baseMipLevel: mipLevel,
+                        mipLevelCount: 1,
+                    }),
+                },
+                {
+                    binding: 1,
+                    resource: this.sampler,
+                },
+            ],
         });
 
         const commandEncoder = this.device.createCommandEncoder();
         const passEncoder = commandEncoder.beginRenderPass({
-            colorAttachments: [{
-                view: context.getCurrentTexture().createView(),
-                loadOp: 'clear',
-                storeOp: 'store'
-            }]
+            colorAttachments: [
+                {
+                    view: context.getCurrentTexture().createView(),
+                    loadOp: 'clear',
+                    storeOp: 'store',
+                },
+            ],
         });
 
         passEncoder.setBindGroup(0, textureBindGroup);
@@ -124,7 +140,7 @@ class TextureRenderer {
 
     // Get or create a texture renderer for the given device.
     static rendererCache = new Map();
-    static getRendererForDevice(device : GPUDevice) {
+    static getRendererForDevice(device: GPUDevice) {
         let renderer = TextureRenderer.rendererCache.get(device);
         if (!renderer) {
             renderer = new TextureRenderer(device);
@@ -134,29 +150,32 @@ class TextureRenderer {
     }
 }
 
-export const TextureLevelViewer: React.FC<Props> = ({ texture, mipLevel }) => {
-    const canvasRef = useRef(null);
+const TextureLevelViewer: React.FC<Props> = ({ texture, mipLevel }) => {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
-        capture.doWebGPUOp(() => {
-            const device = texture.device.webgpuObject;
-            if (!device) { return; }
+        const device = texture.device.webgpuObject!;
 
-            const canvas = canvasRef.current;
-            canvas.width = texture.size.width;
-            canvas.height = texture.size.height;
+        const canvas = canvasRef.current!;
+        canvas.width = texture.size.width;
+        canvas.height = texture.size.height;
 
-            const context = canvas.getContext('webgpu');
-            context.configure({
-                device,
-                format: navigator.gpu.getPreferredCanvasFormat(),
-                alphaMode: 'premultiplied',
-            });
-
-            const renderer = TextureRenderer.getRendererForDevice(device);
-            renderer.render(context, texture.webgpuObject, mipLevel);
+        const context = requestUnwrappedWebGPUContext(canvas);
+        context.configure({
+            device,
+            format: navigator.gpu.getPreferredCanvasFormat(),
+            alphaMode: 'premultiplied',
         });
+
+        const renderer = TextureRenderer.getRendererForDevice(device);
+        renderer.render(context, texture.webgpuObject, mipLevel);
     }, []);
 
-    return <div>Texture mipLevel: {mipLevel} <canvas ref={canvasRef}/></div>;
+    return (
+        <div>
+            Texture mipLevel: {mipLevel} <canvas ref={canvasRef} />
+        </div>
+    );
 };
+
+export default TextureLevelViewer;

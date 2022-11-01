@@ -75,6 +75,8 @@ const mapClassToCreationFunctionNames = new Map<Function, Set<string>>(classToCr
 
 const isPromise = (p: any) => typeof p === 'object' && typeof p.then === 'function';
 
+const unwrappedDevices = new WeakMap<GPUDevice, GPUDevice>();
+
 /**
  * The prototype to this object may have been altered so we
  * put properties on the object itself with the original functions.
@@ -134,8 +136,6 @@ export function requestUnwrappedAdapter(options: GPURequestAdapterOptions) {
 export function requestUnwrappedWebGPUContext(canvas: HTMLCanvasElement, ...args: any[]) {
     return callUnwrappedGPUFn(HTMLCanvasElement, canvas, 'getContext', 'webgpu', ...args);
 }
-
-const unwrappedDevices = new WeakMap<GPUDevice, GPUDevice>();
 
 export function getNonWrappedGPUDeviceFromWrapped(wrapped: GPUDevice): GPUDevice {
     const unwrappedDevice = unwrappedDevices.get(wrapped);
