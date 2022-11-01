@@ -1082,13 +1082,15 @@ class RenderPassEncoderState extends BaseState {
         spector2.renderPassEncoderProto.setIndexBuffer.call(this.webgpuObject, buffer, indexFormat, offset, size);
         this.encoder.reference(buffer);
         const bufferState = spector2.buffers.get(buffer);
+        offset = offset ?? 0;
+        size = size ?? Math.max(0, bufferState.size - offset);
         this.encoder.addCommand({
             name: 'setIndexBuffer',
             args: {
                 bufferSerial: bufferState.traceSerial,
                 indexFormat,
-                offset: offset ?? 0,
-                size: size ?? Math.max(0, bufferState.size - offset),
+                offset,
+                size,
             },
         });
     }
@@ -1108,13 +1110,15 @@ class RenderPassEncoderState extends BaseState {
         spector2.renderPassEncoderProto.setVertexBuffer.call(this.webgpuObject, slot, buffer, offset, size);
         this.encoder.reference(buffer);
         const bufferState = spector2.buffers.get(buffer);
+        offset = offset ?? 0;
+        size = size ?? Math.max(0, bufferState.size - offset);
         this.encoder.addCommand({
             name: 'setVertexBuffer',
             args: {
                 slot,
                 bufferSerial: bufferState.traceSerial,
-                offset: offset ?? 0,
-                size: size ?? Math.max(0, bufferState.size - offset),
+                offset,
+                size,
             },
         });
     }
