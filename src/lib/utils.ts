@@ -3,6 +3,14 @@ const valueOr1 = (v?: number) => (v === undefined ? 1 : v);
 // TODO: fix
 const isSequence = (v: any) => Symbol.iterator in Object(v);
 
+// This differs from a GPUExtent3DDict in that
+// it requires all 3 values which makes it less of a PITA to use
+export type GPUExtent3DDictFull = {
+    width: number;
+    height: number;
+    depthOrArrayLayers: number;
+};
+
 function dimensionsFromGPUExtent3D(extent: GPUExtent3D): number[] {
     if (isSequence(extent)) {
         const iter = extent as Array<number>;
@@ -13,7 +21,7 @@ function dimensionsFromGPUExtent3D(extent: GPUExtent3D): number[] {
     }
 }
 
-export function gpuExtent3DDictFromGPUExtent3D(extent: GPUExtent3D): GPUExtent3DDict {
+export function gpuExtent3DDictFullFromGPUExtent3D(extent: GPUExtent3D): GPUExtent3DDictFull {
     const [width, height, depthOrArrayLayers] = dimensionsFromGPUExtent3D(extent);
     return { width, height, depthOrArrayLayers };
 }

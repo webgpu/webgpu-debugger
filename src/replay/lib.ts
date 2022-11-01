@@ -1,3 +1,5 @@
+import { GPUExtent3DDictFull } from '../lib/utils';
+
 type RequestAdapterFn = (options: GPURequestAdapterOptions) => Promise<GPUAdapter>;
 
 let requestUnwrappedAdapter: RequestAdapterFn;
@@ -837,7 +839,7 @@ export class ReplayShaderModule extends ReplayObject {
 
 export class ReplayTexture extends ReplayObject {
     device: ReplayDevice;
-    size: GPUExtent3DDict;
+    size: GPUExtent3DDictFull;
     format: string;
     sampleCount: number;
     mipLevelCount: number;
