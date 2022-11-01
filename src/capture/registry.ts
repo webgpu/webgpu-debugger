@@ -1,6 +1,17 @@
+/* eslint-disable @typescript-eslint/ban-types */
 import { gpuExtent3DDictFullFromGPUExtent3D } from '../lib/utils';
 
-class ObjectRegistry {
+type CaptureStateBase<T> = {
+    webgpuObject: T | null;
+    traceSerial: number;
+};
+
+class ObjectRegistry<GPUType extends Object, CaptureState extends CaptureStateBase<GPUType>> {
+    iterating: boolean;
+    currentTraceSerial: number;
+    dataMap: WeakMap<GPUType, CaptureState>;
+    objects: WeakRef<GPUType>[];
+
     constructor() {
         this.dataMap = new WeakMap();
         this.objects = [];
@@ -8,7 +19,7 @@ class ObjectRegistry {
         this.iterating = false;
     }
 
-    add(obj, data) {
+    add(obj: GPUType, data: CaptureState) {
         if (this.iterating) {
             throw new Error('Mutating Registry while iterating it.');
         }
@@ -20,11 +31,11 @@ class ObjectRegistry {
         this.currentTraceSerial++;
     }
 
-    has(obj) {
+    has(obj: GPUType) {
         return this.dataMap.has(obj);
     }
 
-    get(obj) {
+    get(obj: GPUType) {
         return this.dataMap.get(obj);
     }
 
@@ -57,54 +68,84 @@ class ObjectRegistry {
     }
 }
 
+type Proto = Record<string, Function>;
+type ClassFuncs = { Class: Function; proto: Proto; wrappers: Proto };
+type RequestAdapterFn = (options?: GPURequestAdapterOptions | undefined) => Promise<GPUAdapter | null>;
+
 export class Spector2 {
+    tracing = false;
+    dataSerial = 0;
+    inReentrantWebGPUOperations = false;
+
+    adapters = new ObjectRegistry<GPUAdapter, AdapterState>();
+    bindGroups = new ObjectRegistry<GPUBindGroup, BindGroupState>();
+    bindGroupLayouts = new ObjectRegistry<GPUBindGroupLayout, BindGroupLayoutState>();
+    buffers = new ObjectRegistry<GPUBuffer, BufferState>();
+    commandBuffers = new ObjectRegistry<GPUCommandBuffer, CommandBufferState>();
+    commandEncoders = new ObjectRegistry<GPUCommandEncoder, CommandEncoderState>();
+    canvasContexts = new ObjectRegistry<GPUCanvasContext, CanvasContextState>();
+    devices = new ObjectRegistry<GPUDevice, DeviceState>();
+    pipelineLayouts = new ObjectRegistry<GPUPipelineLayout, PipelineLayoutState>();
+    querySets = new ObjectRegistry<GPUQuerySet, QuerySetState>();
+    queues = new ObjectRegistry<GPUQueue, QueueState>();
+    renderPassEncoders = new ObjectRegistry<GPURenderPassEncoder, RenderPassEncoderState>();
+    renderPipelines = new ObjectRegistry<GPURenderPipeline, RenderPipelineState>();
+    samplers = new ObjectRegistry<GPUSampler, SamplerState>();
+    shaderModules = new ObjectRegistry<GPUShaderModule, ShaderModuleState>();
+    textures = new ObjectRegistry<GPUTexture, TextureState>();
+    textureViews = new ObjectRegistry<GPUTextureView, TextureViewState>();
+
+    adapterProto: Proto;
+    bufferProto: Proto;
+    commandEncoderProto: Proto;
+    canvasContextProto: Proto;
+    deviceProto: Proto;
+    querySetProto: Proto;
+    queueProto: Proto;
+    renderPassEncoderProto: Proto;
+    renderPipelineProto: Proto;
+    textureProto: Proto;
+
+    canvasGetContext: Function;
+    gpuRequestAdapter: RequestAdapterFn;
+
+    wrappers: {
+        classes: ClassFuncs[];
+        getContextWrapper: Function;
+        requestAdaptorWrapper: RequestAdapterFn;
+    };
+
     constructor() {
-        function replacePrototypeOf(c, registry) {
-            const originalProto = {};
+        function replacePrototypeOf<GPUType extends Object, CaptureState extends CaptureStateBase<GPUType>>(
+            c: Function,
+            registry: ObjectRegistry<GPUType, CaptureState>
+        ) {
+            const originalProto: Record<string, Function> = {};
 
             for (const name in c.prototype) {
                 const props = Object.getOwnPropertyDescriptor(c.prototype, name);
                 if (!props?.writable || typeof c.prototype[name] !== 'function') {
                     continue;
                 }
-                const originalMethod = c.prototype[name];
+                const originalMethod: Function = c.prototype[name];
                 originalProto[name] = originalMethod;
-                c.prototype[name] = function (...args) {
+                c.prototype[name] = function (...args: any[]) {
                     if (spector2.inReentrantWebGPUOperations) {
                         return originalMethod.apply(this, args);
                     }
 
-                    const self = registry.get(this);
-                    if (!self[name]) {
+                    const self = registry.get(this)!;
+                    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                    // @ts-ignore
+                    const fn: Function = self[name] as Function;
+                    if (!fn) {
                         console.assert(false, `Doesn't have "${name}"`);
                     }
-                    return self[name].call(self, ...args);
+                    return fn.call(self, ...args);
                 };
             }
             return originalProto;
         }
-
-        this.tracing = false;
-        this.dataSerial = 0;
-        this.inReentrantWebGPUOperations = false;
-
-        this.adapters = new ObjectRegistry();
-        this.bindGroups = new ObjectRegistry();
-        this.bindGroupLayouts = new ObjectRegistry();
-        this.buffers = new ObjectRegistry();
-        this.commandBuffers = new ObjectRegistry();
-        this.commandEncoders = new ObjectRegistry();
-        this.canvasContexts = new ObjectRegistry();
-        this.devices = new ObjectRegistry();
-        this.pipelineLayouts = new ObjectRegistry();
-        this.querySets = new ObjectRegistry();
-        this.queues = new ObjectRegistry();
-        this.renderPassEncoders = new ObjectRegistry();
-        this.renderPipelines = new ObjectRegistry();
-        this.samplers = new ObjectRegistry();
-        this.shaderModules = new ObjectRegistry();
-        this.textures = new ObjectRegistry();
-        this.textureViews = new ObjectRegistry();
 
         this.adapterProto = replacePrototypeOf(GPUAdapter, this.adapters);
         // GPUBindGroup doesn't have methods except the label setter?
@@ -158,7 +199,7 @@ export class Spector2 {
             requestAdaptorWrapper: GPU.prototype.requestAdapter,
         };
 
-        const saveEntryPoints = ({ Class, proto, wrappers }) => {
+        const saveEntryPoints = ({ Class, proto, wrappers }: ClassFuncs) => {
             for (const name in proto) {
                 wrappers[name] = Class.prototype[name];
             }
@@ -168,7 +209,7 @@ export class Spector2 {
     }
 
     wrapEntryPoints() {
-        const setEntryPointsToWrappers = ({ Class, proto, wrappers }) => {
+        const setEntryPointsToWrappers = ({ Class, proto, wrappers }: ClassFuncs) => {
             for (const name in proto) {
                 Class.prototype[name] = wrappers[name];
             }
@@ -176,13 +217,17 @@ export class Spector2 {
 
         this.wrappers.classes.forEach(setEntryPointsToWrappers);
 
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         HTMLCanvasElement.prototype.getContext = this.wrappers.getContextWrapper;
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         GPU.prototype.requestAdaptor = this.wrappers.requestAdaptorWrapper;
     }
 
     // For now we don't support all entrypoints, which breaks the replay, here's a method to put regular entrypoints back.
     revertEntryPoints() {
-        const revertEntryPoints = ({ Class, proto }) => {
+        const revertEntryPoints = ({ Class, proto }: ClassFuncs) => {
             for (const name in proto) {
                 Class.prototype[name] = proto[name];
             }
@@ -190,11 +235,27 @@ export class Spector2 {
 
         this.wrappers.classes.forEach(revertEntryPoints);
 
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         HTMLCanvasElement.prototype.getContext = this.canvasGetContext;
         GPU.prototype.requestAdapter = this.gpuRequestAdapter;
     }
 
-    doWebGPUOp(f) {
+    /**
+     * Do not call this function outside of this file.
+     * If you want to use webgpu without your calls being inspected call one or more
+     * of
+     *
+     * * requestUnwrappedAdapter (instead of navigator.gpu.requestAdapter)
+     * * getUnwrappedGPUCanvasContext (instead of someCanvas.getContext('webgpu'))
+     * * getUnwrappedGPUDeviceFromWrapped (if you have a wrapped device)
+     *
+     * Note: The device attached to `ReplayDevice` is already unwrapped and is
+     * safe to call.
+     *
+     * @param f
+     */
+    doWebGPUOp(f: () => void) {
         this.inReentrantWebGPUOperations = true;
         f();
         this.inReentrantWebGPUOperations = false;
@@ -330,7 +391,11 @@ export class Spector2 {
 const spector2 = new Spector2();
 export { spector2 };
 
-class BaseState {
+class BaseState<T> {
+    webgpuObject: T | null;
+    traceSerial: number;
+    label?: string;
+
     constructor(desc) {
         // TODO what about the setter for labels?
         if (desc.label) {
@@ -341,7 +406,7 @@ class BaseState {
     }
 }
 
-class AdapterState extends BaseState {
+class AdapterState extends BaseState<GPUAdapter> {
     constructor() {
         super({});
     }
@@ -362,7 +427,7 @@ class AdapterState extends BaseState {
     }
 }
 
-class BindGroupState extends BaseState {
+class BindGroupState extends BaseState<GPUBindGroup> {
     constructor(device, desc) {
         super(desc);
         this.device = device;
@@ -408,7 +473,7 @@ class BindGroupState extends BaseState {
     }
 }
 
-class BindGroupLayoutState extends BaseState {
+class BindGroupLayoutState extends BaseState<GPUBindGroupLayout> {
     constructor(device, desc) {
         super(desc);
         this.device = device;
@@ -470,7 +535,7 @@ class BindGroupLayoutState extends BaseState {
     }
 }
 
-class BufferState extends BaseState {
+class BufferState extends BaseState<GPUBuffer> {
     constructor(device, desc) {
         super(desc);
         this.device = device;
@@ -568,7 +633,7 @@ class BufferState extends BaseState {
     }
 }
 
-class CommandBufferState extends BaseState {
+class CommandBufferState extends BaseState<GPUCommandBuffer> {
     constructor(encoder, desc) {
         super(desc);
         this.device = encoder.device;
@@ -581,7 +646,7 @@ class CommandBufferState extends BaseState {
     }
 }
 
-class CommandEncoderState extends BaseState {
+class CommandEncoderState extends BaseState<GPUCommandEncoder> {
     constructor(device, desc) {
         super(desc);
         this.device = device;
@@ -677,7 +742,7 @@ class CommandEncoderState extends BaseState {
     }
 }
 
-class CanvasContextState extends BaseState {
+class CanvasContextState extends BaseState<GPUCanvasContext> {
     constructor(canvas) {
         super({});
         this.canvas = canvas;
@@ -745,7 +810,7 @@ class CanvasContextState extends BaseState {
     }
 }
 
-class DeviceState extends BaseState {
+class DeviceState extends BaseState<GPUDevice> {
     constructor(adapter, desc) {
         super(desc);
         this.adapter = adapter;
@@ -827,7 +892,7 @@ class DeviceState extends BaseState {
     }
 }
 
-class PipelineLayoutState extends BaseState {
+class PipelineLayoutState extends BaseState<GPUPipelineLayout> {
     constructor(device, desc) {
         super(desc);
         this.device = device;
@@ -842,7 +907,7 @@ class PipelineLayoutState extends BaseState {
     }
 }
 
-class QuerySetState extends BaseState {
+class QuerySetState extends BaseState<GPUQuerySet> {
     constructor(device, desc) {
         super(desc);
         this.device = device;
@@ -862,7 +927,7 @@ class QuerySetState extends BaseState {
     }
 }
 
-class QueueState extends BaseState {
+class QueueState extends BaseState<GPUQueue> {
     constructor(device, desc) {
         super(desc);
         this.device = device;
@@ -957,7 +1022,7 @@ class QueueState extends BaseState {
     }
 }
 
-class RenderPassEncoderState extends BaseState {
+class RenderPassEncoderState extends BaseState<GPURenderPassEncoder> {
     constructor(encoder, desc) {
         super(desc);
         this.encoder = encoder;
@@ -1145,7 +1210,7 @@ class RenderPassEncoderState extends BaseState {
     }
 }
 
-class RenderPipelineState extends BaseState {
+class RenderPipelineState extends BaseState<GPURenderPipeline> {
     constructor(device, desc) {
         super(desc);
         this.device = device;
@@ -1299,7 +1364,7 @@ class RenderPipelineState extends BaseState {
     }
 }
 
-class SamplerState extends BaseState {
+class SamplerState extends BaseState<GPUSampler> {
     constructor(device, desc) {
         super(desc);
         this.device = device;
@@ -1324,7 +1389,7 @@ class SamplerState extends BaseState {
     }
 }
 
-class ShaderModuleState extends BaseState {
+class ShaderModuleState extends BaseState<GPUShaderModule> {
     constructor(device, desc) {
         super(desc);
         this.device = device;
@@ -1352,7 +1417,7 @@ function align(n, alignment) {
     return Math.ceil(n / alignment) * alignment;
 }
 
-class TextureState extends BaseState {
+class TextureState extends BaseState<GPUTexture> {
     constructor(device, desc, isSwapChain) {
         super(desc);
         this.isSwapChain = isSwapChain;
@@ -1489,7 +1554,7 @@ class TextureState extends BaseState {
     // TODO getters lol
 }
 
-class TextureViewState extends BaseState {
+class TextureViewState extends BaseState<GPUTextureView> {
     constructor(texture, desc) {
         super(desc);
         this.texture = texture;
