@@ -133,7 +133,7 @@ export function requestUnwrappedAdapter(options: GPURequestAdapterOptions) {
     return callUnwrappedGPUFn(GPU, navigator.gpu, 'requestAdapter', options);
 }
 
-export function requestUnwrappedWebGPUContext(canvas: HTMLCanvasElement, ...args: any[]) {
+export function requestUnwrappedGPUCanvasContext(canvas: HTMLCanvasElement, ...args: any[]) {
     return callUnwrappedGPUFn(HTMLCanvasElement, canvas, 'getContext', 'webgpu', ...args);
 }
 

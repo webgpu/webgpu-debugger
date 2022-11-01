@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './components/App/App';
 import { uiStateHelper } from './contexts/UIStateContext';
-import { spector2 as capture, requestUnwrappedAdapter, requestUnwrappedWebGPUContext } from '../capture';
+import { spector2 as capture, requestUnwrappedAdapter, requestUnwrappedGPUCanvasContext } from '../capture';
 import { loadReplay } from '../replay';
 
 let initialized = false;
@@ -43,7 +43,7 @@ uiStateHelper.registerAPI({
 
         // Go through each command, and show the presented texture of the trace on the capture canvas.
         const captureCanvas = document.createElement('canvas');
-        const context = requestUnwrappedWebGPUContext(captureCanvas);
+        const context = requestUnwrappedGPUCanvasContext(captureCanvas);
 
         for (const c of replay.commands) {
             replay.execute(c);
