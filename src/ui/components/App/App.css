@@ -1,6 +1,8 @@
 :root {
   --spector2-bg-color: white;
   --spector2-color: black;
+  --spector2-warn-color: darkorange;
+  --spector2-error-color: red;
   --spector2-clickable-color: #48F;
   --spector2-tab-moving-bg-color: #f5ffd3;
   --spector2-tab-bar-bg-color: #eee;
