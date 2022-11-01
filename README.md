@@ -68,3 +68,16 @@ This builds 3 libraries.
    <script src="dist/spector2.js"></script>
    ```
 
+## Pushing changes
+
+Before you push a change please run `npm run check` or, better yet, make it
+automatic by putting 
+
+```
+npm run check
+```
+
+In `.git/hooks/pre-push` and then set the executable bit `chmod u+x .git/hooks/pre-push`
+
+We use `prettier` to format code so if you find errors, some of them may be able to be
+fixed with `npm run fix`.

@@ -8,7 +8,6 @@ import { uiStateHelper } from '../../contexts/UIStateContext';
 
 import '../../../3rdParty/FlexLayout/style/dark.css';
 import './Debugger.css';
-import { Action } from '../../../3rdParty/FlexLayout/src/index';
 
 // We started with react-tile-pane. It refers to panes by id
 // we what we do is make each new pane with a new id `pane<id>`

@@ -3,12 +3,6 @@ import { ReplayTexture } from '../../../../replay';
 import TextureLevelViewer from '../../../components/TextureLevelViewer/TextureLevelViewer';
 import { ValueObject } from '../../../components/Value/Value';
 
-function* range(n: number) {
-    for (let i = 0; i < n; i++) {
-        yield i;
-    }
-}
-
 const s_ranges: number[][] = [];
 
 function getRange(n: number) {

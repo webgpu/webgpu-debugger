@@ -342,7 +342,7 @@ class BaseState {
 }
 
 class AdapterState extends BaseState {
-    constructor(options) {
+    constructor() {
         super({});
     }
 
@@ -539,7 +539,7 @@ class BufferState extends BaseState {
         return arrayBuf;
     }
 
-    unmap(offset, size) {
+    unmap() {
         if (spector2.recordingTrace()) {
             spector2.traceCommand({
                 name: 'bufferUpdateData',

@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { ReplayTexture } from '../../../replay';
-import { getUnwrappedGPUDeviceFromWrapped, getUnwrappedGPUCanvasContext, spector2 as capture } from '../../../capture';
+import { getUnwrappedGPUCanvasContext } from '../../../capture';
 
 interface Props {
     texture: ReplayTexture;
