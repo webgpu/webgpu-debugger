@@ -1,3 +1,5 @@
+import { gpuExtent3DDictFromGPUExtent3D } from '../lib/utils';
+
 class ObjectRegistry {
     constructor() {
         this.dataMap = new WeakMap();
@@ -1343,7 +1345,7 @@ class TextureState extends BaseState {
         this.device = device;
         this.format = desc.format;
         this.usage = desc.usage;
-        this.size = desc.size; // TODO reify
+        this.size = gpuExtent3DDictFromGPUExtent3D(desc.size);
         this.dimension = desc.dimension ?? '2d';
         this.mipLevelCount = desc.mipLevelCount ?? 1;
         this.sampleCount = desc.sampleCount ?? 1;
