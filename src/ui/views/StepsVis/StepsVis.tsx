@@ -48,13 +48,13 @@ function Arg({ k, v }: { k: string; v: any }) {
     if (typeof v === 'object') {
         return (
             <div className="spector2-cmd-arg">
-                {canDisplayInline(v) ? <Value data={v} /> : <div>{v.constructor.name}</div>}
+                {canDisplayInline(v) ? <Value data={v} /> : <div>{JSON.stringify(v)}</div>}
             </div>
         );
     }
     return (
         <div className="spector2-cmd-arg">
-            {JSON.stringify(v)}: {k}
+            <Value data={v} />: {k}
         </div>
     );
 }

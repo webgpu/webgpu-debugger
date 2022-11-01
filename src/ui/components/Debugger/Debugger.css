@@ -11,7 +11,6 @@
 }
 
 .spector2-vis {
-  overflow: auto;
   font-size: var(--spector2-font-size);
 }
 

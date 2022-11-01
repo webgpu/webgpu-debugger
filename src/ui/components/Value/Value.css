@@ -4,3 +4,12 @@
   cursor: pointer;
   font-weight: bold;
 }
+
+.spector2-value-undefined,
+.spector2-value-null {
+  color: var(--spector2-warn-color);
+}
+
+.spector2-value-nan {
+  color: var(--spector2-error-color);
+}

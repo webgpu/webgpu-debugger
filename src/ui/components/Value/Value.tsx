@@ -140,11 +140,12 @@ function ValueArray({ depth, data }: { depth?: number; data: any[] }) {
 
 export default function Value({ depth, data }: { depth?: number; data: any }) {
     if (data === undefined) {
-        return <div>undefined</div>;
+        return <div className="spector2-value-undefined">undefined</div>;
     } else if (data === null) {
-        return <div>null</div>;
+        return <div className="spector2-value-null">null</div>;
     } else if (typeof data === 'number') {
-        return <div className="spector2-value-number">{data}</div>;
+        const className = Number.isNaN(data) ? 'spector2-value-nan' : 'spector2-value-number';
+        return <div className={className}>{data}</div>;
     } else if (typeof data === 'string') {
         return <div className="spector2-value-string">&quot;{data}&quot;</div>;
     } else if (Array.isArray(data)) {
