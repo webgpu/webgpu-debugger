@@ -1225,13 +1225,13 @@ class RenderPipelineState extends BaseState {
                         target.blend = {
                             color: {
                                 operation: b.color.operation ?? 'add',
-                                operation: b.color.srcFactor ?? 'one',
-                                operation: b.color.dstFactor ?? 'zero',
+                                srcFactor: b.color.srcFactor ?? 'one',
+                                dstFactor: b.color.dstFactor ?? 'zero',
                             },
                             alpha: {
                                 operation: b.alpha.operation ?? 'add',
-                                operation: b.alpha.srcFactor ?? 'one',
-                                operation: b.alpha.dstFactor ?? 'zero',
+                                srcFactor: b.alpha.srcFactor ?? 'one',
+                                dstFactor: b.alpha.dstFactor ?? 'zero',
                             },
                         };
                     }
