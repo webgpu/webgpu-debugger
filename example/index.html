@@ -18,6 +18,7 @@ async function run() {
         device,
         format: presentationFormat,
         alphaMode: 'opaque',
+        usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING
     });
 
     const module = device.createShaderModule({

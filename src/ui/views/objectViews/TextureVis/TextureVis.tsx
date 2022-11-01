@@ -24,7 +24,7 @@ export default function TextureVis({ data }: { data: ReplayTexture }) {
             <ValueObject data={data} />
             {/* will have to figure out something different for texture arrays */}
             {getRange(data.mipLevelCount).map(mipLevel => (
-                <TextureLevelViewer key={`mip${mipLevel}`} texture={data.webgpuObject} mipLevel={mipLevel} />
+                <TextureLevelViewer key={`mip${mipLevel}`} texture={data} mipLevel={mipLevel} />
             ))}
         </div>
     );
