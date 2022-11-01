@@ -133,11 +133,11 @@ export function requestUnwrappedAdapter(options: GPURequestAdapterOptions) {
     return callUnwrappedGPUFn(GPU, navigator.gpu, 'requestAdapter', options);
 }
 
-export function requestUnwrappedGPUCanvasContext(canvas: HTMLCanvasElement, ...args: any[]) {
+export function getUnwrappedGPUCanvasContext(canvas: HTMLCanvasElement, ...args: any[]) {
     return callUnwrappedGPUFn(HTMLCanvasElement, canvas, 'getContext', 'webgpu', ...args);
 }
 
-export function getNonWrappedGPUDeviceFromWrapped(wrapped: GPUDevice): GPUDevice {
+export function getUnwrappedGPUDeviceFromWrapped(wrapped: GPUDevice): GPUDevice {
     const unwrappedDevice = unwrappedDevices.get(wrapped);
     if (unwrappedDevice) {
         return unwrappedDevice;

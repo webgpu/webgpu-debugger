@@ -1,10 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { ReplayTexture } from '../../../replay';
-import {
-    getNonWrappedGPUDeviceFromWrapped,
-    requestUnwrappedGPUCanvasContext,
-    spector2 as capture,
-} from '../../../capture';
+import { getUnwrappedGPUDeviceFromWrapped, getUnwrappedGPUCanvasContext, spector2 as capture } from '../../../capture';
 
 interface Props {
     texture: ReplayTexture;
@@ -160,7 +156,7 @@ const TextureLevelViewer: React.FC<Props> = ({ texture, mipLevel }) => {
         canvas.width = texture.size.width;
         canvas.height = texture.size.height;
 
-        const context = requestUnwrappedGPUCanvasContext(canvas);
+        const context = getUnwrappedGPUCanvasContext(canvas);
         context.configure({
             device,
             format: navigator.gpu.getPreferredCanvasFormat(),
