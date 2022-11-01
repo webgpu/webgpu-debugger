@@ -137,7 +137,7 @@ export function requestUnwrappedWebGPUContext(canvas: HTMLCanvasElement, ...args
 
 const unwrappedDevices = new WeakMap<GPUDevice, GPUDevice>();
 
-export function getNonWrappedGPUDeviceForWrapped(wrapped: GPUDevice): GPUDevice {
+export function getNonWrappedGPUDeviceFromWrapped(wrapped: GPUDevice): GPUDevice {
     const unwrappedDevice = unwrappedDevices.get(wrapped);
     if (unwrappedDevice) {
         return unwrappedDevice;
