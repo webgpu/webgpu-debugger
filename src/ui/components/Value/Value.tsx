@@ -20,6 +20,7 @@ import {
 } from '../../../replay';
 import { TileContext } from '../../contexts/TileContext';
 import { UIStateContext } from '../../contexts/UIStateContext';
+import { gpuBufferUsageToString, gpuTextureUsageToString } from '../../lib/webgpu-utils';
 
 import './Value.css';
 
@@ -92,17 +93,44 @@ const s_replayClassToComponent = new Map<Function, ValueComponent>([
 
 export const canDisplayInline = (v: any) => s_replayClassToComponent.has(Object.getPrototypeOf(v).constructor);
 
-const baseObjectProto = Object.getPrototypeOf({});
+const s_baseObjectProto = Object.getPrototypeOf({});
 
-const excludedProperties = new Set(['replay', 'webgpuObject']);
+// 'device' is only on GPUAdaptorInfo and GPUCanvasConfiguration. Can special case those if we need to
+// 'replay' is part of the ReplayXXX objects
+// 'webgpuObject' is part of the ReplayXXX objects
+const s_excludedProperties = new Set(['replay', 'webgpuObject', 'device']);
+
+type PropertyNameToComponentMap = Record<string, ValueComponent>;
+
+const GPUBufferUsageValue = ({ data }: { data: number }) => {
+    return <div className="spector2-value-bitmask">{gpuBufferUsageToString(data)}</div>;
+};
+
+const GPUTextureUsageValue = ({ data }: { data: number }) => {
+    return <div className="spector2-value-bitmask">{gpuTextureUsageToString(data)}</div>;
+};
+
+const s_classToSpecialProperties = new Map<Function, PropertyNameToComponentMap>();
+s_classToSpecialProperties.set(ReplayBuffer, {
+    usage: GPUBufferUsageValue,
+});
+s_classToSpecialProperties.set(ReplayTexture, {
+    usage: GPUTextureUsageValue,
+});
+
+function ValueProperty({ component, depth, data }: { component?: ValueComponent; depth: number; data: any }) {
+    return component ? React.createElement(component, { data }) : <Value depth={depth} data={data} />;
+}
 
 export function ValueObject({ depth, data }: { depth?: number; data: Record<string, any> }) {
     const childDepth = (depth || 0) + 1;
+    const ctor = Object.getPrototypeOf(data).constructor;
+    const specialProperties: PropertyNameToComponentMap = s_classToSpecialProperties.get(ctor) || {};
     return (
         <table className={`spector2-value-object spector2-value-depth${depth}`}>
             <tbody>
                 {Object.entries(data).map(([key, value], ndx) =>
-                    excludedProperties.has(key) ? (
+                    s_excludedProperties.has(key) ? (
                         <React.Fragment key={`p${ndx}`} />
                     ) : (
                         <tr className="spector2-value-key-value" key={`p${ndx}`}>
@@ -110,7 +138,12 @@ export function ValueObject({ depth, data }: { depth?: number; data: Record<stri
                                 {key}:
                             </td>
                             <td>
-                                <Value key={`v${ndx}`} depth={childDepth} data={value} />
+                                <ValueProperty
+                                    component={specialProperties[key]}
+                                    key={`v${ndx}`}
+                                    depth={childDepth}
+                                    data={value}
+                                />
                             </td>
                         </tr>
                     )
@@ -154,7 +187,7 @@ export default function Value({ depth, data }: { depth?: number; data: any }) {
         return <div className="spector2-value-function">{data.name}</div>;
     } else if (typeof data === 'object') {
         const proto = Object.getPrototypeOf(data);
-        if (proto === baseObjectProto) {
+        if (proto === s_baseObjectProto) {
             return <ValueObject depth={depth} data={data} />;
         } else {
             const component = s_replayClassToComponent.get(proto.constructor);
