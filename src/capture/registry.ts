@@ -206,7 +206,11 @@ export class Spector2 {
         function serializeAllObjects(registry) {
             const result = {};
             for (const obj of registry) {
-                result[obj.traceSerial] = obj.serialize();
+                const serializedObj = obj.serialize();
+                if (obj.label) {
+                    serializedObj.label = obj.label;
+                }
+                result[obj.traceSerial] = serializedObj;
             }
             return result;
         }
@@ -216,7 +220,14 @@ export class Spector2 {
             const result = {};
             // TODO have some context where objects can ask for a device?
             for (const obj of registry) {
-                pendingPromises.push(obj.serializeAsync().then(d => (result[obj.traceSerial] = d)));
+                pendingPromises.push(
+                    obj.serializeAsync().then(serializedObj => {
+                        if (obj.label) {
+                            serializedObj.label = obj.label;
+                        }
+                        result[obj.traceSerial] = serializedObj;
+                    })
+                );
             }
             return result;
         }
