@@ -47,7 +47,7 @@ class ObjectRegistry<GPUType extends Object, CaptureState extends CaptureStateBa
         this.objects = this.objects.filter(ref => ref.deref() !== undefined);
     }
 
-    [Symbol.iterator]() {
+    [Symbol.iterator](): Iterator<CaptureState> {
         let i = 0;
         this.iterating = true;
 
