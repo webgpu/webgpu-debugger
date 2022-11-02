@@ -98,7 +98,16 @@ const s_baseObjectProto = Object.getPrototypeOf({});
 // 'device' is only on GPUAdaptorInfo and GPUCanvasConfiguration. Can special case those if we need to
 // 'replay' is part of the ReplayXXX objects
 // 'webgpuObject' is part of the ReplayXXX objects
-const s_excludedProperties = new Set(['replay', 'webgpuObject', 'device']);
+const s_excludedProperties = new Set([
+    'bufferSerial',
+    'device',
+    'deviceSerial',
+    'layoutSerial',
+    'moduleSerial',
+    'replay',
+    'textureSerial',
+    'webgpuObject',
+]);
 
 type PropertyNameToComponentMap = Record<string, ValueComponent>;
 
