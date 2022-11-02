@@ -3,6 +3,7 @@ import replace from '@rollup/plugin-replace';
 import resolve from '@rollup/plugin-node-resolve';
 import typescript from '@rollup/plugin-typescript';
 import fs from 'fs';
+import process from 'process';
 import postcss from 'rollup-plugin-postcss';
 import livereload from 'rollup-plugin-livereload';
 import serve from 'rollup-plugin-serve';
@@ -85,7 +86,7 @@ export default [
             }),
             serve({
                 open: true,
-                openPage: '/example/',
+                openPage: process.env.START_PATH || '/examples/',
                 verbose: true,
                 contentBase: [''],
                 host: 'localhost',

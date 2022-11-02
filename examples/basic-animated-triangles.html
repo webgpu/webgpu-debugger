@@ -1,13 +1,11 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <title>Basic Animated Triangle for development.</title>
-</head>
-<body>
-<canvas id="renderCanvas" width=400 height=400></canvas>
-<canvas id="captureCanvas" width=1 height=1></canvas>
-<script type="module">
-import traceFrame from './traceFrame.js';
+  <head>
+  </head>
+  <body>
+    <canvas id="renderCanvas" width=400 height=400></canvas>
+        <script type="module">
+import '../dist/spector2.js';
 
 async function run() {
     const adapter = await navigator.gpu.requestAdapter();
@@ -22,6 +20,7 @@ async function run() {
     });
 
     const module = device.createShaderModule({
+        label: 'single colored triangle shaders',
         code: `
             struct Uniforms {
               matrix: mat4x4<f32>,
@@ -47,15 +46,8 @@ async function run() {
         `,
     });
 
-    const uniformBuffer = device.createBuffer({
-        size: (16 + 4) * 4,
-        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
-    const uniformValues = new Float32Array(16 + 4);
-    const matrix = uniformValues.subarray(0, 16);
-    const color = uniformValues.subarray(16, 20);
-
     const pipeline = device.createRenderPipeline({
+        label: 'pipeline for triangles',
         layout: 'auto',
         vertex: {
             module,
@@ -68,10 +60,29 @@ async function run() {
         },
     });
 
-    const bindGroup = device.createBindGroup({
-        layout: pipeline.getBindGroupLayout(0),
-        entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+    const roundUpToMultipleOf = (v, r) => (((v + r - 1) / r) | 0) * r;
+
+    const numTriangles = 6;
+    const uniformSizeInFloats = 16 + 4;
+    const uniformSizeInBytes = uniformSizeInFloats * 4;
+    const uniformBlockSizeBytes = roundUpToMultipleOf(uniformSizeInBytes, 256);
+    const uniformBuffers = device.createBuffer({
+        label: 'uniform buffer',
+        size: uniformBlockSizeBytes * numTriangles,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
+    const uniformValues = new Float32Array((uniformBlockSizeBytes / 4) * numTriangles);
+    const triangles = [];
+    for (let i = 0; i < numTriangles; ++i) {
+        const offset = (i * uniformBlockSizeBytes) / 4;
+        const matrix = uniformValues.subarray(offset, offset + 16);
+        const color = uniformValues.subarray(offset + 16, offset + 20);
+        const bindGroup = device.createBindGroup({
+            layout: pipeline.getBindGroupLayout(0),
+            entries: [{ binding: 0, resource: { buffer: uniformBuffers, offset: offset * 4 } }],
+        });
+        triangles.push({ matrix, color, bindGroup });
+    }
 
     const hsl = (h, s, l) => `hsl(${(h * 360) | 0}, ${s * 100}%, ${(l * 100) | 0}%)`;
     const cssColorToRGBA8 = (() => {
@@ -92,24 +103,31 @@ async function run() {
 
     function frame(time) {
         time *= 0.001;
-
-        {
-            const angle = time;
-            const c = Math.cos(angle);
-            const s = Math.sin(angle);
-            matrix.set([c, s, 0, 0, -s, c, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
-        }
-
         const hue = time * 0.1;
-        color.set(hslToRGBA(hue, 1, 0.5));
 
-        device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
+        triangles.forEach(({ matrix, color }, i) => {
+            {
+                const angle = time + i * 0.2;
+                const c = Math.cos(angle);
+                const s = Math.sin(angle);
+                matrix.set([c, s, 0, 0, -s, c, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+            }
+
+            color.set(hslToRGBA(hue + i * 0.05, 1, 0.5));
+        });
+
+        device.queue.writeBuffer(uniformBuffers, 0, uniformValues);
 
         const encoder = device.createCommandEncoder();
+        const dstTexture = context.getCurrentTexture();
+        dstTexture.label = 'canvas texture';
+        const view = dstTexture.createView();
+        view.label = 'canvas texture view';
         const pass = encoder.beginRenderPass({
+            label: 'triangle render pass',
             colorAttachments: [
                 {
-                    view: context.getCurrentTexture().createView(),
+                    view,
                     clearValue: hslToRGBA(hue + 0.5, 1, 0.5),
                     loadOp: 'clear',
                     storeOp: 'store',
@@ -117,8 +135,10 @@ async function run() {
             ],
         });
         pass.setPipeline(pipeline);
-        pass.setBindGroup(0, bindGroup);
-        pass.draw(3);
+        for (const { bindGroup } of triangles) {
+            pass.setBindGroup(0, bindGroup);
+            pass.draw(3);
+        }
         pass.end();
 
         device.queue.submit([encoder.finish()]);
@@ -126,11 +146,9 @@ async function run() {
         requestAnimationFrame(frame);
     }
 
-    traceFrame();
-
     requestAnimationFrame(frame);
 }
 run();
-</script>
-</body>
+    </script>
+  </body>
 </html>

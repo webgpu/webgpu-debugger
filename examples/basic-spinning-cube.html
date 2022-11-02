@@ -25,12 +25,11 @@
 </head>
 <body>
 <canvas id="renderCanvas" width=400 height=400></canvas>
-<canvas id="captureCanvas" width=1 height=1></canvas>
 <div id="fail" style="display: none">
     <div class="content"></div>
 </div>
 <script type="module">
-import traceFrame from './traceFrame.js';
+import '/dist/spector2.js';
 
 /* global GPUBufferUsage */
 /* global GPUTextureUsage */
@@ -390,7 +389,6 @@ async function main() {
         requestAnimationFrame(render);
     }
 
-    traceFrame();
     requestAnimationFrame(render);
 }
 
