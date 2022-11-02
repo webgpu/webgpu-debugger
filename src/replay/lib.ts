@@ -650,13 +650,28 @@ export class ReplayBuffer extends ReplayObject {
 
 export class ReplayBindGroup extends ReplayObject {
     device: ReplayDevice;
-    desc: GPUBindGroupDescriptor;
+    //desc: GPUBindGroupDescriptor;
     webgpuObject: GPUBindGroup;
+    bindings = [];
 
     constructor(replay, desc) {
         super(replay, desc);
-        this.desc = desc;
+        //this.desc = desc;
         this.device = this.replay.devices[desc.deviceSerial];
+
+        for (const e of desc.entries) {
+            if (e.textureViewSerial !== undefined) {
+                this.bindings[e.binding] = this.replay.textureViews[e.textureViewSerial];
+            } else if (e.samplerSerial !== undefined) {
+                this.bindings[e.binding] = this.replay.samplers[e.samplerSerial];
+            } else if (e.bufferSerial !== undefined) {
+                this.bindings[e.binding] = {
+                    buffer: this.replay.buffers[e.bufferSerial],
+                    offset: e.offset,
+                    size: e.size,
+                };
+            }
+        }
 
         this.webgpuObject = this.device.webgpuObject.createBindGroup({
             layout: this.replay.bindGroupLayouts[desc.layoutSerial].webgpuObject,

@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useContext } from 'react';
 import { ReplayTexture } from '../../../replay';
-import { getUnwrappedGPUCanvasContext } from '../../../capture';
+import { kTextureFormatInfo, getUnwrappedGPUCanvasContext } from '../../../capture';
 import { UIStateContext } from '../../contexts/UIStateContext';
 
 interface Props {
@@ -11,8 +11,7 @@ interface Props {
 class TextureRenderer {
     device: GPUDevice;
     shaderModule: GPUShaderModule;
-    bindGroupLayout: GPUBindGroupLayout;
-    pipeline: GPURenderPipeline;
+    pipelines: Map<string, GPURenderPipeline> = new Map<string, GPURenderPipeline>();
     sampler: GPUSampler;
 
     constructor(device: GPUDevice) {
@@ -38,83 +37,205 @@ class TextureRenderer {
                 return output;
             }
 
-            @group(0) @binding(0) var img : texture_2d<f32>;
-            @group(0) @binding(1) var imgSampler : sampler;
+            @group(0) @binding(0) var imgSampler : sampler;
 
+            @group(0) @binding(1) var img : texture_2d<f32>;
             @fragment
             fn fragmentMain(@location(0) texCoord : vec2<f32>) -> @location(0) vec4<f32> {
                 return textureSample(img, imgSampler, texCoord);
             }
+
+            @group(0) @binding(1) var depthImg : texture_depth_2d;
+            @fragment
+            fn depthFragmentMain(@location(0) texCoord : vec2<f32>) -> @location(0) vec4<f32> {
+                let depth = textureSample(depthImg, imgSampler, texCoord);
+                return vec4(depth, depth, depth, 1.0);
+            }
+
+            @group(0) @binding(1) var multiImg : texture_multisampled_2d<f32>;
+            @fragment
+            fn multiFragmentMain(@location(0) texCoord : vec2<f32>) -> @location(0) vec4<f32> {
+                let sampleCoord = vec2<i32>(texCoord * vec2<f32>(textureDimensions(multiImg)));
+                return textureLoad(multiImg, sampleCoord, 0i);
+            }
+
+            @group(0) @binding(1) var multiDepthImg : texture_depth_multisampled_2d;
+            @fragment
+            fn multiDepthFragmentMain(@location(0) texCoord : vec2<f32>) -> @location(0) vec4<f32> {
+                let sampleCoord = vec2<i32>(texCoord * vec2<f32>(textureDimensions(multiDepthImg)));
+                let depth = textureLoad(multiDepthImg, sampleCoord, 0i);
+                return vec4(depth, depth, depth, 1.0);
+            }
         `,
         });
 
-        this.bindGroupLayout = device.createBindGroupLayout({
-            entries: [
-                {
-                    binding: 0,
-                    texture: {},
-                    visibility: GPUShaderStage.FRAGMENT,
+        this.pipelines.set(
+            'color',
+            device.createRenderPipeline({
+                layout: 'auto',
+                vertex: {
+                    module: this.shaderModule,
+                    entryPoint: 'vertexMain',
                 },
-                {
-                    binding: 1,
-                    sampler: {},
-                    visibility: GPUShaderStage.FRAGMENT,
+                primitive: {
+                    topology: 'triangle-strip',
                 },
-            ],
-        });
-
-        this.pipeline = device.createRenderPipeline({
-            layout: device.createPipelineLayout({
-                bindGroupLayouts: [this.bindGroupLayout],
-            }),
-            vertex: {
-                module: this.shaderModule,
-                entryPoint: 'vertexMain',
-            },
-            primitive: {
-                topology: 'triangle-strip',
-            },
-            fragment: {
-                module: this.shaderModule,
-                entryPoint: 'fragmentMain',
-                targets: [
-                    {
-                        format: navigator.gpu.getPreferredCanvasFormat(),
-                        blend: {
-                            color: {
-                                srcFactor: 'src-alpha',
-                                dstFactor: 'one-minus-src-alpha',
-                            },
-                            alpha: {
-                                srcFactor: 'one',
-                                dstFactor: 'zero',
+                fragment: {
+                    module: this.shaderModule,
+                    entryPoint: 'fragmentMain',
+                    targets: [
+                        {
+                            format: navigator.gpu.getPreferredCanvasFormat(),
+                            blend: {
+                                color: {
+                                    srcFactor: 'src-alpha',
+                                    dstFactor: 'one-minus-src-alpha',
+                                },
+                                alpha: {
+                                    srcFactor: 'one',
+                                    dstFactor: 'zero',
+                                },
                             },
                         },
-                    },
-                ],
-            },
-        });
+                    ],
+                },
+            })
+        );
+
+        this.pipelines.set(
+            'depth',
+            device.createRenderPipeline({
+                layout: 'auto',
+                vertex: {
+                    module: this.shaderModule,
+                    entryPoint: 'vertexMain',
+                },
+                primitive: {
+                    topology: 'triangle-strip',
+                },
+                fragment: {
+                    module: this.shaderModule,
+                    entryPoint: 'depthFragmentMain',
+                    targets: [
+                        {
+                            format: navigator.gpu.getPreferredCanvasFormat(),
+                            blend: {
+                                color: {
+                                    srcFactor: 'src-alpha',
+                                    dstFactor: 'one-minus-src-alpha',
+                                },
+                                alpha: {
+                                    srcFactor: 'one',
+                                    dstFactor: 'zero',
+                                },
+                            },
+                        },
+                    ],
+                },
+            })
+        );
+
+        this.pipelines.set(
+            'multisampled-color',
+            device.createRenderPipeline({
+                layout: 'auto',
+                vertex: {
+                    module: this.shaderModule,
+                    entryPoint: 'vertexMain',
+                },
+                primitive: {
+                    topology: 'triangle-strip',
+                },
+                fragment: {
+                    module: this.shaderModule,
+                    entryPoint: 'multiFragmentMain',
+                    targets: [
+                        {
+                            format: navigator.gpu.getPreferredCanvasFormat(),
+                            blend: {
+                                color: {
+                                    srcFactor: 'src-alpha',
+                                    dstFactor: 'one-minus-src-alpha',
+                                },
+                                alpha: {
+                                    srcFactor: 'one',
+                                    dstFactor: 'zero',
+                                },
+                            },
+                        },
+                    ],
+                },
+            })
+        );
+
+        this.pipelines.set(
+            'multisampled-depth',
+            device.createRenderPipeline({
+                layout: 'auto',
+                vertex: {
+                    module: this.shaderModule,
+                    entryPoint: 'vertexMain',
+                },
+                primitive: {
+                    topology: 'triangle-strip',
+                },
+                fragment: {
+                    module: this.shaderModule,
+                    entryPoint: 'multiDepthFragmentMain',
+                    targets: [
+                        {
+                            format: navigator.gpu.getPreferredCanvasFormat(),
+                            blend: {
+                                color: {
+                                    srcFactor: 'src-alpha',
+                                    dstFactor: 'one-minus-src-alpha',
+                                },
+                                alpha: {
+                                    srcFactor: 'one',
+                                    dstFactor: 'zero',
+                                },
+                            },
+                        },
+                    ],
+                },
+            })
+        );
 
         this.sampler = device.createSampler({});
     }
 
     render(context: GPUCanvasContext, texture: GPUTexture, mipLevel: number) {
-        const textureBindGroup = this.device.createBindGroup({
-            layout: this.bindGroupLayout,
-            entries: [
+        const formatInfo = kTextureFormatInfo[texture.format];
+        const type = (texture.sampleCount > 1 ? 'multisampled-' : '') + formatInfo?.type;
+
+        const pipeline = this.pipelines.get(type);
+        let bindGroup;
+
+        if (pipeline) {
+            const entries: Array<GPUBindGroupEntry> = [
                 {
-                    binding: 0,
+                    binding: 1,
                     resource: texture.createView({
                         baseMipLevel: mipLevel,
                         mipLevelCount: 1,
                     }),
                 },
-                {
-                    binding: 1,
+            ];
+
+            if (texture.sampleCount === 1) {
+                entries.push({
+                    binding: 0,
                     resource: this.sampler,
-                },
-            ],
-        });
+                });
+            }
+
+            bindGroup = this.device.createBindGroup({
+                layout: pipeline.getBindGroupLayout(0),
+                entries,
+            });
+        } else {
+            console.warn(`No approprate pipeline found for texture type "${type}"`);
+        }
 
         const commandEncoder = this.device.createCommandEncoder();
         const passEncoder = commandEncoder.beginRenderPass({
@@ -127,9 +248,11 @@ class TextureRenderer {
             ],
         });
 
-        passEncoder.setBindGroup(0, textureBindGroup);
-        passEncoder.setPipeline(this.pipeline);
-        passEncoder.draw(4);
+        if (pipeline && bindGroup) {
+            passEncoder.setBindGroup(0, bindGroup);
+            passEncoder.setPipeline(pipeline);
+            passEncoder.draw(4);
+        }
 
         passEncoder.end();
         this.device.queue.submit([commandEncoder.finish()]);
@@ -155,8 +278,8 @@ const TextureLevelViewer: React.FC<Props> = ({ texture, mipLevel }) => {
         const device = texture.device.webgpuObject!;
 
         const canvas = canvasRef.current!;
-        canvas.width = texture.size.width;
-        canvas.height = texture.size.height;
+        canvas.width = texture.size.width >> mipLevel;
+        canvas.height = texture.size.height >> mipLevel;
 
         const context = getUnwrappedGPUCanvasContext(canvas);
         context.configure({

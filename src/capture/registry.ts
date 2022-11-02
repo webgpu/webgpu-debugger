@@ -1403,7 +1403,7 @@ class ShaderModuleState extends BaseState<GPUShaderModule> {
     }
 }
 
-const kTextureFormatInfo = {
+export const kTextureFormatInfo = {
     rgba8unorm: { type: 'color', blockWidth: 1, blockHeight: 1, blockByteSize: 4 },
     'rgba8unorm-srgb': { type: 'color', blockWidth: 1, blockHeight: 1, blockByteSize: 4 },
     bgra8unorm: { type: 'color', blockWidth: 1, blockHeight: 1, blockByteSize: 4 },

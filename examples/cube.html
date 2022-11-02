@@ -27,7 +27,7 @@
       import {mat4, vec3} from 'https://cdn.jsdelivr.net/npm/gl-matrix@3.4.3/esm/index.js';;
 
       const depthFormat = "depth24plus";
-      const sampleCount = 1;
+      const sampleCount = 4;
 
       const uniformBufferSize = 4 * 16; // 4x4 matrix
 
@@ -241,7 +241,112 @@
           label: 'Default Sampler',
           minFilter: 'linear',
           magFilter: 'linear',
+          mipmapFilter: 'linear',
         });
+
+        function generateMipmap(gpuDevice, texture, textureDescriptor) {
+          // Create a simple shader that renders a fullscreen textured quad.
+          const mipmapShaderModule = gpuDevice.createShaderModule({
+            code: `
+              var<private> pos : array<vec2<f32>, 4> = array<vec2<f32>, 4>(
+                vec2<f32>(-1.0, 1.0), vec2<f32>(1.0, 1.0),
+                vec2<f32>(-1.0, -1.0), vec2<f32>(1.0, -1.0));
+
+              struct VertexOutput {
+                @builtin(position) position : vec4<f32>,
+                @location(0) texCoord : vec2<f32>,
+              };
+
+              @vertex
+              fn vertexMain(@builtin(vertex_index) vertexIndex : u32) -> VertexOutput {
+                var output : VertexOutput;
+                output.texCoord = pos[vertexIndex] * vec2<f32>(0.5, -0.5) + vec2<f32>(0.5);
+                output.position = vec4<f32>(pos[vertexIndex], 0.0, 1.0);
+                return output;
+              }
+
+              @group(0) @binding(0) var imgSampler : sampler;
+              @group(0) @binding(1) var img : texture_2d<f32>;
+
+              @fragment
+              fn fragmentMain(@location(0) texCoord : vec2<f32>) -> @location(0) vec4<f32> {
+                return textureSample(img, imgSampler, texCoord);
+              }
+            `
+          });
+
+          const pipeline = gpuDevice.createRenderPipeline({
+            layout: 'auto',
+            vertex: {
+              module: mipmapShaderModule,
+              entryPoint: 'vertexMain',
+            },
+            fragment: {
+              module: mipmapShaderModule,
+              entryPoint: 'fragmentMain',
+              targets: [{
+                format: textureDescriptor.format // Make sure to use the same format as the texture
+              }],
+            },
+            primitive: {
+              topology: 'triangle-strip',
+              stripIndexFormat: 'uint32',
+            },
+          });
+
+          // We'll ALWAYS be rendering minified here, so that's the only filter mode we need to set.
+          const sampler = gpuDevice.createSampler({
+            minFilter: 'linear',
+            magFilter: 'linear',
+            mipmapFilter: 'linear',
+          });
+
+          let srcView = texture.createView({
+            baseMipLevel: 0,
+            mipLevelCount: 1
+          });
+
+          // Loop through each mip level and renders the previous level's contents into it.
+          const commandEncoder = gpuDevice.createCommandEncoder({});
+          for (let i = 1; i < textureDescriptor.mipLevelCount; ++i) {
+            const dstView = texture.createView({
+              baseMipLevel: i,  // Make sure we're getting the right mip level...
+              mipLevelCount: 1, // And only selecting one mip level
+            });
+
+            const passEncoder = commandEncoder.beginRenderPass({
+              colorAttachments: [{
+                view: dstView, // Render pass uses the next mip level as it's render attachment.
+                loadOp: 'clear',
+                storeOp: 'store'
+              }],
+            });
+
+            // Need a separate bind group for each level to ensure
+            // we're only sampling from the previous level.
+            const bindGroup = gpuDevice.createBindGroup({
+              layout: pipeline.getBindGroupLayout(0),
+              entries: [{
+                binding: 0,
+                resource: sampler,
+              }, {
+                binding: 1,
+                resource: srcView,
+              }],
+            });
+
+            // Render
+            passEncoder.setPipeline(pipeline);
+            passEncoder.setBindGroup(0, bindGroup);
+            passEncoder.draw(4);
+            passEncoder.end();
+
+            // The source texture view for the next iteration of the loop is the
+            // destination view for this one.
+            srcView = dstView;
+          }
+          gpuDevice.queue.submit([commandEncoder.finish()]);
+        }
 
         async function textureFromImageUrl(gpuDevice, url) {
           const response = await fetch(url);
@@ -252,11 +357,15 @@
             label: `${url} Texture`,
             size: { width: source.width, height: source.height },
             format: 'rgba8unorm',
+            mipLevelCount: Math.floor(Math.log2(Math.max(source.width, source.height))) + 1,
             usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST
           };
+
           const texture = gpuDevice.createTexture(textureDescriptor);
 
           gpuDevice.queue.copyExternalImageToTexture({ source }, { texture }, textureDescriptor.size);
+
+          generateMipmap(gpuDevice, texture, textureDescriptor);
 
           return texture;
         }
@@ -315,7 +424,7 @@
           renderPassDescriptor.depthStencilAttachment.view = depthTexture.createView();
 
           const aspect = Math.abs(canvas.width / canvas.height);
-          mat4.perspective(projectionMatrix, Math.PI * 0.5, aspect, 0.1, 1000.0);
+          mat4.perspective(projectionMatrix, Math.PI * 0.5, aspect, 0.1, 5.0);
         }
         window.addEventListener('resize', onResize);
         onResize();
