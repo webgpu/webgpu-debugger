@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ReplayTexture } from '../../../../replay';
+import Checkbox from '../../../components/Checkbox/Checkbox';
 import TextureLevelViewer from '../../../components/TextureLevelViewer/TextureLevelViewer';
 import { ValueObject } from '../../../components/Value/Value';
 
@@ -12,8 +13,7 @@ export default function TextureVis({ data }: { data: ReplayTexture }) {
         <div className="spector2-vis">
             <ValueObject data={data} />
             <div>
-                <span>Display actual size: </span>
-                <input type="checkbox" checked={actualSize} onChange={e => setActualSize(e.target.checked)} />
+                <Checkbox label="Display actual size:" checked={actualSize} onChange={setActualSize} />
             </div>
             {data.size.depthOrArrayLayers > 1 && (
                 <div>

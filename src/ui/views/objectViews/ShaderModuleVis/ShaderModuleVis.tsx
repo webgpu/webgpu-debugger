@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ReplayShaderModule } from '../../../../replay';
+import Checkbox from '../../../components/Checkbox/Checkbox';
 import { ValueObject } from '../../../components/Value/Value';
 
 // This is kind of a hack in that it's not taking the tab size into account.
@@ -32,7 +33,7 @@ export default function ShaderModuleVis({ data }: { data: ReplayShaderModule }) 
     return (
         <div className="spector2-vis">
             <ValueObject data={desc.hints || {}} />
-            <input type="checkbox" checked={raw} onChange={event => setRaw(event.target.checked)} />
+            <Checkbox label="raw" checked={raw} onChange={setRaw} />
             <pre>{optionallyRemoveLeadingWhitespace(!raw, desc.code)}</pre>
         </div>
     );

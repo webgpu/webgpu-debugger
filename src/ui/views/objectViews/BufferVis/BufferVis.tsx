@@ -6,6 +6,7 @@ import { ValueNumber, ValueObject } from '../../../components/Value/Value';
 import { roundUpToMultipleOf } from '../../../lib/math-utils';
 
 import './BufferVis.css';
+import Checkbox from '../../../components/Checkbox/Checkbox';
 
 interface SelectSimpleProps {
     value: string;
@@ -201,7 +202,7 @@ export default function BufferVis({ data }: { data: ReplayBuffer }) {
                         value={columns}
                         onChange={e => setColumns(parseInt(e.target.value))}
                     />
-                    <input type="checkbox" checked={hex} onChange={e => setHex(e.target.checked)} />
+                    <Checkbox label="hex:" checked={hex} onChange={setHex} />
                 </div>
                 <div className="spector2-buffer-data">
                     <BufferGrid type={type} columns={columns} hex={hex} buffer={data} />
