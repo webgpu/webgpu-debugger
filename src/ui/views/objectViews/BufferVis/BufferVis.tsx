@@ -1,30 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { FixedSizeGrid as Grid } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
+import Checkbox from '../../../components/Checkbox/Checkbox';
+import Range from '../../../components/Range/Range';
+import SelectSimple from '../../../components/SelectSimple/SelectSimple';
 import { ReplayBuffer } from '../../../../replay';
 import { ValueNumber, ValueObject } from '../../../components/Value/Value';
 import { roundUpToMultipleOf } from '../../../lib/math-utils';
 
 import './BufferVis.css';
-import Checkbox from '../../../components/Checkbox/Checkbox';
-
-interface SelectSimpleProps {
-    value: string;
-    options: string[];
-    onChange: (v: string) => void;
-}
-
-function SelectSimple({ value, options, onChange }: SelectSimpleProps) {
-    return (
-        <select value={value} onChange={e => onChange(e.target.value)}>
-            {options.map((option, ndx) => (
-                <option key={`o${ndx}`} value={option}>
-                    {option}
-                </option>
-            ))}
-        </select>
-    );
-}
 
 type TypedArrayConstructor =
     | Int8ArrayConstructor
@@ -195,13 +179,7 @@ export default function BufferVis({ data }: { data: ReplayBuffer }) {
                 <ValueObject data={data} />
                 <div>
                     <SelectSimple value={type} options={s_typesKeys} onChange={setType} />
-                    <input
-                        type="range"
-                        min="1"
-                        max="64"
-                        value={columns}
-                        onChange={e => setColumns(parseInt(e.target.value))}
-                    />
+                    <Range label="columns:" min={1} max={64} value={columns} onChange={setColumns} />
                     <Checkbox label="hex:" checked={hex} onChange={setHex} />
                 </div>
                 <div className="spector2-buffer-data">

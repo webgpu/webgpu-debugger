@@ -6,13 +6,11 @@ interface Props {
     onChange: (checked: boolean) => void;
 }
 
-const Checkbox: React.FC<Props> = ({ label, checked, onChange }) => {
+export default function Checkbox({ label, checked, onChange }: Props) {
     return (
         <label>
             {label}
             <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} />
         </label>
     );
-};
-
-export default Checkbox;
+}

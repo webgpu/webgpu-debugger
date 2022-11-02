@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ReplayTextureView } from '../../../../replay';
 import Checkbox from '../../../components/Checkbox/Checkbox';
+import Range from '../../../components/Range/Range';
 import TextureLevelViewer from '../../../components/TextureLevelViewer/TextureLevelViewer';
 import { ValueObject } from '../../../components/Value/Value';
 
@@ -20,28 +21,26 @@ export default function TextureViewVis({ data }: { data: ReplayTextureView }) {
             </div>
             {data.arrayLayerCount > 1 && (
                 <div>
-                    <span>Layer: </span>
-                    <input
-                        type="range"
+                    <Range
+                        label="Layer:"
                         min={data.baseArrayLayer}
                         max={maxArrayLayer}
                         value={arrayLayer}
-                        onChange={e => setArrayLayer(parseInt(e.target.value))}
-                    />{' '}
-                    {arrayLayer} of [{data.baseArrayLayer}, {maxArrayLayer}]
+                        valueFormatFn={(v: number) => `${v} of [${data.baseArrayLayer}, ${maxArrayLayer}]`}
+                        onChange={setArrayLayer}
+                    />
                 </div>
             )}
             {data.mipLevelCount > 1 && (
                 <div>
-                    <span>Mip Level: </span>
-                    <input
-                        type="range"
+                    <Range
+                        label="Level:"
                         min={data.baseMipLevel}
                         max={maxMipLevel}
                         value={mipLevel}
-                        onChange={e => setMipLevel(parseInt(e.target.value))}
-                    />{' '}
-                    {mipLevel} of [{data.baseMipLevel}, {maxMipLevel}]
+                        valueFormatFn={(v: number) => `${v} of [${data.baseMipLevel}, ${maxMipLevel}]`}
+                        onChange={setMipLevel}
+                    />
                 </div>
             )}
             <TextureLevelViewer texture={data.texture} mipLevel={mipLevel} layer={arrayLayer} actualSize={actualSize} />
