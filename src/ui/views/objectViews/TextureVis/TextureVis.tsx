@@ -9,12 +9,14 @@ export default function TextureVis({ data }: { data: ReplayTexture }) {
     const [actualSize, setActualSize] = useState(false);
     const [mipLevel, setMipLevel] = useState(0);
     const [arrayLayer, setArrayLayer] = useState(0);
+    const [pixelated, setPixelated] = useState(false);
 
     return (
         <div className="spector2-vis">
             <ValueObject data={data} />
             <div>
                 <Checkbox label="Display actual size:" checked={actualSize} onChange={setActualSize} />
+                <Checkbox label="Pixelated:" checked={pixelated} onChange={setPixelated} />
             </div>
             {data.size.depthOrArrayLayers > 1 && (
                 <div>
@@ -38,7 +40,9 @@ export default function TextureVis({ data }: { data: ReplayTexture }) {
                     />
                 </div>
             )}
-            <TextureLevelViewer texture={data} mipLevel={mipLevel} layer={arrayLayer} actualSize={actualSize} />
+            <div style={{ imageRendering: pixelated ? 'pixelated' : 'auto' }}>
+                <TextureLevelViewer texture={data} mipLevel={mipLevel} layer={arrayLayer} actualSize={actualSize} />
+            </div>
         </div>
     );
 }

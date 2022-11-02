@@ -9,6 +9,7 @@ export default function TextureViewVis({ data }: { data: ReplayTextureView }) {
     const [actualSize, setActualSize] = useState(false);
     const [mipLevel, setMipLevel] = useState(data.baseMipLevel);
     const [arrayLayer, setArrayLayer] = useState(data.baseArrayLayer);
+    const [pixelated, setPixelated] = useState(false);
 
     const maxMipLevel = data.baseMipLevel + data.mipLevelCount - 1;
     const maxArrayLayer = data.baseArrayLayer + data.arrayLayerCount - 1;
@@ -18,6 +19,7 @@ export default function TextureViewVis({ data }: { data: ReplayTextureView }) {
             <ValueObject data={data} />
             <div>
                 <Checkbox label="Display actual size:" checked={actualSize} onChange={setActualSize} />
+                <Checkbox label="Pixelated:" checked={pixelated} onChange={setPixelated} />
             </div>
             {data.arrayLayerCount > 1 && (
                 <div>
@@ -43,7 +45,14 @@ export default function TextureViewVis({ data }: { data: ReplayTextureView }) {
                     />
                 </div>
             )}
-            <TextureLevelViewer texture={data.texture} mipLevel={mipLevel} layer={arrayLayer} actualSize={actualSize} />
+            <div style={{ imageRendering: pixelated ? 'pixelated' : 'auto' }}>
+                <TextureLevelViewer
+                    texture={data.texture}
+                    mipLevel={mipLevel}
+                    layer={arrayLayer}
+                    actualSize={actualSize}
+                />
+            </div>
         </div>
     );
 }
