@@ -4,11 +4,6 @@ import { Replay, ReplayTexture } from '../../replay';
 import { getPathForLastStep } from '../lib/replay-utils';
 import { arrayRemoveElementByValue } from '../lib/array-utils';
 
-import StateVis from '../views/StateVis/StateVis';
-import StepsVis from '../views/StepsVis/StepsVis';
-import ObjectVis from '../views/ObjectVis/ObjectVis';
-import ResultVis from '../views/ResultVis/ResultVis';
-
 export type PaneComponent = React.FunctionComponent<{ data: any }> | React.ComponentClass<{ data: any }>;
 type ViewData = {
     component: PaneComponent;
@@ -63,6 +58,12 @@ export class UIStateHelper {
     setStateFn: UIStateSetterFn = () => {};
     state: Readonly<UIState> = createUIState();
     stateUpdateQueued = false;
+    paneComponentsByName: Record<string, PaneComponent> = {};
+
+    // map of PaneComponent names to lru paneIds where the first
+    // entry is the most recently used view of that type.
+    mruViewsByType: Map<string, string[]> = new Map();
+    replayAPI?: ReplayAPI;
 
     setState: UIStateSetterFn = (state: any) => {
         if (!this.stateUpdateQueued) {
@@ -82,11 +83,6 @@ export class UIStateHelper {
         this.state = { ...state };
     };
 
-    // map of PaneComponents to lru paneIds where the first
-    // entry is the most recently used view of that type.
-    mruViewsByType: Map<PaneComponent, string[]> = new Map();
-    replayAPI?: ReplayAPI;
-
     setFullUI = (full: boolean) => {
         this.setState({ fullUI: full });
     };
@@ -103,9 +99,13 @@ export class UIStateHelper {
         this.replayAPI = api as ReplayAPI;
     }
 
-    setMostRecentPaneIdForComponentType = (component: PaneComponent, paneId: string) => {
-        this.mruViewsByType.set(component, this.mruViewsByType.get(component) || []);
-        const mru = this.mruViewsByType.get(component)!;
+    registerPaneComponent = (name: string, component: PaneComponent) => {
+        this.paneComponentsByName[name] = component;
+    };
+
+    setMostRecentPaneIdForComponentType = (componentName: string, paneId: string) => {
+        this.mruViewsByType.set(componentName, this.mruViewsByType.get(componentName) || []);
+        const mru = this.mruViewsByType.get(componentName)!;
         arrayRemoveElementByValue(mru, paneId);
         mru.unshift(paneId);
     };
@@ -113,33 +113,34 @@ export class UIStateHelper {
     setMostRecentPaneByPaneId = (paneId: string) => {
         const viewType = this.state.paneIdToViewType[paneId];
         if (viewType) {
-            this.setMostRecentPaneIdForComponentType(viewType.component, paneId);
+            this.setMostRecentPaneIdForComponentType(viewType.component.name, paneId);
         }
     };
 
-    getMostRecentPaneIdForComponentType = (component: PaneComponent): string | undefined => {
+    getMostRecentPaneIdForComponentType = (componentName: string): string | undefined => {
         // This is a hack: See Debugger.tsx
-        if (!this.mruViewsByType.get(component)) {
+        if (!this.mruViewsByType.get(componentName)) {
             for (const [paneId, viewData] of Object.entries(this.state.paneIdToViewType)) {
-                this.setMostRecentPaneIdForComponentType(viewData.component, paneId);
+                this.setMostRecentPaneIdForComponentType(viewData.component.name, paneId);
             }
         }
-        const mru = this.mruViewsByType.get(component)!;
+        const mru = this.mruViewsByType.get(componentName)!;
         return mru.length ? mru[0] : undefined;
     };
 
-    setPaneViewType = (paneId: string, component: PaneComponent, name: string, data: any): void => {
+    setPaneViewType = (paneId: string, componentName: string, name: string, data: any): void => {
+        const component = this.paneComponentsByName[componentName]!;
         const paneIdToViewType = { ...this.state.paneIdToViewType };
         paneIdToViewType[paneId] = { component, name, data };
         this.setState({ paneIdToViewType });
-        this.setMostRecentPaneIdForComponentType(component, paneId);
+        this.setMostRecentPaneIdForComponentType(componentName, paneId);
     };
 
     deletePaneByPaneId(paneId: string) {
         // remove from mru list
         const viewType = this.state.paneIdToViewType[paneId]!;
         const component = viewType.component;
-        const mru = this.mruViewsByType.get(component)!;
+        const mru = this.mruViewsByType.get(component.name)!;
         arrayRemoveElementByValue(mru, paneId);
 
         // remove from paneIdToViewType list
@@ -159,11 +160,11 @@ export class UIStateHelper {
      * @param data Data for ObjectVis
      */
     setObjectView = (name: string, data: any) => {
-        const paneId = this.getMostRecentPaneIdForComponentType(ObjectVis);
+        const paneId = this.getMostRecentPaneIdForComponentType('ObjectVis');
         if (!paneId) {
             throw new Error('TODO: add pane of this type');
         }
-        this.setPaneViewType(paneId, ObjectVis, name, data);
+        this.setPaneViewType(paneId, 'ObjectVis', name, data);
     };
 
     /**
@@ -173,7 +174,7 @@ export class UIStateHelper {
      * @param freePaneId Id of unused Pane
      */
     addObjectView = (name: string, data: any, freePaneId: string) => {
-        this.setPaneViewType(freePaneId, ObjectVis, name, data);
+        this.setPaneViewType(freePaneId, 'ObjectVis', name, data);
         // remove from freePaneIds
         const freePaneIds = [...this.state.freePaneIds];
         arrayRemoveElementByValue(freePaneIds, freePaneId);
@@ -190,30 +191,30 @@ export class UIStateHelper {
     };
 
     setReplay = (replayInfo: ReplayInfo) => {
-        const paneId = this.getMostRecentPaneIdForComponentType(StepsVis);
+        const paneId = this.getMostRecentPaneIdForComponentType('StepsVis');
         if (!paneId) {
             throw new Error('TODO: add pane of this type');
         }
-        this.setPaneViewType(paneId, StepsVis, 'Steps', replayInfo);
+        this.setPaneViewType(paneId, 'StepsVis', 'Steps', replayInfo);
         this.setFullUI(true);
     };
 
     // TODO: This should take a texture view?
     setResult = (texture: ReplayTexture, mipLevel: number) => {
-        const paneId = this.getMostRecentPaneIdForComponentType(ResultVis);
+        const paneId = this.getMostRecentPaneIdForComponentType('ResultVis');
         if (!paneId) {
             throw new Error('TODO: add pane of this type');
         }
-        this.setPaneViewType(paneId, ResultVis, 'Result', { texture, mipLevel });
+        this.setPaneViewType(paneId, 'ResultVis', 'Result', { texture, mipLevel });
     };
 
     setGPUState = (state: any) => {
-        const paneId = this.getMostRecentPaneIdForComponentType(StateVis);
+        const paneId = this.getMostRecentPaneIdForComponentType('StateVis');
         if (!paneId) {
             throw new Error('TODO: add pane of this type');
         }
         console.log(state);
-        this.setPaneViewType(paneId, StateVis, 'State', state);
+        this.setPaneViewType(paneId, 'StateVis', 'State', state);
 
         // TODO: choose the correct texture
         const mipLevel = 0;

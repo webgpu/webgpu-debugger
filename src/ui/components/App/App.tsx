@@ -25,6 +25,11 @@ class App extends React.Component<UIProps, UIState> {
             pane4: { component: ObjectVis, name: 'Data', data: null },
         };
 
+        uiStateHelper.registerPaneComponent('StateVis', StateVis);
+        uiStateHelper.registerPaneComponent('StepsVis', StepsVis);
+        uiStateHelper.registerPaneComponent('ObjectVis', ObjectVis);
+        uiStateHelper.registerPaneComponent('ResultVis', ResultVis);
+
         const freePaneIds: string[] = [];
         for (let i = 0; i < maxPanes; ++i) {
             const paneId = `pane${i}`;
