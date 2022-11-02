@@ -11,7 +11,10 @@ export default function TextureVis({ data }: { data: ReplayTexture }) {
             <ValueObject data={data} />
             {/* will have to figure out something different for texture arrays */}
             {getRange(data.mipLevelCount).map(mipLevel => (
-                <TextureLevelViewer key={`mip${mipLevel}`} texture={data} mipLevel={mipLevel} />
+                <div key={`mip${mipLevel}`}>
+                    <div>mipLevel: {mipLevel} </div>
+                    <TextureLevelViewer texture={data} mipLevel={mipLevel} />
+                </div>
             ))}
         </div>
     );

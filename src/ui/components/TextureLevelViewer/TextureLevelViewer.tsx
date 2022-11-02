@@ -167,11 +167,7 @@ const TextureLevelViewer: React.FC<Props> = ({ texture, mipLevel }) => {
         renderer.render(context, texture.webgpuObject, mipLevel);
     }, []);
 
-    return (
-        <div>
-            Texture mipLevel: {mipLevel} <canvas ref={canvasRef} />
-        </div>
-    );
+    return <canvas ref={canvasRef} />;
 };
 
 export default TextureLevelViewer;
