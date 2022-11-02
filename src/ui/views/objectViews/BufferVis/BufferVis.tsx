@@ -109,8 +109,8 @@ const BufferGrid: React.FC<Props> = ({ type, columns, hex, buffer }) => {
 
     const { View, minWidth, format } = s_types[type];
     const view = new View(arrayBuffer);
-    const numElems = view.length;
-    const rows = roundUpToMultipleOf(numElems, columns) / columns;
+    const numValues = view.length;
+    const rows = roundUpToMultipleOf(numValues, columns) / columns;
 
     // fill the view with consecutive values for debugging.
     // view.forEach((v, ndx) => (view[ndx] = ndx % 2 ? -ndx : ndx));
@@ -118,16 +118,19 @@ const BufferGrid: React.FC<Props> = ({ type, columns, hex, buffer }) => {
     const formatFn = hex ? format : (v: number) => v.toString();
 
     /*  size 10  columns = 4
-     0,  1,  2,  3,  4,
-     5,  6,  7,  8,  9,
-    10, 11, 12, 13, 14,
-    15, 16, 17, 18, 19,
+
+        cell indices       data indices
+    ------------------------------------
+     0,  1,  2,  3,  4,    ?  ?  ?  ?  ?
+     5,  6,  7,  8,  9,    ?  0  1  2  3
+    10, 11, 12, 13, 14,    ?  4  5  6  7
+    15, 16, 17, 18, 19,    ?  8  9  .  .
     */
 
     const viewColumns = columns + 1;
     const viewRows = rows + 1;
-    const lastViewColumn = (numElems % columns) + 1;
-    const lastViewRow = numElems / columns + 1;
+    const lastViewColumn = (numValues % columns) + 1;
+    const lastViewRow = numValues / columns + 1;
 
     // If the size is small, try not to cause a scrollbar
     const widthFudge = 10;
