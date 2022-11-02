@@ -1,6 +1,7 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useContext } from 'react';
 import { ReplayTexture } from '../../../replay';
 import { getUnwrappedGPUCanvasContext } from '../../../capture';
+import { UIStateContext } from '../../contexts/UIStateContext';
 
 interface Props {
     texture: ReplayTexture;
@@ -148,6 +149,7 @@ class TextureRenderer {
 
 const TextureLevelViewer: React.FC<Props> = ({ texture, mipLevel }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const { helper } = useContext(UIStateContext);
 
     useEffect(() => {
         const device = texture.device.webgpuObject!;
@@ -165,7 +167,7 @@ const TextureLevelViewer: React.FC<Props> = ({ texture, mipLevel }) => {
 
         const renderer = TextureRenderer.getRendererForDevice(device);
         renderer.render(context, texture.webgpuObject, mipLevel);
-    }, []);
+    }, [texture, helper.state.replayCount]);
 
     return <canvas ref={canvasRef} />;
 };

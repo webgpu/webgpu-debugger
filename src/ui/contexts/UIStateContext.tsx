@@ -27,6 +27,8 @@ export type UIState = {
     fullUI: boolean;
     replays: ReplayInfo[];
     freePaneIds: string[];
+    // This exists solely to force react to respond. It's incremented when state arrives from each "replayTo"
+    replayCount: number;
 };
 
 export type SetStateArgs = Partial<UIState>;
@@ -38,6 +40,7 @@ export function createUIState(state: SetStateArgs = {}): UIState {
             fullUI: false,
             replays: [],
             freePaneIds: [],
+            replayCount: 0,
         },
         ...state,
     };
@@ -222,6 +225,7 @@ export class UIStateHelper {
             }
         }
         this.setResult(texture, mipLevel);
+        this.setState({ replayCount: this.state.replayCount + 1 });
     };
 
     async playTo(replay: Replay, path: number[]) {
