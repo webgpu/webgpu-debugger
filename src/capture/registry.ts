@@ -759,7 +759,7 @@ class CanvasContextState extends BaseState<GPUCanvasContext> {
         spector2.canvasContextProto.configure.call(this.webgpuObject, {
             device: this.device.webgpuObject,
             format: this.format,
-            usage: this.usage | GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST,
+            usage: this.usage | GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST | GPUTextureUsage.TEXTURE_BINDING,
             viewFormats: this.viewFormats,
             colorSpace: this.colorSpace,
             alphaMode: this.alphaMode,
@@ -885,7 +885,7 @@ class DeviceState extends BaseState<GPUDevice> {
     createTexture(desc) {
         const texture = spector2.deviceProto.createTexture.call(this.webgpuObject, {
             ...desc,
-            usage: desc.usage | GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST,
+            usage: desc.usage | GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST | GPUTextureUsage.TEXTURE_BINDING,
         });
         spector2.registerObjectIn('textures', texture, new TextureState(this, desc, /*isSwapChain*/ false));
         return texture;
@@ -1410,6 +1410,7 @@ const kTextureFormatInfo = {
 
     depth32float: { type: 'depth', blockWidth: 1, blockHeight: 1, blockByteSize: 4 },
     'depth24plus-stencil8': { type: 'depth-stencil' },
+    depth24plus: { type: 'depth', blockWidth: 1, blockHeight: 1, blockByteSize: 4 },
 };
 const kBytesPerRowAlignment = 256;
 
