@@ -41,16 +41,30 @@ const interleave = (array: any[], elem: any): any[] => {
     return newArray;
 };
 
+function Json({ data }: { data: any }) {
+    try {
+        const json = JSON.stringify(data);
+        return <div>{json}</div>;
+    } catch (e: any) {
+        /*
+        let errMsg = '';
+        try {
+            errMsg = e.toString();
+        } catch {
+            errMsg = 'EXCEPTION toString throws?!?!';
+        }
+        console.error(errMsg);
+        */
+        return <div className="spector2-error">object with cycle({data.constructor.name})</div>;
+    }
+}
+
 function Arg({ k, v }: { k: string; v: any }) {
     if (Array.isArray(v)) {
         return <div className="spector2-cmd-arg">[...]: {k}</div>;
     }
     if (typeof v === 'object') {
-        return (
-            <div className="spector2-cmd-arg">
-                {canDisplayInline(v) ? <Value data={v} /> : <div>{JSON.stringify(v)}</div>}
-            </div>
-        );
+        return <div className="spector2-cmd-arg">{canDisplayInline(v) ? <Value data={v} /> : <Json data={v} />}</div>;
     }
     return (
         <div className="spector2-cmd-arg">

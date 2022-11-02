@@ -28,7 +28,7 @@
 }
 
 .spector2-cmd-args {
-  color: pink;
+  color: var(--spector2-accent-color);
 }
 
 .spector2-cmd-arg>* {
