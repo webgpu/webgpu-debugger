@@ -9,6 +9,7 @@ import livereload from 'rollup-plugin-livereload';
 import serve from 'rollup-plugin-serve';
 
 const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+const isWatch = process.env.ROLLUP_WATCH;
 
 const plugins = [
     resolve({
@@ -84,15 +85,19 @@ export default [
                 minimize: true,
                 sourceMap: true,
             }),
-            serve({
-                open: true,
-                openPage: process.env.START_PATH || '/examples/',
-                verbose: true,
-                contentBase: [''],
-                host: 'localhost',
-                port: 3000,
-            }),
-            livereload({ watch: 'dist' }),
+            ...(isWatch
+                ? [
+                      serve({
+                          open: true,
+                          openPage: process.env.START_PATH || '/examples/',
+                          verbose: true,
+                          contentBase: [''],
+                          host: 'localhost',
+                          port: 3000,
+                      }),
+                      livereload({ watch: 'dist' }),
+                  ]
+                : []),
         ],
     },
     //{
