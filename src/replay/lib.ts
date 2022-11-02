@@ -1,3 +1,6 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck
+
 import { GPUExtent3DDictFull } from '../lib/utils';
 
 type RequestAdapterFn = (options: GPURequestAdapterOptions) => Promise<GPUAdapter>;
