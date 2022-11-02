@@ -1,6 +1,6 @@
 import React from 'react';
 import ReplayAPI from '../ReplayAPI';
-import { Replay } from '../../replay';
+import { Replay, ReplayTexture } from '../../replay';
 import { getPathForLastStep } from '../lib/replay-utils';
 import { arrayRemoveElementByValue } from '../lib/array-utils';
 
@@ -195,12 +195,13 @@ export class UIStateHelper {
         this.setFullUI(true);
     };
 
-    setResult = (canvas: HTMLCanvasElement) => {
+    // TODO: This should take a texture view?
+    setResult = (texture: ReplayTexture, mipLevel: number) => {
         const paneId = this.getMostRecentPaneIdForComponentType(ResultVis);
         if (!paneId) {
             throw new Error('TODO: add pane of this type');
         }
-        this.setPaneViewType(paneId, ResultVis, 'Result', canvas);
+        this.setPaneViewType(paneId, ResultVis, 'Result', { texture, mipLevel });
     };
 
     setGPUState = (state: any) => {
@@ -210,6 +211,17 @@ export class UIStateHelper {
         }
         console.log(state);
         this.setPaneViewType(paneId, StateVis, 'State', state);
+
+        // TODO: choose the correct texture
+        const mipLevel = 0;
+        let texture = state?.currentTexture;
+        if (!texture) {
+            const attachments = state?.colorAttachments as any[];
+            if (attachments) {
+                texture = attachments[0]?.view?.texture;
+            }
+        }
+        this.setResult(texture, mipLevel);
     };
 
     async playTo(replay: Replay, path: number[]) {

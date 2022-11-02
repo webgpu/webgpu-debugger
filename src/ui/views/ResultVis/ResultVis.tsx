@@ -1,43 +1,23 @@
-import React, { useRef, useEffect } from 'react';
+import React from 'react';
+import { ReplayTexture } from '../../../replay';
+import TextureLevelViewer from '../../components/TextureLevelViewer/TextureLevelViewer';
 
 import './ResultVis.css';
 
+// TODO: this should take a textureview?
 type ResultsVisProps = {
-    data: HTMLCanvasElement;
-};
-
-const draw = (ctx: CanvasRenderingContext2D, srcCanvas: HTMLCanvasElement) => {
-    if (srcCanvas) {
-        ctx.canvas.width = srcCanvas.width;
-        ctx.canvas.height = srcCanvas.height;
-        ctx.drawImage(srcCanvas, 0, 0);
-    } else {
-        const { width, height } = ctx.canvas;
-        ctx.clearRect(0, 0, width, height);
-        ctx.font = 'bold 24px monospace';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.lineWidth = 5;
-        ctx.strokeStyle = 'white';
-        ctx.strokeText('no result', width / 2, height / 2);
-        ctx.fillText('no result', width / 2, height / 2);
-    }
+    data: {
+        texture: ReplayTexture;
+        mipLevel: 0;
+    };
 };
 
 const ResultVis = ({ data }: ResultsVisProps) => {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-
-    useEffect(() => {
-        const canvas = canvasRef.current!;
-        const context = canvas.getContext('2d')!;
-
-        //Our draw come here
-        draw(context, data);
-    }, [draw]);
+    const { texture, mipLevel } = data || {};
 
     return (
         <div className="spector2-vis">
-            <canvas ref={canvasRef} />
+            {texture ? <TextureLevelViewer texture={texture} mipLevel={mipLevel} /> : <div>-- no result --</div>}
         </div>
     );
 };

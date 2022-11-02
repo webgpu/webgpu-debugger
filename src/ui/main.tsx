@@ -40,40 +40,5 @@ uiStateHelper.registerAPI({
         console.log(replay);
 
         uiStateHelper.addReplay(replay);
-
-        // Go through each command, and show the presented texture of the trace on the capture canvas.
-        const captureCanvas = document.createElement('canvas');
-        const context = getUnwrappedGPUCanvasContext(captureCanvas);
-
-        for (const c of replay.commands) {
-            replay.execute(c);
-
-            if (c.name === 'present') {
-                const textureState = c.args.texture;
-                const device = textureState.device.webgpuObject;
-
-                captureCanvas.width = textureState.size.width;
-                captureCanvas.height = textureState.size.height;
-                context.configure({
-                    device,
-                    usage: GPUTextureUsage.COPY_DST,
-                    format: textureState.format,
-                    alphaMode: 'opaque',
-                });
-
-                const encoder = device.createCommandEncoder();
-                encoder.copyTextureToTexture(
-                    { texture: textureState.webgpuObject },
-                    { texture: context.getCurrentTexture() },
-                    textureState.size
-                );
-                device.queue.submit([encoder.finish()]);
-                // TODO: should probably have this generate
-                // an imagebitmap and pass in that instead?
-                uiStateHelper.setResult(captureCanvas);
-            }
-        }
-
-        //        capture.wrapEntryPoints();
     },
 });
