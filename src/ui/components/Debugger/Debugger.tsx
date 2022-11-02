@@ -1,12 +1,12 @@
 import React from 'react';
 import Toolbar from '../Toolbar/Toolbar';
 import Pane from '../Pane/Pane';
-import * as FlexLayout from '../../../3rdParty/FlexLayout/src/index';
+import * as FlexLayout from 'flexlayout-react';
 
 import { TileContext } from '../../contexts/TileContext';
 import { uiStateHelper } from '../../contexts/UIStateContext';
 
-import '../../../3rdParty/FlexLayout/style/dark.css';
+import 'flexlayout-react/style/dark.css';
 import './Debugger.css';
 
 // We started with react-tile-pane. It refers to panes by id
