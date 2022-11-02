@@ -861,6 +861,7 @@ export class ReplayTexture extends ReplayObject {
     format: string;
     sampleCount: number;
     mipLevelCount: number;
+    dimension: GPUTextureDimension;
     webgpuObject: GPUTexture;
 
     constructor(replay, desc) {
@@ -870,11 +871,11 @@ export class ReplayTexture extends ReplayObject {
         this.format = desc.format;
         this.sampleCount = desc.sampleCount;
         this.mipLevelCount = desc.mipLevelCount;
-        this.dimension = desc.dimension;
+        this.dimension = desc.dimension ?? '2d';
 
         this.webgpuObject = this.device.webgpuObject.createTexture({
             format: this.format,
-            usage: desc.usage | GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST,
+            usage: desc.usage | GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST | GPUTextureUsage.TEXTURE_BINDING,
             size: this.size,
             dimension: desc.dimension,
             mipLevelCount: desc.mipLevelCount,
@@ -926,16 +927,42 @@ export class ReplayTexture extends ReplayObject {
 export class ReplayTextureView extends ReplayObject {
     texture: ReplayTexture;
     desc: GPUTextureViewDescriptor;
+    dimension: GPUTextureViewDimension;
     baseMipLevel: number;
     mipLevelCount: number;
+    baseArrayLayer: number;
+    arrayLayerCount: number;
     webgpuObject?: GPUTextureView;
 
     constructor(replay, desc) {
         super(replay, desc);
         this.desc = desc;
         this.texture = this.replay.textures[desc.textureSerial];
+
+        this.dimension = desc.dimension;
+        if (this.dimension === undefined) {
+            switch (this.texture.dimension) {
+                case '1d':
+                    this.dimension = '1d';
+                    break;
+                case '2d':
+                    this.dimension = this.texture.size.depthOrArrayLayers > 1 ? '2d-array' : '2d';
+                    break;
+                case '3d':
+                    this.dimension = '3d';
+                    break;
+            }
+        }
+
         this.baseMipLevel = desc.baseMipLevel ?? 0;
         this.mipLevelCount = desc.mipLevelCount ?? this.texture.mipLevelCount - this.baseMipLevel;
+        this.baseArrayLayer = desc.baseArrayLayer ?? 0;
+        if (this.desc.dimension === '2d-array') {
+            this.arrayLayerCount = desc.arrayLayerCount ?? this.texture.size.depthOrArrayLayers - this.baseArrayLayer;
+        } else {
+            this.arrayLayerCount = desc.arrayLayerCount ?? 1;
+        }
+
         this.webgpuObject = this.texture.webgpuObject.createView({
             format: desc.format,
             dimension: desc.dimension,

@@ -211,6 +211,7 @@ class TextureRenderer {
                 {
                     binding: 1,
                     resource: texture.createView({
+                        dimension: '2d',
                         baseMipLevel: mipLevel,
                         mipLevelCount: 1,
                         baseArrayLayer: layer,
@@ -279,7 +280,6 @@ const TextureLevelViewer: React.FC<Props> = ({ texture, mipLevel = 0, layer = 0,
     const { helper } = useContext(UIStateContext);
 
     useEffect(() => {
-        console.log('Updating Texture Vis');
         const device = texture.device.webgpuObject!;
 
         const canvas = canvasRef.current!;
