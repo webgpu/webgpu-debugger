@@ -7,7 +7,7 @@ export default function TextureViewVis({ data }: { data: ReplayTextureView }) {
     const [actualSize, setActualSize] = useState(false);
     const [mipLevel, setMipLevel] = useState(data.baseMipLevel);
 
-    const maxMipLevel = data.mipLevelCount ?? (data.texture.mipLevelCount - data.baseMipLevel) - 1;
+    const maxMipLevel = data.baseMipLevel + data.mipLevelCount - 1;
 
     return (
         <div className="spector2-vis">
@@ -21,10 +21,11 @@ export default function TextureViewVis({ data }: { data: ReplayTextureView }) {
                 <input
                     type="range"
                     min={data.baseMipLevel}
-                    max={data.baseMipLevel + (data.mipLevelCount ?? (data.texture.mipLevelCount - data.baseMipLevel) - 1)}
+                    max={maxMipLevel}
                     value={mipLevel}
                     onChange={e => setMipLevel(parseInt(e.target.value))}
-                /> {mipLevel} of [{data.baseMipLevel}, {maxMipLevel}]
+                />{' '}
+                {mipLevel} of [{data.baseMipLevel}, {maxMipLevel}]
             </div>
             <TextureLevelViewer texture={data.texture} mipLevel={mipLevel} actualSize={actualSize} />
         </div>

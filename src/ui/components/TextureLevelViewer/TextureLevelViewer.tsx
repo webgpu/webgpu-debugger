@@ -269,17 +269,17 @@ class TextureRenderer {
 
 interface Props {
     texture: ReplayTexture;
-    mipLevel: number;
-    layer: number;
-    actualSize: boolean;
+    mipLevel?: number;
+    layer?: number;
+    actualSize?: boolean;
 }
 
-const TextureLevelViewer: React.FC<Props> = ({ texture, mipLevel = 0, layer = 0, actualSize = true }) => {
+const TextureLevelViewer: React.FC<Props> = ({ texture, mipLevel = 0, layer = 0, actualSize = true }: Props) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const { helper } = useContext(UIStateContext);
 
     useEffect(() => {
-        console.log('Updating Texture Vis')
+        console.log('Updating Texture Vis');
         const device = texture.device.webgpuObject!;
 
         const canvas = canvasRef.current!;

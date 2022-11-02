@@ -924,6 +924,7 @@ export class ReplayTextureView extends ReplayObject {
     texture: ReplayTexture;
     desc: GPUTextureViewDescriptor;
     baseMipLevel: number;
+    mipLevelCount: number;
     webgpuObject?: GPUTextureView;
 
     constructor(replay, desc) {
@@ -931,6 +932,7 @@ export class ReplayTextureView extends ReplayObject {
         this.desc = desc;
         this.texture = this.replay.textures[desc.textureSerial];
         this.baseMipLevel = desc.baseMipLevel ?? 0;
+        this.mipLevelCount = desc.mipLevelCount ?? this.texture.mipLevelCount - this.baseMipLevel;
         this.webgpuObject = this.texture.webgpuObject.createView({
             format: desc.format,
             dimension: desc.dimension,

@@ -3,8 +3,6 @@ import { ReplayTexture } from '../../../../replay';
 import TextureLevelViewer from '../../../components/TextureLevelViewer/TextureLevelViewer';
 import { ValueObject } from '../../../components/Value/Value';
 
-import { getRange } from '../../../lib/array-utils';
-
 export default function TextureVis({ data }: { data: ReplayTexture }) {
     const [actualSize, setActualSize] = useState(false);
     const [mipLevel, setMipLevel] = useState(0);
@@ -24,7 +22,8 @@ export default function TextureVis({ data }: { data: ReplayTexture }) {
                     max={data.mipLevelCount - 1}
                     value={mipLevel}
                     onChange={e => setMipLevel(parseInt(e.target.value))}
-                /> {mipLevel} of [0, {data.mipLevelCount-1}]
+                />{' '}
+                {mipLevel} of [0, {data.mipLevelCount - 1}]
             </div>
             <TextureLevelViewer texture={data} mipLevel={mipLevel} actualSize={actualSize} />
         </div>
