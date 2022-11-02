@@ -752,6 +752,8 @@ class CanvasContextState extends BaseState<GPUCanvasContext> {
         this.device = spector2.devices.get(config.device);
         this.format = config.format;
         this.usage = config.usage ?? GPUTextureUsage.RENDER_ATTACHMENT;
+        // TODO: remove
+        this.usage |= GPUTextureUsage.TEXTURE_BINDING;
         this.viewFormats = config.viewFormats ?? []; // TODO clone the inside
         this.colorSpace = config.colorSpace ?? 'srgb';
         this.alphaMode = config.alphaMode ?? 'opaque';
