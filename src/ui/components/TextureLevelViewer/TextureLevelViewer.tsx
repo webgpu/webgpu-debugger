@@ -3,11 +3,6 @@ import { ReplayTexture } from '../../../replay';
 import { kTextureFormatInfo, getUnwrappedGPUCanvasContext } from '../../../capture';
 import { UIStateContext } from '../../contexts/UIStateContext';
 
-interface Props {
-    texture: ReplayTexture;
-    mipLevel: number;
-}
-
 class TextureRenderer {
     device: GPUDevice;
     shaderModule: GPUShaderModule;
@@ -204,7 +199,7 @@ class TextureRenderer {
         this.sampler = device.createSampler({});
     }
 
-    render(context: GPUCanvasContext, texture: GPUTexture, mipLevel: number) {
+    render(context: GPUCanvasContext, texture: GPUTexture, mipLevel: number, layer: number) {
         const formatInfo = kTextureFormatInfo[texture.format];
         const type = (texture.sampleCount > 1 ? 'multisampled-' : '') + formatInfo?.type;
 
@@ -218,6 +213,8 @@ class TextureRenderer {
                     resource: texture.createView({
                         baseMipLevel: mipLevel,
                         mipLevelCount: 1,
+                        baseArrayLayer: layer,
+                        arrayLayerCount: 1,
                     }),
                 },
             ];
@@ -270,16 +267,32 @@ class TextureRenderer {
     }
 }
 
-const TextureLevelViewer: React.FC<Props> = ({ texture, mipLevel }) => {
+interface Props {
+    texture: ReplayTexture;
+    mipLevel: number;
+    layer: number;
+    actualSize: boolean;
+}
+
+const TextureLevelViewer: React.FC<Props> = ({ texture, mipLevel = 0, layer = 0, actualSize = true }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const { helper } = useContext(UIStateContext);
 
     useEffect(() => {
+        console.log('Updating Texture Vis')
         const device = texture.device.webgpuObject!;
 
         const canvas = canvasRef.current!;
         canvas.width = texture.size.width >> mipLevel;
         canvas.height = texture.size.height >> mipLevel;
+        canvas.style.margin = '1em';
+        canvas.style.padding = '';
+
+        if (actualSize) {
+            canvas.style.width = '';
+        } else {
+            canvas.style.width = 'calc(100% - 2em)';
+        }
 
         const context = getUnwrappedGPUCanvasContext(canvas);
         context.configure({
@@ -289,8 +302,8 @@ const TextureLevelViewer: React.FC<Props> = ({ texture, mipLevel }) => {
         });
 
         const renderer = TextureRenderer.getRendererForDevice(device);
-        renderer.render(context, texture.webgpuObject, mipLevel);
-    }, [texture, helper.state.replayCount]);
+        renderer.render(context, texture.webgpuObject, mipLevel, layer);
+    }, [texture, mipLevel, layer, actualSize, helper.state.replayCount]);
 
     return <canvas ref={canvasRef} />;
 };
