@@ -9,12 +9,6 @@ export function arrayCopyWithoutValue<Type>(array: Type[], value: Type) {
     return array.filter(v => v !== value);
 }
 
-function* range(n: number) {
-    for (let i = 0; i < n; i++) {
-        yield i;
-    }
-}
-
 const s_ranges: number[][] = [];
 
 export function getRange(n: number) {

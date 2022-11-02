@@ -58,11 +58,11 @@ const negativeHexFormatter = (SrcType: TypedArrayConstructor, DstType: TypedArra
 // prettier-ignore
 const s_types: Record<string, TypedArrayInfo> = {
     i8:  { View: Int8Array,    minWidth:  34, format: negativeHexFormatter(Int8Array, Uint8Array, 2) },
-    u8:  { View: Uint8Array,   minWidth:  34, format: (v: number) => v.toString(16).padStart(2, '0') },
+    u8:  { View: Uint8Array,   minWidth:  34, format: positiveHexFormatter(2) },
     i16: { View: Int16Array,   minWidth:  48, format: negativeHexFormatter(Int16Array, Uint16Array, 4) },
-    u16: { View: Uint16Array,  minWidth:  48, format: (v: number) => v.toString(16).padStart(4, '0') },
+    u16: { View: Uint16Array,  minWidth:  48, format: positiveHexFormatter(4) },
     i32: { View: Int32Array,   minWidth:  80, format: negativeHexFormatter(Int32Array, Uint32Array, 8) },
-    u32: { View: Uint32Array,  minWidth:  80, format: (v: number) => v.toString(16).padStart(8, '0') },
+    u32: { View: Uint32Array,  minWidth:  80, format: positiveHexFormatter(8) },
     f64: { View: Float64Array, minWidth: 100, format: (v: number) => v.toString() },
     f32: { View: Float32Array, minWidth: 100, format: (v: number) => v.toString() },
 };
