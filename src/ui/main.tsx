@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './components/App/App';
 import { uiStateHelper } from './contexts/UIStateContext';
-import { spector2 as capture, requestUnwrappedAdapter, getUnwrappedGPUCanvasContext } from '../capture';
+import { spector2 as capture, requestUnwrappedAdapter } from '../capture';
 import { loadReplay } from '../replay';
 
 let initialized = false;
@@ -20,6 +20,16 @@ function init() {
     root.render(<App uiStateHelper={uiStateHelper} />);
 }
 
+export async function captureFrame() {
+    const trace = await capture.traceFrame();
+    // Trace the frame and set up the replay.
+    console.log(trace);
+    const replay = await loadReplay(trace, requestUnwrappedAdapter);
+    console.log(replay);
+
+    uiStateHelper.addReplay(replay);
+}
+
 init();
 uiStateHelper.registerAPI({
     playTo(replay, id) {
@@ -32,13 +42,5 @@ uiStateHelper.registerAPI({
     endCapture() {
         // TBD: Stop Capturing
     },
-    async captureFrame() {
-        const trace = await capture.traceFrame();
-        // Trace the frame and set up the replay.
-        console.log(trace);
-        const replay = await loadReplay(trace, requestUnwrappedAdapter);
-        console.log(replay);
-
-        uiStateHelper.addReplay(replay);
-    },
+    captureFrame,
 });
