@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { Command, CommandArgs, QueueSubmitArgs, RenderPassArgs } from '../../../replay';
 import Value, { canDisplayInline } from '../../components/Value/Value';
-import { TraceInfo, UIStateContext } from '../../contexts/UIStateContext';
+import { ReplayInfo, UIStateContext } from '../../contexts/UIStateContext';
 import { classNames } from '../../lib/css';
 
 import './StepsVis.css';
@@ -182,7 +182,7 @@ function Commands({ commands, commandId }: { commands: Command[]; commandId: num
 }
 
 interface StepsVisProps {
-    data: TraceInfo;
+    data: ReplayInfo;
 }
 
 export default function StepsVis({ data }: StepsVisProps) {
@@ -195,7 +195,7 @@ export default function StepsVis({ data }: StepsVisProps) {
     const playTo = (step: number[]) => {
         if (data) {
             setState({ currentStep: step });
-            helper.playTo(replay, step);
+            helper.playTo(replay!, step);
         }
     };
 
@@ -206,7 +206,7 @@ export default function StepsVis({ data }: StepsVisProps) {
     return (
         <div className="spector2-vis">
             <StepsContext.Provider value={{ state, playTo }}>
-                {data ? <Commands commands={replay.commands} commandId={[]} /> : 'no replay'}
+                {replay ? <Commands commands={replay.commands} commandId={[]} /> : 'no replay'}
             </StepsContext.Provider>
         </div>
     );
