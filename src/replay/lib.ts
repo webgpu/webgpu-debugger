@@ -800,17 +800,15 @@ export class ReplayRenderPipeline extends ReplayObject {
     }
 
     async recreate(desc) {
-        const vsModule = this.replay.shaderModules[desc.vertex.moduleSerial].webgpuObject;
-        const fsModule = this.replay.shaderModules[desc.fragment.moduleSerial].webgpuObject;
-        const layout = desc.layout === 'auto' ? 'auto' : this.replay.pipelineLayouts[desc.layoutSerial].webgpuObject;
+        const vsModule = this.replay.shaderModules[desc.vertex.moduleSerial];
+        this.desc.vertex.module = vsModule;
 
         // Do this properly and with all state pls.
-        const localDesc = {
+        const localDesc: GPURenderPipelineDescriptor = {
             label: desc.label,
-            layout,
             vertex: {
-                module: vsModule,
                 ...desc.vertex,
+                module: vsModule.webgpuObject,
             },
             depthStencil: desc.depthStencil,
             multisample: desc.multisample,
@@ -818,11 +816,22 @@ export class ReplayRenderPipeline extends ReplayObject {
         };
 
         if (desc.fragment !== undefined) {
+            const fsModule = this.replay.shaderModules[desc.fragment.moduleSerial];
+            this.desc.fragment.module = fsModule;
             localDesc.fragment = {
-                module: fsModule,
                 ...desc.fragment,
+                module: fsModule.webgpuObject,
             };
         }
+
+        if (desc.layout === 'auto') {
+            localDesc.layout = 'auto';
+        } else {
+            const layout = this.replay.pipelineLayouts[desc.layoutSerial];
+            desc.layout = layout;
+            localDesc.layout = layout.webgpuObject;
+        }
+
         this.webgpuObject = await this.device.webgpuObject.createRenderPipelineAsync(localDesc);
     }
 }
@@ -842,7 +851,7 @@ export class ReplaySampler extends ReplayObject {
 
 export class ReplayShaderModule extends ReplayObject {
     device: ReplayDevice;
-    desc: GPUSamplerDescriptor;
+    desc: GPUShaderModuleDescriptor;
     webgpuObject?: GPUShaderModule;
 
     constructor(replay, desc) {
