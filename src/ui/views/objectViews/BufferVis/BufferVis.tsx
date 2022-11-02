@@ -112,7 +112,8 @@ const BufferGrid: React.FC<Props> = ({ type, columns, hex, buffer }) => {
     const numElems = view.length;
     const rows = roundUpToMultipleOf(numElems, columns) / columns;
 
-    view.forEach((v, ndx) => (view[ndx] = ndx % 2 ? -ndx : ndx));
+    // fill the view with consecutive values for debugging.
+    // view.forEach((v, ndx) => (view[ndx] = ndx % 2 ? -ndx : ndx));
 
     const formatFn = hex ? format : (v: number) => v.toString();
 
