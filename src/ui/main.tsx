@@ -2,8 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './components/App/App';
 import { uiStateHelper } from './contexts/UIStateContext';
-import { spector2 as capture, requestUnwrappedAdapter } from '../capture';
-import { loadReplay } from '../replay';
+import { spector2 as capture } from '../capture';
 
 let initialized = false;
 
@@ -22,12 +21,7 @@ function init() {
 
 export async function captureFrame() {
     const trace = await capture.traceFrame();
-    // Trace the frame and set up the replay.
-    console.log(trace);
-    const replay = await loadReplay(trace, requestUnwrappedAdapter);
-    console.log(replay);
-
-    uiStateHelper.addReplay(replay);
+    uiStateHelper.addTrace(trace);
 }
 
 init();

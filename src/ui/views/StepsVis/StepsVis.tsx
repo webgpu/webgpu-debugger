@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { Command, CommandArgs, QueueSubmitArgs, RenderPassArgs } from '../../../replay';
 import Value, { canDisplayInline } from '../../components/Value/Value';
-import { ReplayInfo, UIStateContext } from '../../contexts/UIStateContext';
+import { TraceInfo, UIStateContext } from '../../contexts/UIStateContext';
 import { classNames } from '../../lib/css';
 
 import './StepsVis.css';
@@ -182,7 +182,7 @@ function Commands({ commands, commandId }: { commands: Command[]; commandId: num
 }
 
 interface StepsVisProps {
-    data: ReplayInfo;
+    data: TraceInfo;
 }
 
 export default function StepsVis({ data }: StepsVisProps) {

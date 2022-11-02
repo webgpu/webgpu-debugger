@@ -6,7 +6,7 @@ export default function FramesVis() {
 
     return (
         <div className="spector2-vis">
-            {helper.state.replays.map((replay, ndx) => (
+            {helper.state.traces.map((replay, ndx) => (
                 <button
                     key={`b${ndx}`}
                     onClick={() => {

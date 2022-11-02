@@ -3,6 +3,8 @@ import ReplayAPI from '../ReplayAPI';
 import { Replay, ReplayTexture } from '../../replay';
 import { getPathForLastStep } from '../lib/replay-utils';
 import { arrayRemoveElementByValue } from '../lib/array-utils';
+import { requestUnwrappedAdapter } from '../../capture';
+import { loadReplay } from '../../replay';
 
 export type PaneComponent = React.FunctionComponent<{ data: any }> | React.ComponentClass<{ data: any }>;
 type ViewData = {
@@ -12,16 +14,26 @@ type ViewData = {
 };
 
 export type PaneIdToViewType = Record<string, ViewData>;
+
 export type ReplayInfo = {
-    replay: Replay;
+    replay?: Replay;
     lastPath: number[];
+};
+
+export type TraceInfo = {
+    trace: Blob;
+    replayUUID: string; // Because react wants state to be flat
 };
 
 export type UIState = {
     paneIdToViewType: PaneIdToViewType;
     fullUI: boolean;
-    replays: ReplayInfo[];
+    traces: TraceInfo[];
+
+    // Because react wants state to be flat
+    replaysByUUID: Record<string, ReplayInfo>;
     freePaneIds: string[];
+
     // This exists solely to force react to respond. It's incremented when state arrives from each "replayTo"
     replayCount: number;
 };
@@ -33,7 +45,8 @@ export function createUIState(state: SetStateArgs = {}): UIState {
         ...{
             paneIdToViewType: {},
             fullUI: false,
-            replays: [],
+            traces: [],
+            replaysByUUID: {},
             freePaneIds: [],
             replayCount: 0,
         },
@@ -181,13 +194,37 @@ export class UIStateHelper {
         this.setState({ freePaneIds });
     };
 
-    addReplay = (replay: Replay) => {
-        const lastPath = getPathForLastStep(replay);
-        const replayInfo = { replay, lastPath };
-        this.setState({
-            replays: [...this.state.replays, replayInfo],
-        });
+    replayTrace = async (traceInfo: TraceInfo) => {
+        let replayInfo = this.state.replaysByUUID[traceInfo.replayUUID];
+        if (!replayInfo) {
+            const json = await traceInfo.trace.text();
+            const trace = JSON.parse(json);
+            const replay = await loadReplay(trace, requestUnwrappedAdapter);
+            console.log('replay:', replay);
+
+            const lastPath = getPathForLastStep(replay);
+            replayInfo = { replay, lastPath };
+            const replayByUUID: Record<string, ReplayInfo> = {};
+            replayByUUID[traceInfo.replayUUID] = replayInfo;
+            this.setState({
+                replaysByUUID: { ...this.state.replaysByUUID, ...replayByUUID },
+            });
+        }
         this.setReplay(replayInfo);
+    };
+
+    addTraceBlob = (trace: Blob) => {
+        const traceInfo: TraceInfo = { trace, replayUUID: crypto.randomUUID() };
+        this.setState({
+            traces: [...this.state.traces, traceInfo],
+        });
+        this.replayTrace(traceInfo);
+    };
+
+    addTrace = (trace: any) => {
+        console.log('trace:', trace);
+        const blob = new Blob([JSON.stringify(trace)], { type: 'application/json' });
+        this.addTraceBlob(blob);
     };
 
     setReplay = (replayInfo: ReplayInfo) => {
@@ -213,7 +250,7 @@ export class UIStateHelper {
         if (!paneId) {
             throw new Error('TODO: add pane of this type');
         }
-        console.log(state);
+        console.log('state:', state);
         this.setPaneViewType(paneId, 'StateVis', 'State', state);
 
         // TODO: choose the correct texture
