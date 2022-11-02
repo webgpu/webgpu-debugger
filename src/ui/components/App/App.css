@@ -60,3 +60,7 @@
 .spector2 tr+tr {
   border-top: 1px solid var(--spector2-table-cell-border-color);
 }
+
+.spector2-error {
+  color: var(--spector2-error-color);
+}
