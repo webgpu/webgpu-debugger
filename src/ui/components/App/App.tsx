@@ -21,7 +21,8 @@ class App extends React.Component<UIProps, UIState> {
             pane0: { component: StepsVis,  name: 'Steps',  data: null },
             pane1: { component: ResultVis, name: 'Result', data: null },
             pane2: { component: StateVis,  name: 'State',  data: null },
-            pane3: { component: ObjectVis, name: 'Data',  data: null },
+            pane4: { component: ObjectVis, name: 'Data',  data: null },  // These two are swapped intentionally
+            pane3: { component: ObjectVis, name: 'Data',  data: null },  // to get them on mru list in order
         };
 
         uiStateHelper.registerPaneComponent('StateVis', StateVis);

@@ -19,6 +19,7 @@ import {
     ReplayTexture,
     ReplayTextureView,
 } from '../../../replay';
+import { PaneContext } from '../../contexts/PaneContext';
 import { TileContext } from '../../contexts/TileContext';
 import { UIStateContext } from '../../contexts/UIStateContext';
 import { gpuBufferUsageToString, gpuTextureUsageToString } from '../../lib/webgpu-utils';
@@ -37,13 +38,15 @@ function makeVisValue(Class: Function, typeName: string) {
     return function VisValue({ data }: { data: any }) {
         const { helper } = useContext(UIStateContext);
         const { onAddPaneViaDrag } = useContext(TileContext);
+        const { paneId } = useContext(PaneContext);
+
         const freePaneId = helper.state.freePaneIds[0];
         const name = `${typeName}${data.label ? `(${data.label})` : ''}`;
         return (
             <div
                 className={`spector2-value-vis spector-value-${typeName}`}
                 onClick={() => {
-                    helper.setObjectView(name, data);
+                    helper.setObjectView(name, data, paneId);
                 }}
             >
                 {name}

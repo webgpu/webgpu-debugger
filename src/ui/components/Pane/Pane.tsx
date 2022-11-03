@@ -1,4 +1,5 @@
 import React, { useContext } from 'react';
+import { PaneContext } from '../../contexts/PaneContext';
 import { UIStateContext } from '../../contexts/UIStateContext';
 
 interface PaneProps {
@@ -13,7 +14,11 @@ const Pane: React.FC<PaneProps> = ({ id }) => {
     const { state } = helper;
     const viewData = state.paneIdToViewType[id];
     // This is a hack. See Debugger.tsx
-    return viewData ? React.createElement(viewData.component, { data: viewData.data }) : <div>not ready</div>;
+    return (
+        <PaneContext.Provider value={{ paneId: id }}>
+            {viewData ? React.createElement(viewData.component, { data: viewData.data }) : <div>not ready</div>}
+        </PaneContext.Provider>
+    );
 };
 
 export default Pane;

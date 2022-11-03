@@ -28,13 +28,30 @@ const layout: FlexLayout.IJsonModel = {
         type: 'row',
         children: [
             {
-                type: 'tabset',
+                type: 'row',
                 weight: 50,
                 children: [
                     {
-                        type: 'tab',
-                        name: 'pane0',
-                        component: 'Pane',
+                        type: 'tabset',
+                        weight: 65,
+                        children: [
+                            {
+                                type: 'tab',
+                                name: 'pane0',
+                                component: 'Pane',
+                            },
+                        ],
+                    },
+                    {
+                        type: 'tabset',
+                        weight: 35,
+                        children: [
+                            {
+                                type: 'tab',
+                                name: 'pane4',
+                                component: 'Pane',
+                            },
+                        ],
                     },
                 ],
             },
@@ -74,6 +91,7 @@ const layout: FlexLayout.IJsonModel = {
                                 component: 'Pane',
                             },
                         ],
+                        active: true,
                     },
                 ],
             },
@@ -156,7 +174,7 @@ class Debugger extends React.Component<any, IState> {
             <div className="spector2-debugger">
                 <Toolbar />
                 <div>
-                    {/*
+                    {
                         <button
                             onClick={() => {
                                 console.log(JSON.stringify(this.state.model!.toJson(), null, '\t'));
@@ -164,7 +182,7 @@ class Debugger extends React.Component<any, IState> {
                         >
                             show model
                         </button>
-                    */}
+                    }
                 </div>
                 <div className="spector2-panes">
                     <TileContext.Provider value={{ onAddPaneViaDrag: this.onAddPaneViaDrag }}>

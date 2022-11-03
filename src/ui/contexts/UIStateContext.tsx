@@ -139,7 +139,14 @@ export class UIStateHelper {
         }
     };
 
-    getMostRecentPaneIdForComponentType = (componentName: string): string | undefined => {
+    /**
+     * Get the most recently used pane of a certain type
+     * @param componentName Type of pane
+     * @param notPaneId Don't return this paneId. This is so, if possible, we don't return ourselves.
+     *    This is used so if you click a resource it appears in a different pane.
+     * @returns The paneId to use.
+     */
+    getMostRecentPaneIdForComponentType = (componentName: string, notPaneId?: string): string | undefined => {
         // This is a hack: See Debugger.tsx
         if (!this.mruViewsByType.get(componentName)) {
             for (const [paneId, viewData] of Object.entries(this.state.paneIdToViewType)) {
@@ -147,7 +154,14 @@ export class UIStateHelper {
             }
         }
         const mru = this.mruViewsByType.get(componentName)!;
-        return mru.length ? mru[0] : undefined;
+        if (!mru.length) {
+            return undefined;
+        }
+        if (mru[0] !== notPaneId || mru.length === 1) {
+            return mru[0];
+        }
+
+        return mru[1];
     };
 
     setPaneViewType = (paneId: string, componentName: string, name: string, data: any): void => {
@@ -180,9 +194,10 @@ export class UIStateHelper {
      * this object.
      * @param name Name to display in tab
      * @param data Data for ObjectVis
+     * @param srcPaneId id of pane that called us
      */
-    setObjectView = (name: string, data: any) => {
-        const paneId = this.getMostRecentPaneIdForComponentType('ObjectVis');
+    setObjectView = (name: string, data: any, srcPaneId: string) => {
+        const paneId = this.getMostRecentPaneIdForComponentType('ObjectVis', srcPaneId);
         if (!paneId) {
             throw new Error('TODO: add pane of this type');
         }
