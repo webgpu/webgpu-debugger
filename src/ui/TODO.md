@@ -3,17 +3,19 @@
 - [ ] If they don't already, every resources should get a number (1, 2, 3), otherwise, if the user
       does not label them they all show up the same
 
-- [ ] Buffer view
+- [ ] Don't show a close button on the Steps, Results, and State panes
 
-  - [ ] show as grid of values with options for N values per row, as u8, i8, u16, float, etc....
+- [X] Buffer view
+
+  - [X] show as grid of values with options for N values per row, as u8, i8, u16, float, etc....
   - [ ] handle all buffers. Not all buffers can be mapped so need to copy those buffers. 
         Also, not all buffers can be copied (or can they?), if not then need compute shader to copy?
   - [ ] figure out how we can eventually show uniforms, vertices, etc. 
         Compiling the shaders, looking up what they are bound to etc...
   - [ ] Can we have a 3D view (to show wireframes of 3D data?) 
 
-- [ ] Texture view
-  - [ ] Show textures, let you pick mips or show all mips?
+- [X] Texture view
+  - [X] Show textures, let you pick mips or show all mips?
   - [ ] Allow zooming
   - [ ] allow inspecting colors under the cursor (show actual values)
   - [ ] Magnifying glass
@@ -24,8 +26,8 @@
   - [ ] Add range/level type settings so you can view data that's not easily visualized
   - [ ] Consider adding the ability add user created shader snippets to convert to something visualizable
 
-- [ ] Switch to holding both capture and replay?
-  - [ ] Put capture in blob? (premature optimization?)
+- [X] Switch to holding both capture and replay?
+  - [X] Put capture in blob? (premature optimization?)
 
         once a capture is turned into a replay the capture is not needed
         except to offer the user to save.
@@ -75,7 +77,7 @@
         so it'd be nice not to have to scroll to see them?
         But some users might want 1 step per line
 
-- [ ] Let user drag/size UI (right now hard coded to 50%)
+- [X] Let user drag/size UI (right now hard coded to 50%)
 
 - [ ] Let use drag and drop a value representing an object to create a new pane
 
@@ -83,11 +85,6 @@
 
 - [ ] Add Icons for steps
 
-- [ ] Show Frames, Let you select a frame, updates most recently
-
-- [ ] Make pane bars have split icon
-
-- [ ] Make pane bars have drop down for view type
-
 - [ ] Make it save layout to local storage
 
+- [ ] Add a syntax highlighter for shaders

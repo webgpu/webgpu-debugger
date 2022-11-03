@@ -4,7 +4,6 @@ import MiniUI from '../MiniUI/MiniUI';
 import { createUIState, PaneIdToViewType, UIProps, UIState, UIStateContext } from '../../contexts/UIStateContext';
 import { maxPanes } from '../../globals';
 
-import FramesVis from '../../views/FramesVis/FramesVis';
 import ObjectVis from '../../views/ObjectVis/ObjectVis';
 import ResultVis from '../../views/ResultVis/ResultVis';
 import StateVis from '../../views/StateVis/StateVis';
@@ -17,12 +16,12 @@ class App extends React.Component<UIProps, UIState> {
         super(props);
         const { uiStateHelper } = props;
 
+        // prettier-ignore
         const paneIdToViewType: PaneIdToViewType = {
-            pane0: { component: FramesVis, name: 'Frames', data: null },
-            pane1: { component: StepsVis, name: 'Steps', data: null },
-            pane2: { component: ResultVis, name: 'Result', data: null },
-            pane3: { component: StateVis, name: 'State', data: null },
-            pane4: { component: ObjectVis, name: 'Data', data: null },
+            pane0: { component: StepsVis,  name: 'Steps',  data: null },
+            pane1: { component: ResultVis, name: 'Result', data: null },
+            pane2: { component: StateVis,  name: 'State',  data: null },
+            pane3: { component: ObjectVis, name: 'Data',  data: null },
         };
 
         uiStateHelper.registerPaneComponent('StateVis', StateVis);

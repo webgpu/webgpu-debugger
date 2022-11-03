@@ -22,6 +22,7 @@ export type ReplayInfo = {
 
 export type TraceInfo = {
     trace: Blob;
+    name: string;
     replayUUID: string; // Because react wants state to be flat
 };
 
@@ -29,6 +30,7 @@ export type UIState = {
     paneIdToViewType: PaneIdToViewType;
     fullUI: boolean;
     traces: TraceInfo[];
+    currentTraceIndex: number;
 
     // Because react wants state to be flat
     replaysByUUID: Record<string, ReplayInfo>;
@@ -46,6 +48,7 @@ export function createUIState(state: SetStateArgs = {}): UIState {
             paneIdToViewType: {},
             fullUI: false,
             traces: [],
+            currentTraceIndex: 0,
             replaysByUUID: {},
             freePaneIds: [],
             replayCount: 0,
@@ -77,6 +80,7 @@ export class UIStateHelper {
     // entry is the most recently used view of that type.
     mruViewsByType: Map<string, string[]> = new Map();
     replayAPI?: ReplayAPI;
+    nextTraceId = 1;
 
     setState: UIStateSetterFn = (state: any) => {
         if (!this.stateUpdateQueued) {
@@ -106,6 +110,11 @@ export class UIStateHelper {
 
     capture = () => {
         this.replayAPI?.captureFrame();
+    };
+
+    setCurrentTraceByIndex = (ndx: number) => {
+        this.setState({ currentTraceIndex: ndx });
+        this.replayTrace(this.state.traces[ndx]);
     };
 
     registerAPI(api: Partial<ReplayAPI>) {
@@ -213,18 +222,28 @@ export class UIStateHelper {
         this.setReplay(replayInfo);
     };
 
-    addTraceBlob = (trace: Blob) => {
-        const traceInfo: TraceInfo = { trace, replayUUID: crypto.randomUUID() };
+    addTraceFile = (trace: File) => {
+        this.addTraceBlob(trace, trace.name);
+    };
+
+    addTraceBlob = (trace: Blob, name: string) => {
+        const traceInfo: TraceInfo = {
+            trace,
+            name,
+            replayUUID: crypto.randomUUID(),
+        };
+        const newNdx = this.state.traces.length;
         this.setState({
             traces: [...this.state.traces, traceInfo],
         });
-        this.replayTrace(traceInfo);
+        // Note: this seems iffy because the state has not yet been updated.
+        this.setCurrentTraceByIndex(newNdx);
     };
 
     addTrace = (trace: any) => {
         console.log('trace:', trace);
         const blob = new Blob([JSON.stringify(trace)], { type: 'application/json' });
-        this.addTraceBlob(blob);
+        this.addTraceBlob(blob, `trace-${this.nextTraceId++}`);
     };
 
     setReplay = (replayInfo: ReplayInfo) => {

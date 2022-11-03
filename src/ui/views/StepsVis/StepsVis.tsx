@@ -1,5 +1,6 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { Command, CommandArgs, QueueSubmitArgs, RenderPassArgs } from '../../../replay';
+import SelectSimpleIndex from '../../components/SelectSimple/SelectSimpleIndex';
 import Value, { canDisplayInline } from '../../components/Value/Value';
 import { ReplayInfo, UIStateContext } from '../../contexts/UIStateContext';
 import { classNames } from '../../lib/css';
@@ -205,8 +206,16 @@ export default function StepsVis({ data }: StepsVisProps) {
 
     return (
         <div className="spector2-vis">
+            <div>
+                <SelectSimpleIndex
+                    value={helper.state.currentTraceIndex}
+                    options={helper.state.traces.map(t => t.name)}
+                    onChange={helper.setCurrentTraceByIndex}
+                />
+            </div>
+            <hr />
             <StepsContext.Provider value={{ state, playTo }}>
-                {replay ? <Commands commands={replay.commands} commandId={[]} /> : 'no replay'}
+                {replay ? <Commands commands={replay.commands} commandId={[]} /> : 'no traces'}
             </StepsContext.Provider>
         </div>
     );

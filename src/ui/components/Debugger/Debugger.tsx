@@ -28,74 +28,50 @@ const layout: FlexLayout.IJsonModel = {
         type: 'row',
         children: [
             {
+                type: 'tabset',
+                weight: 50,
+                children: [
+                    {
+                        type: 'tab',
+                        name: 'pane0',
+                        component: 'Pane',
+                    },
+                ],
+            },
+            {
                 type: 'row',
-                weight: 10,
+                weight: 50,
                 children: [
                     {
                         type: 'tabset',
-                        weight: 10,
+                        weight: 40,
                         children: [
                             {
                                 type: 'tab',
-                                name: 'pane0',
+                                name: 'pane1',
                                 component: 'Pane',
                             },
                         ],
                     },
                     {
-                        type: 'row',
-                        weight: 90,
+                        type: 'tabset',
+                        weight: 30,
                         children: [
                             {
-                                type: 'tabset',
-                                weight: 50,
-                                children: [
-                                    {
-                                        type: 'tab',
-                                        name: 'pane1',
-                                        component: 'Pane',
-                                    },
-                                ],
+                                type: 'tab',
+                                name: 'pane2',
+                                component: 'Pane',
                             },
+                        ],
+                    },
+                    {
+                        type: 'tabset',
+                        weight: 30,
+                        children: [
                             {
-                                type: 'row',
-                                weight: 50,
-                                children: [
-                                    {
-                                        type: 'tabset',
-                                        weight: 34,
-                                        children: [
-                                            {
-                                                type: 'tab',
-                                                name: 'pane2',
-                                                component: 'Pane',
-                                            },
-                                        ],
-                                    },
-                                    {
-                                        type: 'tabset',
-                                        weight: 33,
-                                        children: [
-                                            {
-                                                type: 'tab',
-                                                name: 'pane3',
-                                                component: 'Pane',
-                                            },
-                                        ],
-                                    },
-                                    {
-                                        type: 'tabset',
-                                        weight: 33,
-                                        children: [
-                                            {
-                                                type: 'tab',
-                                                name: 'pane4',
-                                                component: 'Pane',
-                                            },
-                                        ],
-                                        active: true,
-                                    },
-                                ],
+                                type: 'tab',
+                                name: 'pane3',
+                                component: 'Pane',
                             },
                         ],
                     },
@@ -181,13 +157,13 @@ class Debugger extends React.Component<any, IState> {
                 <Toolbar />
                 <div>
                     {/*
-                    <button
-                        onClick={() => {
-                            console.log(JSON.stringify(this.state.model!.toJson(), null, '\t'));
-                        }}
-                    >
-                        show model
-                    </button>
+                        <button
+                            onClick={() => {
+                                console.log(JSON.stringify(this.state.model!.toJson(), null, '\t'));
+                            }}
+                        >
+                            show model
+                        </button>
                     */}
                 </div>
                 <div className="spector2-panes">
