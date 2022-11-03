@@ -5,6 +5,7 @@ import { getPathForLastStep } from '../lib/replay-utils';
 import { arrayRemoveElementByValue } from '../lib/array-utils';
 import { requestUnwrappedAdapter } from '../../capture';
 import { loadReplay } from '../../replay';
+import { getDateForFilename } from '../lib/date-utils';
 
 export type PaneComponentInfo = {
     component: PaneComponent;
@@ -279,7 +280,7 @@ export class UIStateHelper {
     addTrace = (trace: any) => {
         console.log('trace:', trace);
         const blob = new Blob([JSON.stringify(trace)], { type: 'application/json' });
-        this.addTraceBlob(blob, `trace-${this.nextTraceId++}`);
+        this.addTraceBlob(blob, `trace-${getDateForFilename(new Date())}`);
     };
 
     setReplay = (replayInfo: ReplayInfo) => {
