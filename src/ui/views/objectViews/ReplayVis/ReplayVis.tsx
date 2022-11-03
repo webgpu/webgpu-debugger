@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Replay } from '../../../../replay';
-import Checkbox from '../../../components/Checkbox/Checkbox';
 import Value from '../../../components/Value/Value';
 
 import './ReplayVis.css';
