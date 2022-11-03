@@ -1,27 +1,31 @@
 <!DOCTYPE html>
 <html>
-  <head>
-  </head>
-  <body>
+
+<head>
+</head>
+
+<body>
     <canvas id="renderCanvas" width=400 height=400></canvas>
-        <script type="module">
-import '../dist/spector2.js';
+    <script type="module">
+        import traceFrame from './traceFrame.js';
 
-async function run() {
-    const adapter = await navigator.gpu.requestAdapter();
-    const device = await adapter.requestDevice();
+        async function run() {
+            const adapter = await navigator.gpu.requestAdapter();
+            const device = await adapter.requestDevice();
 
-    const context = document.getElementById('renderCanvas').getContext('webgpu');
-    const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-    context.configure({
-        device,
-        format: presentationFormat,
-        alphaMode: 'opaque',
-    });
+            const context = document.getElementById('renderCanvas').getContext('webgpu');
+            const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+            context.configure({
+                device,
+                format: presentationFormat,
+                alphaMode: 'opaque',
+            });
 
-    const module = device.createShaderModule({
-        label: 'single colored triangle shaders',
-        code: `
+            traceFrame();
+
+            const module = device.createShaderModule({
+                label: 'single colored triangle shaders',
+                code: `
             struct Uniforms {
               matrix: mat4x4<f32>,
               color: vec4<f32>,
@@ -44,111 +48,112 @@ async function run() {
               return uniforms.color;
             }
         `,
-    });
+            });
 
-    const pipeline = device.createRenderPipeline({
-        label: 'pipeline for triangles',
-        layout: 'auto',
-        vertex: {
-            module,
-            entryPoint: 'vs',
-        },
-        fragment: {
-            module,
-            entryPoint: 'fs',
-            targets: [{ format: presentationFormat }],
-        },
-    });
+            const pipeline = device.createRenderPipeline({
+                label: 'pipeline for triangles',
+                layout: 'auto',
+                vertex: {
+                    module,
+                    entryPoint: 'vs',
+                },
+                fragment: {
+                    module,
+                    entryPoint: 'fs',
+                    targets: [{ format: presentationFormat }],
+                },
+            });
 
-    const roundUpToMultipleOf = (v, r) => (((v + r - 1) / r) | 0) * r;
+            const roundUpToMultipleOf = (v, r) => (((v + r - 1) / r) | 0) * r;
 
-    const numTriangles = 6;
-    const uniformSizeInFloats = 16 + 4;
-    const uniformSizeInBytes = uniformSizeInFloats * 4;
-    const uniformBlockSizeBytes = roundUpToMultipleOf(uniformSizeInBytes, 256);
-    const uniformBuffers = device.createBuffer({
-        label: 'uniform buffer',
-        size: uniformBlockSizeBytes * numTriangles,
-        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
-    const uniformValues = new Float32Array((uniformBlockSizeBytes / 4) * numTriangles);
-    const triangles = [];
-    for (let i = 0; i < numTriangles; ++i) {
-        const offset = (i * uniformBlockSizeBytes) / 4;
-        const matrix = uniformValues.subarray(offset, offset + 16);
-        const color = uniformValues.subarray(offset + 16, offset + 20);
-        const bindGroup = device.createBindGroup({
-            layout: pipeline.getBindGroupLayout(0),
-            entries: [{ binding: 0, resource: { buffer: uniformBuffers, offset: offset * 4 } }],
-        });
-        triangles.push({ matrix, color, bindGroup });
-    }
-
-    const hsl = (h, s, l) => `hsl(${(h * 360) | 0}, ${s * 100}%, ${(l * 100) | 0}%)`;
-    const cssColorToRGBA8 = (() => {
-        const canvas = document.createElement('canvas');
-
-        canvas.width = 1;
-        canvas.height = 1;
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        return cssColor => {
-            ctx.clearRect(0, 0, 1, 1);
-            ctx.fillStyle = cssColor;
-            ctx.fillRect(0, 0, 1, 1);
-            return Array.from(ctx.getImageData(0, 0, 1, 1).data);
-        };
-    })();
-    const cssColorToRGBA = cssColor => cssColorToRGBA8(cssColor).map(v => v / 255);
-    const hslToRGBA = (h, s, l) => cssColorToRGBA(hsl(h, s, l));
-
-    function frame(time) {
-        time *= 0.001;
-        const hue = time * 0.1;
-
-        triangles.forEach(({ matrix, color }, i) => {
-            {
-                const angle = time + i * 0.2;
-                const c = Math.cos(angle);
-                const s = Math.sin(angle);
-                matrix.set([c, s, 0, 0, -s, c, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+            const numTriangles = 6;
+            const uniformSizeInFloats = 16 + 4;
+            const uniformSizeInBytes = uniformSizeInFloats * 4;
+            const uniformBlockSizeBytes = roundUpToMultipleOf(uniformSizeInBytes, 256);
+            const uniformBuffers = device.createBuffer({
+                label: 'uniform buffer',
+                size: uniformBlockSizeBytes * numTriangles,
+                usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+            });
+            const uniformValues = new Float32Array((uniformBlockSizeBytes / 4) * numTriangles);
+            const triangles = [];
+            for (let i = 0; i < numTriangles; ++i) {
+                const offset = (i * uniformBlockSizeBytes) / 4;
+                const matrix = uniformValues.subarray(offset, offset + 16);
+                const color = uniformValues.subarray(offset + 16, offset + 20);
+                const bindGroup = device.createBindGroup({
+                    layout: pipeline.getBindGroupLayout(0),
+                    entries: [{ binding: 0, resource: { buffer: uniformBuffers, offset: offset * 4 } }],
+                });
+                triangles.push({ matrix, color, bindGroup });
             }
 
-            color.set(hslToRGBA(hue + i * 0.05, 1, 0.5));
-        });
+            const hsl = (h, s, l) => `hsl(${(h * 360) | 0}, ${s * 100}%, ${(l * 100) | 0}%)`;
+            const cssColorToRGBA8 = (() => {
+                const canvas = document.createElement('canvas');
 
-        device.queue.writeBuffer(uniformBuffers, 0, uniformValues);
+                canvas.width = 1;
+                canvas.height = 1;
+                const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                return cssColor => {
+                    ctx.clearRect(0, 0, 1, 1);
+                    ctx.fillStyle = cssColor;
+                    ctx.fillRect(0, 0, 1, 1);
+                    return Array.from(ctx.getImageData(0, 0, 1, 1).data);
+                };
+            })();
+            const cssColorToRGBA = cssColor => cssColorToRGBA8(cssColor).map(v => v / 255);
+            const hslToRGBA = (h, s, l) => cssColorToRGBA(hsl(h, s, l));
 
-        const encoder = device.createCommandEncoder();
-        const dstTexture = context.getCurrentTexture();
-        dstTexture.label = 'canvas texture';
-        const view = dstTexture.createView();
-        view.label = 'canvas texture view';
-        const pass = encoder.beginRenderPass({
-            label: 'triangle render pass',
-            colorAttachments: [
-                {
-                    view,
-                    clearValue: hslToRGBA(hue + 0.5, 1, 0.5),
-                    loadOp: 'clear',
-                    storeOp: 'store',
-                },
-            ],
-        });
-        pass.setPipeline(pipeline);
-        for (const { bindGroup } of triangles) {
-            pass.setBindGroup(0, bindGroup);
-            pass.draw(3);
+            function frame(time) {
+                time *= 0.001;
+                const hue = time * 0.1;
+
+                triangles.forEach(({ matrix, color }, i) => {
+                    {
+                        const angle = time + i * 0.2;
+                        const c = Math.cos(angle);
+                        const s = Math.sin(angle);
+                        matrix.set([c, s, 0, 0, -s, c, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+                    }
+
+                    color.set(hslToRGBA(hue + i * 0.05, 1, 0.5));
+                });
+
+                device.queue.writeBuffer(uniformBuffers, 0, uniformValues);
+
+                const encoder = device.createCommandEncoder();
+                const dstTexture = context.getCurrentTexture();
+                dstTexture.label = 'canvas texture';
+                const view = dstTexture.createView();
+                view.label = 'canvas texture view';
+                const pass = encoder.beginRenderPass({
+                    label: 'triangle render pass',
+                    colorAttachments: [
+                        {
+                            view,
+                            clearValue: hslToRGBA(hue + 0.5, 1, 0.5),
+                            loadOp: 'clear',
+                            storeOp: 'store',
+                        },
+                    ],
+                });
+                pass.setPipeline(pipeline);
+                for (const { bindGroup } of triangles) {
+                    pass.setBindGroup(0, bindGroup);
+                    pass.draw(3);
+                }
+                pass.end();
+
+                device.queue.submit([encoder.finish()]);
+
+                requestAnimationFrame(frame);
+            }
+
+            requestAnimationFrame(frame);
         }
-        pass.end();
-
-        device.queue.submit([encoder.finish()]);
-
-        requestAnimationFrame(frame);
-    }
-
-    requestAnimationFrame(frame);
-}
-run();
+        run();
     </script>
-  </body>
+</body>
+
 </html>
