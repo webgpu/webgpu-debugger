@@ -1,0 +1,21 @@
+.spector2-textureviewer {
+  display: flex;
+  flex-flow: column;
+  height: 100%;
+}
+
+.spector2-textureviewer-canvascontainer {
+  flex: 1 1 auto;
+}
+
+.spector2-textureviewer canvas {
+  margin: 1em;
+  padding: 0;
+  width: auto;
+  height: auto;
+}
+
+.spector2-textureviewer canvas.fill {
+  width: calc(100% - 2em);
+  width: calc(100% - 2em);
+}

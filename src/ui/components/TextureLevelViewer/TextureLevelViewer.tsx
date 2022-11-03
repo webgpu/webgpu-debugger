@@ -1,7 +1,11 @@
-import React, { useRef, useEffect, useContext } from 'react';
+import React, { useState, useRef, useEffect, useContext, DOMElement } from 'react';
 import { ReplayTexture } from '../../../replay';
 import { kTextureFormatInfo, getUnwrappedGPUCanvasContext } from '../../../capture';
 import { UIStateContext } from '../../contexts/UIStateContext';
+import Checkbox from '../../components/Checkbox/Checkbox';
+import Range from '../../components/Range/Range';
+
+import './TextureLevelViewer.css'
 
 class TextureRenderer {
     device: GPUDevice;
@@ -270,14 +274,30 @@ class TextureRenderer {
 
 interface Props {
     texture: ReplayTexture;
-    mipLevel?: number;
-    layer?: number;
-    actualSize?: boolean;
+    baseMipLevel?: number;
+    mipLevelCount?: number;
+    baseArrayLayer?: number;
+    arrayLayerCount?: number;
 }
 
-const TextureLevelViewer: React.FC<Props> = ({ texture, mipLevel = 0, layer = 0, actualSize = true }: Props) => {
+const TextureLevelViewer: React.FC<Props> = ({ texture, baseMipLevel = 0, mipLevelCount, baseArrayLayer = 0, arrayLayerCount }: Props) => {
+    const [actualSize, setActualSize] = useState(false);
+    const [pixelated, setPixelated] = useState(false);
+    const [mipLevel, setMipLevel] = useState(baseMipLevel);
+    const [arrayLayer, setArrayLayer] = useState(baseArrayLayer);
+
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const { helper } = useContext(UIStateContext);
+
+    if (mipLevelCount === undefined) {
+        mipLevelCount = texture.mipLevelCount - baseMipLevel;
+    }
+    if (arrayLayerCount === undefined) {
+        arrayLayerCount = texture.size.depthOrArrayLayers - baseArrayLayer;
+    }
+
+    const maxMipLevel = baseMipLevel + mipLevelCount - 1;
+    const maxArrayLayer = baseArrayLayer + arrayLayerCount - 1;
 
     useEffect(() => {
         const device = texture.device.webgpuObject!;
@@ -285,14 +305,6 @@ const TextureLevelViewer: React.FC<Props> = ({ texture, mipLevel = 0, layer = 0,
         const canvas = canvasRef.current!;
         canvas.width = texture.size.width >> mipLevel;
         canvas.height = texture.size.height >> mipLevel;
-        canvas.style.margin = '1em';
-        canvas.style.padding = '';
-
-        if (actualSize) {
-            canvas.style.width = '';
-        } else {
-            canvas.style.width = 'calc(100% - 2em)';
-        }
 
         const context = getUnwrappedGPUCanvasContext(canvas);
         context.configure({
@@ -302,10 +314,44 @@ const TextureLevelViewer: React.FC<Props> = ({ texture, mipLevel = 0, layer = 0,
         });
 
         const renderer = TextureRenderer.getRendererForDevice(device);
-        renderer.render(context, texture.webgpuObject, mipLevel, layer);
-    }, [texture, mipLevel, layer, actualSize, helper.state.replayCount]);
+        renderer.render(context, texture.webgpuObject, mipLevel, arrayLayer);
+    }, [texture, mipLevel, arrayLayer, actualSize, helper.state.replayCount]);
 
-    return <canvas ref={canvasRef} />;
+    return (
+        <div className="spector2-textureviewer" style={{ imageRendering: pixelated ? 'pixelated' : 'auto' }}>
+            <div>
+                <Checkbox label="Display actual size:" checked={actualSize} onChange={setActualSize} />
+                <Checkbox label="Pixelated:" checked={pixelated} onChange={setPixelated} />
+            </div>
+            {arrayLayerCount > 1 && (
+                <div>
+                    <Range
+                        label="Layer:"
+                        min={baseArrayLayer}
+                        max={maxArrayLayer}
+                        value={arrayLayer}
+                        valueFormatFn={(v: number) => `${v} of [${baseArrayLayer}, ${maxArrayLayer}]`}
+                        onChange={setArrayLayer}
+                    />
+                </div>
+            )}
+            {mipLevelCount > 1 && (
+                <div>
+                    <Range
+                        label="Level:"
+                        min={baseMipLevel}
+                        max={maxMipLevel}
+                        value={mipLevel}
+                        valueFormatFn={(v: number) => `${v} of [${baseMipLevel}, ${maxMipLevel}]`}
+                        onChange={setMipLevel}
+                    />
+                </div>
+            )}
+            <div className="spector2-textureviewer-canvascontainer">
+                <canvas ref={canvasRef} className={ actualSize ? '' : 'fill' } />
+            </div>
+        </div>
+    );
 };
 
 export default TextureLevelViewer;

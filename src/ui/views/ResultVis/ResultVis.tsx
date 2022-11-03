@@ -17,7 +17,7 @@ const ResultVis = ({ data }: ResultsVisProps) => {
 
     return (
         <div className="spector2-vis">
-            {texture ? <TextureLevelViewer texture={texture} mipLevel={mipLevel} /> : <div>-- no result --</div>}
+            {texture ? <TextureLevelViewer texture={texture} baseMipLevel={mipLevel} mipLevelCount={1} /> : <div>-- no result --</div>}
         </div>
     );
 };
