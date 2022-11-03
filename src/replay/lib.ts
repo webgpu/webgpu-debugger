@@ -354,16 +354,11 @@ export class ReplayRenderPass extends ReplayObject {
 
     encodeUpTo(path, encoder) {
         const commandIndex = path.shift();
-        if (commandIndex === 0) {
-            return;
-        }
 
         console.assert(this.commands[0].name === 'beginRenderPass');
         console.assert(this.commands[this.commands.length - 1].name === 'endPass');
 
         const renderPassDesc = this.commands[0].args;
-        const renderPass = encoder.beginRenderPass(renderPassDesc);
-        let renderPassEnded = false;
 
         if (commandIndex !== this.commands.length) {
             for (const a of renderPassDesc.colorAttachments ?? []) {
@@ -385,6 +380,12 @@ export class ReplayRenderPass extends ReplayObject {
         );
         const firstAttachment = renderPassDesc.colorAttachments[0].viewState;
         console.assert(firstAttachment.baseMipLevel === 0);
+
+        if (commandIndex === 0) {
+            this.replay.state = this.commands[0].args;
+            return;
+        }
+
         const state = {
             viewport: {
                 x: 0,
@@ -403,6 +404,9 @@ export class ReplayRenderPass extends ReplayObject {
             vertexBuffers: [],
             indexBuffer: { buffer: null, offset: 0, size: 0 },
         };
+
+        const renderPass = encoder.beginRenderPass(renderPassDesc);
+        let renderPassEnded = false;
 
         // HAAAAACK
         const a = renderPassDesc.colorAttachments[0];
