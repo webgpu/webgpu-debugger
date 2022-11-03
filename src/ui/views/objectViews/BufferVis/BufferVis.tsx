@@ -192,7 +192,7 @@ export default function BufferVis({ data }: { data: ReplayBuffer }) {
             <div className="spector2-buffer-vis">
                 <ValueObject data={data} />
                 <div className="spector2-buffer-vis-controls">
-                    <SelectSimple value={type} options={s_typesKeys} onChange={setType} />
+                    <SelectSimple label="" value={type} options={s_typesKeys} onChange={setType} />
                     <Range label="columns:" min={1} max={64} value={columns} onChange={setColumns} />
                     {hex ? (
                         <Checkbox label="hex:" checked={showHex} onChange={setShowHex} />

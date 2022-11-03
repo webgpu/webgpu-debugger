@@ -213,6 +213,7 @@ export default function StepsVis({ data }: StepsVisProps) {
             <div className="spector2-steps-vis">
                 <div className="spector2-steps-vis-traces">
                     <SelectSimpleIndex
+                        label=""
                         value={helper.state.currentTraceIndex}
                         options={helper.state.traces.map(t => t.name)}
                         onChange={helper.setCurrentTraceByIndex}
