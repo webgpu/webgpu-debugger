@@ -48,7 +48,7 @@ const layout: FlexLayout.IJsonModel = {
                         children: [
                             {
                                 type: 'tab',
-                                name: 'pane4',
+                                name: 'pane5',
                                 component: 'Pane',
                             },
                         ],
@@ -66,6 +66,11 @@ const layout: FlexLayout.IJsonModel = {
                             {
                                 type: 'tab',
                                 name: 'pane1',
+                                component: 'Pane',
+                            },
+                            {
+                                type: 'tab',
+                                name: 'pane3',
                                 component: 'Pane',
                             },
                         ],
@@ -87,7 +92,7 @@ const layout: FlexLayout.IJsonModel = {
                         children: [
                             {
                                 type: 'tab',
-                                name: 'pane3',
+                                name: 'pane4',
                                 component: 'Pane',
                             },
                         ],

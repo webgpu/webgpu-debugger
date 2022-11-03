@@ -6,6 +6,7 @@ import { maxPanes } from '../../globals';
 
 import ObjectVis from '../../views/ObjectVis/ObjectVis';
 import ResultVis from '../../views/ResultVis/ResultVis';
+import ReplayVis from '../../views/objectViews/ReplayVis/ReplayVis';
 import StateVis from '../../views/StateVis/StateVis';
 import StepsVis from '../../views/StepsVis/StepsVis';
 
@@ -21,14 +22,16 @@ class App extends React.Component<UIProps, UIState> {
             pane0: { component: StepsVis,  name: 'Steps',  data: null },
             pane1: { component: ResultVis, name: 'Result', data: null },
             pane2: { component: StateVis,  name: 'State',  data: null },
-            pane4: { component: ObjectVis, name: 'Data',  data: null },  // These two are swapped intentionally
-            pane3: { component: ObjectVis, name: 'Data',  data: null },  // to get them on mru list in order
+            pane3: { component: ReplayVis, name: 'Resources',  data: null },
+            pane5: { component: ObjectVis, name: 'Data',  data: null },  // These two are swapped intentionally
+            pane4: { component: ObjectVis, name: 'Data',  data: null },  // to get them on mru list in order
         };
 
         uiStateHelper.registerPaneComponent('StateVis', StateVis);
         uiStateHelper.registerPaneComponent('StepsVis', StepsVis);
         uiStateHelper.registerPaneComponent('ObjectVis', ObjectVis);
         uiStateHelper.registerPaneComponent('ResultVis', ResultVis);
+        uiStateHelper.registerPaneComponent('ReplayVis', ReplayVis);
 
         const freePaneIds: string[] = [];
         for (let i = 0; i < maxPanes; ++i) {
