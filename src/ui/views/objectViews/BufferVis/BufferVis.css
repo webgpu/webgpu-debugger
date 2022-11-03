@@ -5,6 +5,10 @@
   flex-direction: column;
 }
 
+.spector2-buffer-vis-controls {
+  width: 100%;
+}
+
 .spector2-buffer-data {
   flex: 1 1;
   width: 100%;
@@ -31,6 +35,7 @@
 
 .spector2-buffer-data-elem {
   overflow: hidden;
+  text-align: right;
   border-right: 1px solid var(--spector2-table-cell-border-color);
   border-bottom: 1px solid var(--spector2-table-cell-border-color);
 }

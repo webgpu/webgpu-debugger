@@ -69,3 +69,16 @@
 .spector2-error {
   color: var(--spector2-error-color);
 }
+
+.spector2 label {
+  /* display: inline-flex; this breaks the buffer view */
+  align-items: center;
+  white-space: nowrap;
+}
+
+.spector2 label+label,
+.spector2 label+select,
+.spector2 select+label,
+.spector2 select+select {
+  margin-left: 1.0em;
+}

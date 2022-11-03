@@ -24,7 +24,9 @@ type TypedArrayInfo = {
     // eslint-disable-next-line @typescript-eslint/ban-types
     View: TypedArrayConstructor;
     minWidth: number;
-    format: (v: number) => string;
+    hex: boolean;
+    format: (v: number, fixed?: number) => string;
+    hexFormat: (v: number, fixed?: number) => string;
 };
 
 const positiveHexFormatter = (padding: number) => {
@@ -40,16 +42,22 @@ const negativeHexFormatter = (SrcType: TypedArrayConstructor, DstType: TypedArra
     };
 };
 
+const floatFormatter = (v: number, fixed?: number) => {
+    return fixed === undefined || fixed < 0 ? v.toString() : v.toFixed(fixed);
+};
+
+const identFormatter = (v: number) => v.toString();
+
 // prettier-ignore
 const s_types: Record<string, TypedArrayInfo> = {
-    i8:  { View: Int8Array,    minWidth:  34, format: negativeHexFormatter(Int8Array, Uint8Array, 2) },
-    u8:  { View: Uint8Array,   minWidth:  34, format: positiveHexFormatter(2) },
-    i16: { View: Int16Array,   minWidth:  48, format: negativeHexFormatter(Int16Array, Uint16Array, 4) },
-    u16: { View: Uint16Array,  minWidth:  48, format: positiveHexFormatter(4) },
-    i32: { View: Int32Array,   minWidth:  80, format: negativeHexFormatter(Int32Array, Uint32Array, 8) },
-    u32: { View: Uint32Array,  minWidth:  80, format: positiveHexFormatter(8) },
-    f64: { View: Float64Array, minWidth: 100, format: (v: number) => v.toString() },
-    f32: { View: Float32Array, minWidth: 100, format: (v: number) => v.toString() },
+    i8:  { View: Int8Array,    minWidth:  34, hex: true,  format: identFormatter,  hexFormat: negativeHexFormatter(Int8Array, Uint8Array, 2) },
+    u8:  { View: Uint8Array,   minWidth:  34, hex: true,  format: identFormatter,  hexFormat: positiveHexFormatter(2) },
+    i16: { View: Int16Array,   minWidth:  48, hex: true,  format: identFormatter,  hexFormat: negativeHexFormatter(Int16Array, Uint16Array, 4) },
+    u16: { View: Uint16Array,  minWidth:  48, hex: true,  format: identFormatter,  hexFormat: positiveHexFormatter(4) },
+    i32: { View: Int32Array,   minWidth:  80, hex: true,  format: identFormatter,  hexFormat: negativeHexFormatter(Int32Array, Uint32Array, 8) },
+    u32: { View: Uint32Array,  minWidth:  80, hex: true,  format: identFormatter,  hexFormat: positiveHexFormatter(8) },
+    f32: { View: Float32Array, minWidth: 100, hex: false, format: floatFormatter, hexFormat: floatFormatter },
+    f64: { View: Float64Array, minWidth: 100, hex: false, format: floatFormatter, hexFormat: floatFormatter },
 };
 const s_typesKeys = [...Object.keys(s_types)];
 
@@ -57,10 +65,11 @@ interface Props {
     type: string;
     columns: number;
     buffer: ReplayBuffer;
-    hex: boolean;
+    showHex: boolean;
+    precision: number;
 }
 
-const BufferGrid: React.FC<Props> = ({ type, columns, hex, buffer }) => {
+const BufferGrid: React.FC<Props> = ({ type, columns, showHex, buffer, precision }) => {
     const [arrayBuffer, setArrayBuffer] = useState(new ArrayBuffer(0));
 
     // TODO: Virtualize this so we don't need the entire buffers?
@@ -92,7 +101,7 @@ const BufferGrid: React.FC<Props> = ({ type, columns, hex, buffer }) => {
         getBufferData(buffer);
     }, [buffer]);
 
-    const { View, minWidth, format } = s_types[type];
+    const { View, minWidth, format, hexFormat } = s_types[type];
     const view = new View(arrayBuffer);
     const numValues = view.length;
     const rows = roundUpToMultipleOf(numValues, columns) / columns;
@@ -100,7 +109,8 @@ const BufferGrid: React.FC<Props> = ({ type, columns, hex, buffer }) => {
     // fill the view with consecutive values for debugging.
     // view.forEach((v, ndx) => (view[ndx] = ndx % 2 ? -ndx : ndx));
 
-    const formatFn = hex ? format : (v: number) => v.toString();
+    const formatFnImpl = showHex ? hexFormat : format;
+    const formatFn = (v: number) => formatFnImpl(v, precision);
 
     /*  size 10  columns = 4
 
@@ -119,12 +129,13 @@ const BufferGrid: React.FC<Props> = ({ type, columns, hex, buffer }) => {
 
     // If the size is small, try not to cause a scrollbar
     const widthFudge = 10;
+    const maxWidth = 140;
     return (
         <AutoSizer>
             {({ width, height }) => (
                 <Grid
                     columnCount={viewColumns}
-                    columnWidth={Math.max(minWidth, ((width - widthFudge) / viewColumns) | 0)}
+                    columnWidth={Math.min(maxWidth, Math.max(minWidth, ((width - widthFudge) / viewColumns) | 0))}
                     height={height}
                     rowCount={viewRows}
                     rowHeight={16}
@@ -171,19 +182,26 @@ const BufferGrid: React.FC<Props> = ({ type, columns, hex, buffer }) => {
 export default function BufferVis({ data }: { data: ReplayBuffer }) {
     const [type, setType] = useState('f32');
     const [columns, setColumns] = useState(4);
-    const [hex, setHex] = useState(false);
+    const [showHex, setShowHex] = useState(false);
+    const [precision, setPrecision] = useState(-1);
+
+    const { hex } = s_types[type];
 
     return (
         <div className="spector2-vis">
             <div className="spector2-buffer-vis">
                 <ValueObject data={data} />
-                <div>
+                <div className="spector2-buffer-vis-controls">
                     <SelectSimple value={type} options={s_typesKeys} onChange={setType} />
                     <Range label="columns:" min={1} max={64} value={columns} onChange={setColumns} />
-                    <Checkbox label="hex:" checked={hex} onChange={setHex} />
+                    {hex ? (
+                        <Checkbox label="hex:" checked={showHex} onChange={setShowHex} />
+                    ) : (
+                        <Range label="precision:" min={-1} max={10} value={precision} onChange={setPrecision} />
+                    )}
                 </div>
                 <div className="spector2-buffer-data">
-                    <BufferGrid type={type} columns={columns} hex={hex} buffer={data} />
+                    <BufferGrid type={type} columns={columns} showHex={showHex} precision={precision} buffer={data} />
                 </div>
             </div>
         </div>
