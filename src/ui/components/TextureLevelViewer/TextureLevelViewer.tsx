@@ -1,11 +1,11 @@
-import React, { useState, useRef, useEffect, useContext, DOMElement } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import { ReplayTexture } from '../../../replay';
 import { kTextureFormatInfo, getUnwrappedGPUCanvasContext } from '../../../capture';
 import { UIStateContext } from '../../contexts/UIStateContext';
 import Checkbox from '../../components/Checkbox/Checkbox';
 import Range from '../../components/Range/Range';
 
-import './TextureLevelViewer.css'
+import './TextureLevelViewer.css';
 
 class TextureRenderer {
     device: GPUDevice;
@@ -280,7 +280,13 @@ interface Props {
     arrayLayerCount?: number;
 }
 
-const TextureLevelViewer: React.FC<Props> = ({ texture, baseMipLevel = 0, mipLevelCount, baseArrayLayer = 0, arrayLayerCount }: Props) => {
+const TextureLevelViewer: React.FC<Props> = ({
+    texture,
+    baseMipLevel = 0,
+    mipLevelCount,
+    baseArrayLayer = 0,
+    arrayLayerCount,
+}: Props) => {
     const [actualSize, setActualSize] = useState(false);
     const [pixelated, setPixelated] = useState(false);
     const [mipLevel, setMipLevel] = useState(baseMipLevel);
@@ -348,7 +354,7 @@ const TextureLevelViewer: React.FC<Props> = ({ texture, baseMipLevel = 0, mipLev
                 </div>
             )}
             <div className="spector2-textureviewer-canvascontainer">
-                <canvas ref={canvasRef} className={ actualSize ? '' : 'fill' } />
+                <canvas ref={canvasRef} className={actualSize ? '' : 'fill'} />
             </div>
         </div>
     );
