@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Replay } from '../../../../replay';
+import Checkbox from '../../../components/Checkbox/Checkbox';
 import Value from '../../../components/Value/Value';
 
 import './ReplayVis.css';
@@ -31,16 +32,41 @@ const s_propertyNames = [
 type ObjectKey = keyof Replay;
 
 export default function ReplayVis({ data }: { data: Replay }) {
+    const [open, setOpen] = useState(new Array(s_propertyNames.length).fill(false));
+    const [allOpen, setAllOpen] = useState(true);
+
+    const setOpenNdx = (ndx: number, opened: boolean) => {
+        const newOpen = [...open];
+        newOpen[ndx] = opened;
+        setOpen(newOpen);
+    };
+
+    const toggleAll = () => {
+        const newOpen = [...open].fill(allOpen);
+        setOpen(newOpen);
+        setAllOpen(!allOpen);
+    };
+
     return (
         <div className="spector2-vis">
             <div className="spector2-replay-vis">
+                <div>
+                    <button onClick={toggleAll}>Toggle all open/closed</button>
+                </div>
                 {s_propertyNames.map((name, nameNdx) => {
                     const key = name as ObjectKey;
                     const resources: Record<string, any> = data[key];
 
                     return (
-                        <details className="spector2-replay-group" key={`n${nameNdx}`}>
-                            <summary className="spector2-replay-heading">{name} ({Object.values(resources).length})</summary>
+                        <details
+                            open={open[nameNdx]}
+                            className="spector2-replay-group"
+                            key={`n${nameNdx}`}
+                            onToggle={e => setOpenNdx(nameNdx, (e.target as HTMLDetailsElement).open)}
+                        >
+                            <summary className="spector2-replay-heading">
+                                {name} ({Object.values(resources).length})
+                            </summary>
                             <div className="spector2-replay-resources">
                                 {Object.values(resources).map((resource, ndx) => (
                                     <Value key={`r${ndx}`} data={resource} />
