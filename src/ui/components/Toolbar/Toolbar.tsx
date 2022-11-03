@@ -1,6 +1,8 @@
 import React, { useContext, useRef } from 'react';
 import { UIStateContext } from '../../contexts/UIStateContext';
 
+import './Toolbar.css';
+
 const saveData = (function () {
     const a = document.createElement('a');
     document.body.appendChild(a);
@@ -37,10 +39,17 @@ export default function Toolbar() {
 
     return (
         <div className="spector2-toolbar">
-            <button onClick={helper.capture}>🔴</button>
-            <button onClick={requestFile}>Load</button>
-            <button onClick={saveTrace}>Save</button>
-            <button onClick={helper.toggleUI}>⌃</button>
+            <div className="spector2-toolbar-left">
+                <button onClick={helper.capture}>🔴</button>
+                <button onClick={requestFile}>Load</button>
+                <button onClick={saveTrace}>Save</button>
+                <button onClick={helper.toggleUI}>⌃</button>
+            </div>
+            <div className="spector2-toolbar-right">
+                <a href="https://github.com/Kangz/spector2" target="_blank" rel="noreferrer">
+                    🐞
+                </a>
+            </div>
             <input
                 type="file"
                 ref={inputRef}

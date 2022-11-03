@@ -1,0 +1,9 @@
+.spector2-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.spector2-toolbar a {
+  text-decoration: none;
+}

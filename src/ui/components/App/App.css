@@ -42,6 +42,10 @@
   font-family: inherit;
 }
 
+.spector2 button {
+  margin: 1px;
+}
+
 /* TODO: be more specific? These are for vales */
 .spector2 table {
   border-collapse: collapse;
