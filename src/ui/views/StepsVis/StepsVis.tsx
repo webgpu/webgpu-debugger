@@ -206,17 +206,20 @@ export default function StepsVis({ data }: StepsVisProps) {
 
     return (
         <div className="spector2-vis">
-            <div>
-                <SelectSimpleIndex
-                    value={helper.state.currentTraceIndex}
-                    options={helper.state.traces.map(t => t.name)}
-                    onChange={helper.setCurrentTraceByIndex}
-                />
+            <div className="spector2-steps-vis">
+                <div className="spector2-steps-vis-traces">
+                    <SelectSimpleIndex
+                        value={helper.state.currentTraceIndex}
+                        options={helper.state.traces.map(t => t.name)}
+                        onChange={helper.setCurrentTraceByIndex}
+                    />
+                    <Value data={replay} />
+                </div>
+                <hr />
+                <StepsContext.Provider value={{ state, playTo }}>
+                    {replay ? <Commands commands={replay.commands} commandId={[]} /> : 'no traces'}
+                </StepsContext.Provider>
             </div>
-            <hr />
-            <StepsContext.Provider value={{ state, playTo }}>
-                {replay ? <Commands commands={replay.commands} commandId={[]} /> : 'no traces'}
-            </StepsContext.Provider>
         </div>
     );
 }

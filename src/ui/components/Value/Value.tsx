@@ -2,6 +2,7 @@
 import React, { useContext } from 'react';
 
 import {
+    Replay,
     ReplayAdapter,
     ReplayBindGroup,
     ReplayBindGroupLayout,
@@ -68,12 +69,14 @@ const QuerySetValue = makeVisValue(ReplayQuerySet, 'GPUQuerySet');
 const QueueValue = makeVisValue(ReplayQueue, 'GPUQueue');
 const RenderPassValue = makeVisValue(ReplayRenderPass, 'GPURenderPass');
 const RenderRenderPipelineValue = makeVisValue(ReplayRenderPass, 'GPURenderPipeline');
+const ReplayValue = makeVisValue(Replay, 'Resources');
 const SamplerValue = makeVisValue(ReplaySampler, 'GPUSampler');
 const ShaderModuleValue = makeVisValue(ReplayShaderModule, 'GPUShaderModule');
 const TextureValue = makeVisValue(ReplayTexture, 'GPUTexture');
 const TextureViewValue = makeVisValue(ReplayTextureView, 'GPUTextureView');
 
 const s_replayClassToComponent = new Map<Function, ValueComponent>([
+    [Replay, ReplayValue],
     [ReplayAdapter, AdapterValue],
     [ReplayBindGroup, BindGroupValue],
     [ReplayBindGroupLayout, BindGroupLayoutValue],

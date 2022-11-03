@@ -3,6 +3,7 @@ import React from 'react';
 import { PaneComponent } from '../../contexts/UIStateContext';
 
 import {
+    Replay,
     ReplayAdapter,
     ReplayBindGroup,
     ReplayBindGroupLayout,
@@ -31,6 +32,7 @@ import QuerySetVis from '../objectViews/QuerySetVis/QuerySetVis';
 import QueueVis from '../objectViews/QueueVis/QueueVis';
 import RenderPassVis from '../objectViews/RenderPassVis/RenderPassVis';
 import RenderPipelineVis from '../objectViews/RenderPipelineVis/RenderPipelineVis';
+import ReplayVis from '../objectViews/ReplayVis/ReplayVis';
 import SamplerVis from '../objectViews/SamplerVis/SamplerVis';
 import ShaderModuleVis from '../objectViews/ShaderModuleVis/ShaderModuleVis';
 import TextureViewVis from '../objectViews/TextureViewVis/TextureViewVis';
@@ -41,6 +43,7 @@ interface ObjectVisProps {
 }
 
 const s_objectClassToVis = new Map<Function, PaneComponent>([
+    [Replay, ReplayVis],
     [ReplayAdapter, AdapterVis],
     [ReplayBindGroup, BindGroupVis],
     [ReplayBindGroupLayout, BindGroupLayoutVis],
