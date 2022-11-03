@@ -39,14 +39,14 @@ export default function ReplayVis({ data }: { data: Replay }) {
                     const resources: Record<string, any> = data[key];
 
                     return (
-                        <div className="spector2-replay-group" key={`n${nameNdx}`}>
-                            <div className="spector2-replay-heading">{name}:</div>
+                        <details className="spector2-replay-group" key={`n${nameNdx}`}>
+                            <summary className="spector2-replay-heading">{name} ({Object.values(resources).length})</summary>
                             <div className="spector2-replay-resources">
                                 {Object.values(resources).map((resource, ndx) => (
                                     <Value key={`r${ndx}`} data={resource} />
                                 ))}
                             </div>
-                        </div>
+                        </details>
                     );
                 })}
             </div>
