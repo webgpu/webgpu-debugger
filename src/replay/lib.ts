@@ -209,7 +209,7 @@ export class Replay {
 
             case 'present':
                 // Nothing to do?
-                this.state = { currentTexture: command.args.texture }; // TOOD: hack-remove
+                this.state = { currentTexture: command.args.texture }; // TODO: hack-remove
                 break;
 
             case 'textureDestroy':
@@ -313,7 +313,6 @@ export class ReplayRenderPass extends ReplayObject {
             const c = window.structuredClone(command);
             switch (c.name) {
                 case 'endPass':
-                    this.state = {}; // TODO: hack, remove
                     this.commands.push(c);
                     return;
 
@@ -530,7 +529,6 @@ export class ReplayCommandBuffer extends ReplayObject {
             const c = window.structuredClone(command);
             switch (c.name) {
                 case 'beginRenderPass': {
-                    this.state = { currentRenderPassDescriptor: c.args }; // TODO: hack, remove
                     for (const a of c.args.colorAttachments) {
                         a.viewState = this.replay.textureViews[a.viewSerial];
                         a.view = a.viewState.webgpuObject;
