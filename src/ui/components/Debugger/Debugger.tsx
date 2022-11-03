@@ -51,6 +51,11 @@ const layout: FlexLayout.IJsonModel = {
                                 name: 'pane1',
                                 component: 'Pane',
                             },
+                            {
+                                type: 'tab',
+                                name: 'pane4',
+                                component: 'Pane',
+                            },
                         ],
                     },
                     {

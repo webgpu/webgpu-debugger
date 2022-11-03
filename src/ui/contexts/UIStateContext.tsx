@@ -252,6 +252,12 @@ export class UIStateHelper {
             throw new Error('TODO: add pane of this type');
         }
         this.setPaneViewType(paneId, 'StepsVis', 'Steps', replayInfo);
+
+        const resourcePaneId = this.getMostRecentPaneIdForComponentType('ReplayVis');
+        if (resourcePaneId) {
+            this.setPaneViewType(resourcePaneId, 'ReplayVis', 'Resources', replayInfo.replay);
+        }
+
         this.setFullUI(true);
     };
 
