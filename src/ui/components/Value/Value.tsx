@@ -203,6 +203,8 @@ export default function Value({ depth, data }: { depth?: number; data: any }) {
         return <div className="spector2-value-undefined">undefined</div>;
     } else if (data === null) {
         return <div className="spector2-value-null">null</div>;
+    } else if (typeof data === 'boolean') {
+        return <div className="spector2-value-boolean">{data ? 'true' : 'false'}</div>;
     } else if (typeof data === 'number') {
         return <ValueNumber data={data} />;
     } else if (typeof data === 'string') {
