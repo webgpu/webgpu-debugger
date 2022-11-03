@@ -15,6 +15,10 @@
   height: auto;
 }
 
+.spector2-textureviewer canvas.cube {
+  cursor: all-scroll;
+}
+
 .spector2-textureviewer canvas.fill {
   width: calc(100% - 2em);
   width: calc(100% - 2em);

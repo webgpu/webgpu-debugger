@@ -13,6 +13,7 @@ export default function TextureViewVis({ data }: { data: ReplayTextureView }) {
                 mipLevelCount={data.mipLevelCount}
                 baseArrayLayer={data.baseArrayLayer}
                 arrayLayerCount={data.arrayLayerCount}
+                displayType={data.dimension === 'cube' || data.dimension === 'cube-array' ? 'cube' : '2d'}
             />
         </div>
     );
