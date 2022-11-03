@@ -39,7 +39,10 @@ function makeVisValue(Class: Function, typeName: string) {
         const { onAddPaneViaDrag } = useContext(TileContext);
 
         const freePaneId = helper.state.freePaneIds[0];
-        const name = `${typeName}${data.label ? `(${data.label})` : ''}`;
+        let name = `${typeName}${data.label ? `(${data.label})` : ''}`;
+        if (typeName === 'GPUTextureView' && data.texture.label) {
+            name += `->(${data.texture.label})`;
+        }
         return (
             <div
                 className={`spector2-value-vis spector-value-${typeName}`}
