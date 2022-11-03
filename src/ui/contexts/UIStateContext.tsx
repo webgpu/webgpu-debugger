@@ -6,9 +6,14 @@ import { arrayRemoveElementByValue } from '../lib/array-utils';
 import { requestUnwrappedAdapter } from '../../capture';
 import { loadReplay } from '../../replay';
 
+export type PaneComponentInfo = {
+    component: PaneComponent;
+    closable: boolean;
+};
+
 export type PaneComponent = React.FunctionComponent<{ data: any }> | React.ComponentClass<{ data: any }>;
 type ViewData = {
-    component: PaneComponent;
+    componentInfo: PaneComponentInfo;
     name: string;
     data: unknown;
 };
@@ -70,17 +75,21 @@ export type UIStateSetterFn = <K extends keyof UIState>(
     callback?: (() => void) | undefined
 ) => void;
 
+type UpdatePaneFn = (paneId: string, enableClose: boolean) => void;
+
 export class UIStateHelper {
     setStateFn: UIStateSetterFn = () => {};
     state: Readonly<UIState> = createUIState();
     stateUpdateQueued = false;
-    paneComponentsByName: Record<string, PaneComponent> = {};
+    paneComponentInfosByName: Record<string, PaneComponentInfo> = {};
 
     // map of PaneComponent names to lru paneIds where the first
     // entry is the most recently used view of that type.
     mruViewsByType: Map<string, string[]> = new Map();
     replayAPI?: ReplayAPI;
     nextTraceId = 1;
+
+    updatePaneFn?: UpdatePaneFn;
 
     setState: UIStateSetterFn = (state: any) => {
         if (!this.stateUpdateQueued) {
@@ -121,8 +130,8 @@ export class UIStateHelper {
         this.replayAPI = api as ReplayAPI;
     }
 
-    registerPaneComponent = (name: string, component: PaneComponent) => {
-        this.paneComponentsByName[name] = component;
+    registerPaneComponent = (name: string, componentInfo: PaneComponentInfo) => {
+        this.paneComponentInfosByName[name] = componentInfo;
     };
 
     setMostRecentPaneIdForComponentType = (componentName: string, paneId: string) => {
@@ -135,7 +144,7 @@ export class UIStateHelper {
     setMostRecentPaneByPaneId = (paneId: string) => {
         const viewType = this.state.paneIdToViewType[paneId];
         if (viewType) {
-            this.setMostRecentPaneIdForComponentType(viewType.component.name, paneId);
+            this.setMostRecentPaneIdForComponentType(viewType.componentInfo.component.name, paneId);
         }
     };
 
@@ -150,7 +159,7 @@ export class UIStateHelper {
         // This is a hack: See Debugger.tsx
         if (!this.mruViewsByType.get(componentName)) {
             for (const [paneId, viewData] of Object.entries(this.state.paneIdToViewType)) {
-                this.setMostRecentPaneIdForComponentType(viewData.component.name, paneId);
+                this.setMostRecentPaneIdForComponentType(viewData.componentInfo.component.name, paneId);
             }
         }
         const mru = this.mruViewsByType.get(componentName)!;
@@ -165,17 +174,18 @@ export class UIStateHelper {
     };
 
     setPaneViewType = (paneId: string, componentName: string, name: string, data: any): void => {
-        const component = this.paneComponentsByName[componentName]!;
+        const componentInfo = this.paneComponentInfosByName[componentName]!;
         const paneIdToViewType = { ...this.state.paneIdToViewType };
-        paneIdToViewType[paneId] = { component, name, data };
+        paneIdToViewType[paneId] = { componentInfo, name, data };
         this.setState({ paneIdToViewType });
         this.setMostRecentPaneIdForComponentType(componentName, paneId);
+        this.updatePaneFn!(paneId, componentInfo.closable);
     };
 
     deletePaneByPaneId(paneId: string) {
         // remove from mru list
         const viewType = this.state.paneIdToViewType[paneId]!;
-        const component = viewType.component;
+        const component = viewType.componentInfo.component;
         const mru = this.mruViewsByType.get(component.name)!;
         arrayRemoveElementByValue(mru, paneId);
 
@@ -315,10 +325,14 @@ export class UIStateHelper {
         this.setState({ replayCount: this.state.replayCount + 1 });
     };
 
-    async playTo(replay: Replay, path: number[]) {
+    playTo = async (replay: Replay, path: number[]) => {
         const gpuState = await replay.replayTo(path);
         this.setGPUState(gpuState);
-    }
+    };
+
+    setUpdatePaneFn = (updatePaneFn: UpdatePaneFn) => {
+        this.updatePaneFn = updatePaneFn;
+    };
 }
 
 type UIContextData = {

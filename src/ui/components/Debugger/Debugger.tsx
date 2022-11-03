@@ -19,9 +19,10 @@ import './Debugger.css';
 // We switched to FlexLayout but have not refactored the code from
 // this paneId stuff.
 
-const layout: FlexLayout.IJsonModel = {
+const s_defaultLayout: FlexLayout.IJsonModel = {
     global: {
         splitterSize: 4,
+        tabEnableRename: false,
     },
     borders: [],
     layout: {
@@ -104,6 +105,39 @@ const layout: FlexLayout.IJsonModel = {
     },
 };
 
+const getJsonTabNodeByName = (model: FlexLayout.IJsonModel, name: string) => {
+    const getNode = (node: any): any => {
+        if (node.children) {
+            for (const child of node.children) {
+                const foundNode = getNode(child);
+                if (foundNode) {
+                    return foundNode;
+                }
+            }
+            return undefined;
+        } else {
+            return node.name === name ? node : undefined;
+        }
+    };
+    return getNode(model.layout);
+};
+
+const getTabNodeByName = (model: FlexLayout.Model, name: string): FlexLayout.TabNode | null => {
+    let foundNode: FlexLayout.TabNode | null = null;
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    model.visitNodes((node, _level) => {
+        if (node.getType() === 'tab') {
+            const tabNode = node as FlexLayout.TabNode;
+            if (tabNode.getName() === name) {
+                foundNode = tabNode;
+            }
+        }
+    });
+
+    return foundNode;
+};
+
 interface IState {
     model: FlexLayout.Model;
 }
@@ -113,8 +147,33 @@ class Debugger extends React.Component<any, IState> {
 
     constructor(props: any) {
         super(props);
+
+        // add the enableClose flags
+        // This is probably kind of silly to walk through and apply these.
+        // Part of the design is left over from a previous pane library.
+        const layout = structuredClone(s_defaultLayout);
+        for (const [paneId, viewData] of Object.entries(uiStateHelper.state.paneIdToViewType)) {
+            const node = getJsonTabNodeByName(layout, paneId);
+            node.enableClose = viewData.componentInfo.closable;
+        }
+
         this.state = { model: FlexLayout.Model.fromJson(layout) };
         this.layoutRef = React.createRef();
+
+        // register a function on uiStateHelper so we can tell FlexLayout
+        // to change features of a pane.
+        const updatePane = (paneId: string, enableClose: boolean) => {
+            const tabNode = getTabNodeByName(this.state.model, paneId);
+            if (tabNode) {
+                this.state.model.doAction(
+                    FlexLayout.Actions.updateNodeAttributes(tabNode.getId(), {
+                        enableClose,
+                    })
+                );
+            }
+        };
+
+        uiStateHelper.setUpdatePaneFn(updatePane);
     }
     factory = (node: FlexLayout.TabNode) => {
         const component = node.getComponent();
@@ -130,8 +189,8 @@ class Debugger extends React.Component<any, IState> {
         data: any,
         freePaneId: string
     ) => {
-        //event.stopPropagation();
-        //event.preventDefault();
+        event.stopPropagation();
+        event.preventDefault();
         this.layoutRef!.current!.addTabWithDragAndDrop(
             undefined,
             {
@@ -152,6 +211,7 @@ class Debugger extends React.Component<any, IState> {
                 if (tabNode) {
                     uiStateHelper.deletePaneByPaneId(tabNode.getName());
                 }
+                break;
         }
         return action;
     };
