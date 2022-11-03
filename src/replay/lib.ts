@@ -36,16 +36,35 @@ export type RenderPassArgs = {
 export class Replay {
     commands: Command[] = [];
 
+    adapters: Record<string, ReplayAdapter> = {};
+    devices: Record<string, ReplayDevice> = {};
+    queues: Record<string, ReplayQueue> = {};
+    bindGroupLayouts: Record<string, ReplayBindGroupLayout> = {};
+    pipelineLayouts: Record<string, ReplayPipelineLayout> = {};
+    shaderModules: Record<string, ReplayShaderModule> = {};
+    renderPipelines: Record<string, ReplayRenderPipeline> = {};
+    buffers: Record<string, ReplayBuffer> = {};
+    samplers: Record<string, ReplaySampler> = {};
+    textures: Record<string, ReplayTexture> = {};
+    textureViews: Record<string, ReplayTextureView> = {};
+    querySets: Record<string, ReplayQuerySet> = {};
+    bindGroups: Record<string, ReplayBindGroup> = {};
+    commandBuffers: Record<string, ReplayCommandBuffer> = {};
+
     constructor() {}
 
     async load(trace) {
-        async function recreateObjectsAsync(replay, Class, descMap) {
+        async function recreateObjectsAsync<T>(
+            replay: Replay,
+            Class: new (replay: Replay, desc: any) => T,
+            descMap: Record<string, T>
+        ) {
             if (descMap === undefined) {
                 return {};
             }
 
             const recreatePromises = [];
-            const recreatedObjects = {};
+            const recreatedObjects: Record<string, T> = {};
             for (const traceSerial in descMap) {
                 const desc = descMap[traceSerial];
                 const obj = new Class(replay, desc);
@@ -58,12 +77,16 @@ export class Replay {
             return recreatedObjects;
         }
 
-        function recreateObjects(replay, Class, descMap) {
+        function recreateObjects<T>(
+            replay: Replay,
+            Class: new (replay: Replay, desc: any) => T,
+            descMap: Record<string, T>
+        ) {
             if (descMap === undefined) {
                 return {};
             }
 
-            const recreatedObjects = {};
+            const recreatedObjects: Record<string, T> = {};
             for (const traceSerial in descMap) {
                 const desc = descMap[traceSerial];
                 const obj = new Class(replay, desc);
