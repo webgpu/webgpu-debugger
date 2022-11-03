@@ -179,7 +179,9 @@ export class UIStateHelper {
         paneIdToViewType[paneId] = { componentInfo, name, data };
         this.setState({ paneIdToViewType });
         this.setMostRecentPaneIdForComponentType(componentName, paneId);
-        this.updatePaneFn!(paneId, componentInfo.closable);
+        if (this.updatePaneFn) {
+            this.updatePaneFn(paneId, componentInfo.closable);
+        }
     };
 
     deletePaneByPaneId(paneId: string) {
