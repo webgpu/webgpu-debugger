@@ -65,7 +65,11 @@ function Arg({ k, v }: { k: string; v: any }) {
         return <div className="spector2-cmd-arg">[...]: {k}</div>;
     }
     if (typeof v === 'object') {
-        return <div className="spector2-cmd-arg">{canDisplayInline(v) ? <Value data={v} /> : <Json data={v} />}</div>;
+        return (
+            <div className="spector2-cmd-arg">
+                {canDisplayInline(v) ? <Value data={v} /> : <Json data={v} />}: {k}
+            </div>
+        );
     }
     return (
         <div className="spector2-cmd-arg">
