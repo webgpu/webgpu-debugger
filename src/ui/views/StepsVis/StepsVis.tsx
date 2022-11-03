@@ -218,7 +218,6 @@ export default function StepsVis({ data }: StepsVisProps) {
                         options={helper.state.traces.map(t => t.name)}
                         onChange={helper.setCurrentTraceByIndex}
                     />
-                    <Value data={replay} />
                 </div>
                 <hr />
                 <StepsContext.Provider value={{ state, playTo }}>
