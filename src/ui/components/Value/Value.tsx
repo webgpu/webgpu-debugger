@@ -40,8 +40,17 @@ function makeVisValue(Class: Function, typeName: string) {
 
         const freePaneId = helper.state.freePaneIds[0];
         let name = `${typeName}${data.label ? `(${data.label})` : ''}`;
-        if (typeName === 'GPUTextureView' && data.texture.label) {
-            name += `->(${data.texture.label})`;
+        switch (typeName) {
+            case 'GPUTextureView':
+                if (data.texture.label) {
+                    name += `->(${data.texture.label})`;
+                }
+                break;
+            case 'GPUTexture':
+                if (data.swapChainId) {
+                    name += `:[${data.swapChainId}]`;
+                }
+                break;
         }
         return (
             <div

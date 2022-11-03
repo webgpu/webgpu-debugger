@@ -748,6 +748,7 @@ class CanvasContextState extends BaseState<GPUCanvasContext> {
     constructor(canvas) {
         super({});
         this.canvas = canvas;
+        this.getCurrentTextureCount = 0;
     }
 
     configure(config) {
@@ -784,7 +785,7 @@ class CanvasContextState extends BaseState<GPUCanvasContext> {
                 usage: this.usage,
                 viewFormats: this.viewFormats,
             },
-            /* isSwapChain */ true
+            /* swapChainId */ `gct: ${this.canvas.id || '*'}-${this.getCurrentTextureCount++}`
         );
         spector2.registerObjectIn('textures', texture, textureState);
 
@@ -891,7 +892,7 @@ class DeviceState extends BaseState<GPUDevice> {
             ...desc,
             usage: desc.usage | GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST | GPUTextureUsage.TEXTURE_BINDING,
         });
-        spector2.registerObjectIn('textures', texture, new TextureState(this, desc, /*isSwapChain*/ false));
+        spector2.registerObjectIn('textures', texture, new TextureState(this, desc, /*swapChainId*/ ''));
         return texture;
     }
 }
@@ -1430,9 +1431,9 @@ function align(n, alignment) {
 }
 
 class TextureState extends BaseState<GPUTexture> {
-    constructor(device, desc, isSwapChain) {
+    constructor(device, desc, swapChainId) {
         super(desc);
-        this.isSwapChain = isSwapChain;
+        this.swapChainId = swapChainId; // a string if texture is from `getCurrentTexture`
         this.state = 'available';
         this.device = device;
         this.format = desc.format;
@@ -1453,7 +1454,7 @@ class TextureState extends BaseState<GPUTexture> {
             return result;
         }
 
-        if (this.isSwapChain) {
+        if (this.swapChainId) {
             // TODO: We should be able to make this work but it's hard to track exactly when these textures are destroyed.
             console.warn('No support for swapChain texture initial data.');
             return result;
@@ -1536,6 +1537,7 @@ class TextureState extends BaseState<GPUTexture> {
             mipLevelCount: this.mipLevelCount,
             sampleCount: this.sampleCount,
             viewFormats: this.viewFormats,
+            swapChainId: this.swapChainId,
         };
     }
 

@@ -897,6 +897,7 @@ export class ReplayTexture extends ReplayObject {
     mipLevelCount: number;
     dimension: GPUTextureDimension;
     webgpuObject: GPUTexture;
+    swapChainId: string;
 
     constructor(replay, desc) {
         super(replay, desc);
@@ -906,6 +907,7 @@ export class ReplayTexture extends ReplayObject {
         this.sampleCount = desc.sampleCount;
         this.mipLevelCount = desc.mipLevelCount;
         this.dimension = desc.dimension ?? '2d';
+        this.swapChainId = desc.swapChainId;
 
         this.webgpuObject = this.device.webgpuObject.createTexture({
             format: this.format,
