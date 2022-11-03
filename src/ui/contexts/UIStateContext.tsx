@@ -233,6 +233,16 @@ export class UIStateHelper {
                 replaysByUUID: { ...this.state.replaysByUUID, ...replayByUUID },
             });
         }
+
+        // clear all the panes since otherwise they'd be showing data from a different trace.
+        this.setState({
+            paneIdToViewType: Object.fromEntries(
+                Object.entries(this.state.paneIdToViewType).map(([paneId, viewType]) => [
+                    paneId,
+                    { ...viewType, data: null },
+                ])
+            ),
+        });
         this.setReplay(replayInfo);
     };
 
