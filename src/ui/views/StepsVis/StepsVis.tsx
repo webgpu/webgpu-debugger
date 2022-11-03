@@ -221,7 +221,7 @@ export default function StepsVis({ data }: StepsVisProps) {
                 </div>
                 <hr />
                 <StepsContext.Provider value={{ state, playTo }}>
-                    {replay ? <Commands commands={replay.commands} commandId={[]} /> : 'no traces'}
+                    <Commands commands={replay!.commands} commandId={[]} />
                 </StepsContext.Provider>
             </div>
         </div>

@@ -16,10 +16,10 @@ const Pane: React.FC<PaneProps> = ({ id }) => {
     // This is a hack. See Debugger.tsx
     return (
         <PaneContext.Provider value={{ paneId: id }}>
-            {viewData ? (
+            {viewData && viewData.data ? (
                 React.createElement(viewData.componentInfo.component, { data: viewData.data })
             ) : (
-                <div>not ready</div>
+                <div>no data</div>
             )}
         </PaneContext.Provider>
     );
