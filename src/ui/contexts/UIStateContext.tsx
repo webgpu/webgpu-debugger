@@ -194,10 +194,9 @@ export class UIStateHelper {
      * this object.
      * @param name Name to display in tab
      * @param data Data for ObjectVis
-     * @param srcPaneId id of pane that called us
      */
-    setObjectView = (name: string, data: any, srcPaneId: string) => {
-        const paneId = this.getMostRecentPaneIdForComponentType('ObjectVis', srcPaneId);
+    setObjectView = (name: string, data: any) => {
+        const paneId = this.getMostRecentPaneIdForComponentType('ObjectVis');
         if (!paneId) {
             throw new Error('TODO: add pane of this type');
         }
