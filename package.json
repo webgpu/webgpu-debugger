@@ -7,8 +7,8 @@
   "type": "module",
   "scripts": {
     "rollup-watch": "rollup -c -w",
-    "lint": "eslint 'src/**/*.{js,ts,tsx}'",
-    "fix": "eslint 'src/**/*.{js,ts,tsx}' --quiet --fix",
+    "lint": "eslint \"src/**/*.{js,ts,tsx}\"",
+    "fix": "eslint \"src/**/*.{js,ts,tsx}\" --quiet --fix",
     "check": "npm run lint && node check.js",
     "build": "rollup -c",
     "start": "rollup -c rollup.config.js -w",
