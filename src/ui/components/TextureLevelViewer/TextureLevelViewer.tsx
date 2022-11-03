@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useContext } from 'react';
+import React, { useState, useRef, useEffect, useContext, PointerEvent } from 'react';
 import { ReplayTexture } from '../../../replay';
 import { getUnwrappedGPUCanvasContext } from '../../../capture';
 import { UIStateContext } from '../../contexts/UIStateContext';
@@ -18,7 +18,7 @@ interface Props {
     mipLevelCount?: number;
     baseArrayLayer?: number;
     arrayLayerCount?: number;
-    displayType: string;
+    displayType?: string;
 }
 
 const TextureLevelViewer: React.FC<Props> = ({
@@ -59,7 +59,7 @@ const TextureLevelViewer: React.FC<Props> = ({
         dragging = false;
     }
 
-    function pointerMove(e) {
+    function pointerMove(e: PointerEvent<HTMLCanvasElement>) {
         if (dragging && display === 'cube') {
             angleX += e.movementX * DEG_TO_RAD;
             angleY += e.movementY * DEG_TO_RAD;

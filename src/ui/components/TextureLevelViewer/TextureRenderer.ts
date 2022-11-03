@@ -144,7 +144,15 @@ export class TextureRenderer {
 
     render(context: GPUCanvasContext, texture: GPUTexture, mipLevel: number, layer: number) {
         const formatInfo = kTextureFormatInfo[texture.format];
-        const type = (texture.sampleCount > 1 ? 'multisampled-' : '') + formatInfo?.type;
+        let formatType = formatInfo?.type;
+        let aspect: GPUTextureAspect = 'all';
+        // TODO: For the moment force depth-stencil textures to only render the depth aspect.
+        // We want to be able to visualize the stencil aspect as well, though.
+        if (formatType === 'depth-stencil') {
+            formatType = 'depth';
+            aspect = 'depth-only';
+        }
+        const type = (texture.sampleCount > 1 ? 'multisampled-' : '') + formatType;
 
         const pipeline = this.pipelines.get(type);
         let bindGroup;
@@ -155,6 +163,7 @@ export class TextureRenderer {
                     binding: 1,
                     resource: texture.createView({
                         dimension: '2d',
+                        aspect,
                         baseMipLevel: mipLevel,
                         mipLevelCount: 1,
                         baseArrayLayer: layer,
