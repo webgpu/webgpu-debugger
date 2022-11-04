@@ -1,5 +1,5 @@
 import React from 'react';
-import Value from '../../components/Value/Value';
+import JsonValue from '../../components/JsonValue/JsonValue';
 
 /* it's not clear what this is ATM. */
 interface StateVisProps {
@@ -9,7 +9,7 @@ interface StateVisProps {
 export default function StateVis({ data }: StateVisProps) {
     return (
         <div className="spector2-vis">
-            <Value data={data} />
+            <JsonValue data={data} />
         </div>
     );
 }

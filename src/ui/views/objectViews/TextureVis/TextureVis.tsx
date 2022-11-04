@@ -7,6 +7,7 @@ export default function TextureVis({ data }: { data: ReplayTexture }) {
     return (
         <div className="spector2-vis">
             <ValueObject data={data} />
+            <div className="spector2-top-separator"></div>
             <TextureLevelViewer texture={data} />
         </div>
     );

@@ -1,9 +1,10 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { Command, CommandArgs, QueueSubmitArgs, RenderPassArgs } from '../../../replay';
 import SelectSimpleIndex from '../../components/SelectSimple/SelectSimpleIndex';
-import Value, { canDisplayInline } from '../../components/Value/Value';
+import Value from '../../components/Value/Value';
 import { ReplayInfo, UIStateContext } from '../../contexts/UIStateContext';
 import { classNames } from '../../lib/css';
+import { canDisplayInline } from '../../components/VisValue/VisValue';
 
 import './StepsVis.css';
 

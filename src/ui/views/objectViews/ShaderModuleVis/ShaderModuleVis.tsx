@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ReplayShaderModule } from '../../../../replay';
 import Checkbox from '../../../components/Checkbox/Checkbox';
-import { ValueObject } from '../../../components/Value/Value';
+import { JsonValueObject } from '../../../components/JsonValue/JsonValue';
 
 // This is kind of a hack in that it's not taking the tab size into account.
 // At stop point, instead of a `<pre>` tag we'll use a `<textarea>` to allow you
@@ -32,7 +32,7 @@ export default function ShaderModuleVis({ data }: { data: ReplayShaderModule }) 
 
     return (
         <div className="spector2-vis">
-            <ValueObject data={desc.hints || {}} />
+            <JsonValueObject data={desc.hints || {}} />
             <Checkbox label="raw" checked={raw} onChange={setRaw} />
             <pre>{optionallyRemoveLeadingWhitespace(!raw, desc.code)}</pre>
         </div>

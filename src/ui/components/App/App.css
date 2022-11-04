@@ -1,16 +1,17 @@
 :root {
   --spector2-bg-color: white;
   --spector2-color: black;
-  --spector2-accent-color: #448;
+  --spector2-soft-color: #ddd;
+  --spector2-accent-color: #388;
   --spector2-warn-color: darkorange;
-  --spector2-error-color: red;
-  --spector2-clickable-color: #48F;
+  --spector2-error-color: #C00;
+  --spector2-clickable-color: #05d;
   --spector2-tab-moving-bg-color: #f5ffd3;
   --spector2-tab-bar-bg-color: #eee;
   --spector2-tab-bg-color: #ddd;
   --spector2-tab-splitter-bg-color: #b6b6b6;
   --spector2-tab-move-hover-color: #7dd0db;
-  --spector2-cmd-selected-bg-color: #46C;
+  --spector2-cmd-selected-bg-color: #CEF;
   --spector2-table-cell-border-color: #888;
   --spector2-font-size: medium;
 
@@ -22,6 +23,8 @@
     --spector2-bg-color: #333;
     --spector2-color: white;
     --spector2-accent-color: #FF8;
+    --spector2-error-color: #F00;
+    --spector2-soft-color: #555;
     --spector2-clickable-color: #8AF;
     --spector2-tab-bar-bg-color: #222;
     --spector2-tab-bg-color: #68A;
@@ -85,4 +88,19 @@
 .spector2 select+label,
 .spector2 select+select {
   margin-left: 1.0em;
+}
+
+.spector2 summary {
+  cursor: pointer;
+}
+
+.spector2 summary::marker {
+  color: var(--spector2-soft-color);
+  opacity: 50%;
+}
+
+.spector2-top-separator {
+  border-top: 2px solid var(--spector2-table-cell-border-color);
+  padding-top: 4px;
+  width: 100%;
 }

@@ -1,12 +1,13 @@
 import React from 'react';
 import { ReplayTextureView } from '../../../../replay';
 import TextureLevelViewer from '../../../components/TextureLevelViewer/TextureLevelViewer';
-import { ValueObject } from '../../../components/Value/Value';
+import { JsonValueObject } from '../../../components/JsonValue/JsonValue';
 
 export default function TextureViewVis({ data }: { data: ReplayTextureView }) {
     return (
         <div className="spector2-vis">
-            <ValueObject data={data} />
+            <JsonValueObject data={data} />
+            <div className="spector2-top-separator"></div>
             <TextureLevelViewer
                 texture={data.texture}
                 baseMipLevel={data.baseMipLevel}

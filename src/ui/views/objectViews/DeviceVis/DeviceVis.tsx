@@ -1,11 +1,11 @@
 import React from 'react';
 import { ReplayDevice } from '../../../../replay';
-import { ValueObject } from '../../../components/Value/Value';
+import { JsonValueObject } from '../../../components/JsonValue/JsonValue';
 
 export default function DeviceVis({ data }: { data: ReplayDevice }) {
     return (
         <div className="spector2-vis">
-            <ValueObject data={data} />
+            <JsonValueObject data={data} />
         </div>
     );
 }

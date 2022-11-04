@@ -1,11 +1,11 @@
 import React from 'react';
 import { ReplayBindGroup } from '../../../../replay';
-import { ValueObject } from '../../../components/Value/Value';
+import { JsonValueObject } from '../../../components/JsonValue/JsonValue';
 
 export default function BindGroupVis({ data }: { data: ReplayBindGroup }) {
     return (
         <div className="spector2-vis">
-            <ValueObject data={data} />
+            <JsonValueObject data={data} />
         </div>
     );
 }

@@ -5,7 +5,8 @@ import Checkbox from '../../../components/Checkbox/Checkbox';
 import Range from '../../../components/Range/Range';
 import SelectSimple from '../../../components/SelectSimple/SelectSimple';
 import { ReplayBuffer } from '../../../../replay';
-import { ValueNumber, ValueObject } from '../../../components/Value/Value';
+import { ValueObject } from '../../../components/Value/Value';
+import ValueNumber from '../../../components/ValueNumber/ValueNumber';
 import { roundUpToMultipleOf } from '../../../lib/math-utils';
 
 import './BufferVis.css';
@@ -191,6 +192,7 @@ export default function BufferVis({ data }: { data: ReplayBuffer }) {
         <div className="spector2-vis">
             <div className="spector2-buffer-vis">
                 <ValueObject data={data} />
+                <div className="spector2-top-separator"></div>
                 <div className="spector2-buffer-vis-controls">
                     <SelectSimple label="" value={type} options={s_typesKeys} onChange={setType} />
                     <Range label="columns:" min={1} max={64} value={columns} onChange={setColumns} />

@@ -1,7 +1,8 @@
 .spector2-replay-group {
-  border-bottom: 2px solid var(--spector2-table-cell-border-color);
-  padding: 5px;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--spector2-table-cell-border-color);
+  border-bottom: 1px solid var(--spector2-table-cell-border-color);
+  margin-bottom: 2px;
 }
 
 .spector2-replay-resources {
