@@ -106,7 +106,7 @@ export const getComponentForReplayClass = (Class: Function) => {
 
 export const canDisplayInline = (v: any) => s_replayClassToComponent.has(Object.getPrototypeOf(v).constructor);
 
-type PropertyNameToComponentMap = Record<string, ValueComponent>;
+export type PropertyNameToComponentMap = Record<string, ValueComponent>;
 
 const GPUBufferUsageValue = ({ data }: { data: number }) => {
     return <div className="spector2-value-bitmask">{gpuBufferUsageToString(data)}</div>;

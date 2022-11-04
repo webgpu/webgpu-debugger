@@ -61,7 +61,10 @@ export default function ReplayVis({ data }: { data: Replay }) {
                             open={open[nameNdx]}
                             className="spector2-replay-group"
                             key={`n${nameNdx}`}
-                            onToggle={e => setOpenNdx(nameNdx, (e.target as HTMLDetailsElement).open)}
+                            onToggle={e => {
+                                e.stopPropagation();
+                                setOpenNdx(nameNdx, (e.target as HTMLDetailsElement).open);
+                            }}
                         >
                             <summary className="spector2-replay-heading">
                                 {name} ({Object.values(resources).length})

@@ -1,7 +1,12 @@
 /* eslint-disable @typescript-eslint/ban-types */
-import React from 'react';
+import React, { useState } from 'react';
 import { isBaseObject, isExcludedPropertyName } from '../../lib/object-utils';
-import { getComponentForReplayClass, getSpecialPropertiesForClass, ValueComponent } from '../VisValue/VisValue';
+import {
+    getComponentForReplayClass,
+    getSpecialPropertiesForClass,
+    PropertyNameToComponentMap,
+    ValueComponent,
+} from '../VisValue/VisValue';
 import ValueNumber from '../ValueNumber/ValueNumber';
 
 import './JsonValue.css';
@@ -41,86 +46,218 @@ function JsonValueProperty({ component, depth, data }: { component?: ValueCompon
     return component ? React.createElement(component, { data }) : <JsonValue depth={depth} data={data} />;
 }
 
+interface JsonValueObjectValueProps {
+    propName: string;
+    value: any;
+    childDepth: number;
+    specialProperties: PropertyNameToComponentMap;
+}
+
+function JsonValueObjectValueBasic({ propName, value, childDepth, specialProperties }: JsonValueObjectValueProps) {
+    return (
+        <div className="spector2-jsonvalue-key-value">
+            <div className="spector2-jsonvalue-key">{propName}:</div>
+            <div className="spector2-jsonvalue-value">
+                <JsonValueProperty component={specialProperties[propName]} depth={childDepth} data={value} />,
+            </div>
+        </div>
+    );
+}
+
+function JsonValueObjectValueObject({ propName, value, childDepth, specialProperties }: JsonValueObjectValueProps) {
+    const [open, setOpen] = useState(true);
+    const objectHasKeys = Object.keys(value).length > 0;
+    return (
+        <details
+            open={open}
+            onToggle={e => {
+                e.stopPropagation();
+                setOpen((e.target as HTMLDetailsElement).open);
+            }}
+            className="spector2-jsonvalue-key-value-expandable"
+        >
+            <summary>
+                {propName}: {objectHasKeys ? (open ? `{` : `{...},`) : `{},`}
+            </summary>
+
+            {objectHasKeys && (
+                <div style={{ display: open ? '' : 'none' }}>
+                    <div className="spector2-jsonvalue-key-value-expandable-value">
+                        <JsonValueProperty component={specialProperties[propName]} depth={childDepth} data={value} />
+                    </div>
+                    <div className="spector2-jsonvalue-close-symbol">{'},'}</div>
+                </div>
+            )}
+        </details>
+    );
+}
+
+function JsonValueObjectValueArray({ propName, value, childDepth }: JsonValueObjectValueProps) {
+    const [open, setOpen] = useState(true);
+    const arrayHasElements = value.length > 0;
+    return (
+        <details
+            open={open}
+            onToggle={e => {
+                e.stopPropagation();
+                setOpen((e.target as HTMLDetailsElement).open);
+            }}
+            className="spector2-jsonvalue-key-value-expandable"
+        >
+            <summary>
+                {propName}: {arrayHasElements ? (open ? `[` : `[...]`) : `[],`}
+            </summary>
+
+            {arrayHasElements && (
+                <div style={{ display: open ? '' : 'none' }}>
+                    <div className="spector2-jsonvalue-key-value-expandable-value">
+                        <JsonValueArray depth={childDepth} data={value} />
+                    </div>
+                    <div className="spector2-jsonvalue-close-symbol">{'],'}</div>
+                </div>
+            )}
+        </details>
+    );
+}
+
+function JsonValueObjectValue({ propName, value, childDepth, specialProperties }: JsonValueObjectValueProps) {
+    if (isExcludedPropertyName(propName)) {
+        return <React.Fragment />;
+    }
+
+    const valueType = getValueType(value);
+    switch (valueType) {
+        default:
+        case ValueType.kBasic:
+            return (
+                <JsonValueObjectValueBasic
+                    value={value}
+                    propName={propName}
+                    childDepth={childDepth}
+                    specialProperties={specialProperties}
+                />
+            );
+        case ValueType.kObject:
+            return (
+                <JsonValueObjectValueObject
+                    value={value}
+                    propName={propName}
+                    childDepth={childDepth}
+                    specialProperties={specialProperties}
+                />
+            );
+
+        case ValueType.kArray:
+            return (
+                <JsonValueObjectValueArray
+                    value={value}
+                    propName={propName}
+                    childDepth={childDepth}
+                    specialProperties={specialProperties}
+                />
+            );
+    }
+}
+
 export function JsonValueObject({ depth, data }: { depth?: number; data: Record<string, any> }) {
     const childDepth = (depth || 0) + 1;
     const ctor = Object.getPrototypeOf(data).constructor;
     const specialProperties = getSpecialPropertiesForClass(ctor);
     return (
         <div className={`spector2-value-object spector2-value-depth${depth}`}>
-            {Object.entries(data).map(([key, value], ndx) => {
-                if (isExcludedPropertyName(key)) {
-                    return <React.Fragment key={`p${ndx}`} />;
-                }
-
-                const valueType = getValueType(value);
-                switch (valueType) {
-                    default:
-                    case ValueType.kBasic:
-                        return (
-                            <div className="spector2-jsonvalue-key-value" key={`p${ndx}`}>
-                                <div key={`k${ndx}`} className="spector2-jsonvalue-key">
-                                    {key}:
-                                </div>
-                                <div className="spector2-jsonvalue-value">
-                                    <JsonValueProperty
-                                        component={specialProperties[key]}
-                                        key={`v${ndx}`}
-                                        depth={childDepth}
-                                        data={value}
-                                    />
-                                    ,
-                                </div>
-                            </div>
-                        );
-
-                    case ValueType.kObject:
-                        return (
-                            <details open={true} className="spector2-jsonvalue-key-value-expandable" key={`p${ndx}`}>
-                                {Object.keys(value).length ? (
-                                    <React.Fragment>
-                                        <summary>
-                                            {key}: {'{'}
-                                        </summary>
-                                        <div className="spector2-jsonvalue-key-value-expandable-value">
-                                            <JsonValueProperty
-                                                component={specialProperties[key]}
-                                                key={`v${ndx}`}
-                                                depth={childDepth}
-                                                data={value}
-                                            />
-                                        </div>
-                                        <div className="spector2-jsonvalue-close-symbol">{'},'}</div>
-                                    </React.Fragment>
-                                ) : (
-                                    <summary>
-                                        {key}: {`{},`}
-                                    </summary>
-                                )}
-                            </details>
-                        );
-
-                    case ValueType.kArray:
-                        return (
-                            <details open={true} className="spector2-jsonvalue-key-value-expandable" key={`p${ndx}`}>
-                                {value.length ? (
-                                    <React.Fragment>
-                                        <summary>
-                                            {key}: {'['}
-                                        </summary>
-                                        <div className="spector2-jsonvalue-key-value-expandable-value">
-                                            <JsonValueArray depth={childDepth} data={value} />
-                                        </div>
-                                        <div className="spector2-jsonvalue-close-symbol">{'],'}</div>
-                                    </React.Fragment>
-                                ) : (
-                                    <summary>{key}: [],</summary>
-                                )}
-                            </details>
-                        );
-                }
-            })}
+            {Object.entries(data).map(([key, value], ndx) => (
+                <JsonValueObjectValue
+                    key={`e${childDepth}-${ndx}`}
+                    propName={key}
+                    value={value}
+                    childDepth={childDepth}
+                    specialProperties={specialProperties}
+                />
+            ))}
         </div>
     );
+}
+
+interface JsonValueArrayValueProps {
+    value: any;
+    childDepth: number;
+}
+
+function JsonValueArrayValueBasic({ value, childDepth }: JsonValueArrayValueProps) {
+    return (
+        <div className="spector2-jsonvalue-key-value">
+            <div className="spector2-jsonvalue-value">
+                <JsonValue depth={childDepth} data={value} />,
+            </div>
+        </div>
+    );
+}
+
+function JsonValueArrayValueObject({ value, childDepth }: JsonValueArrayValueProps) {
+    const [open, setOpen] = useState(true);
+    const objectHasKeys = Object.keys(value).length > 0;
+    return (
+        <details
+            open={open}
+            onToggle={e => {
+                e.stopPropagation();
+                setOpen((e.target as HTMLDetailsElement).open);
+            }}
+            className="spector2-jsonvalue-key-value-expandable"
+        >
+            <summary>{objectHasKeys ? (open ? `{` : `{...},`) : `{},`}</summary>
+
+            {objectHasKeys && (
+                <div style={{ display: open ? '' : 'none' }}>
+                    <div className="spector2-jsonvalue-key-value-expandable-value">
+                        <JsonValue depth={childDepth} data={value} />
+                    </div>
+                    <div className="spector2-jsonvalue-close-symbol">{'},'}</div>
+                </div>
+            )}
+        </details>
+    );
+}
+
+function JsonValueArrayValueArray({ value, childDepth }: JsonValueArrayValueProps) {
+    const [open, setOpen] = useState(true);
+    const arrayHasElements = value.length > 0;
+    return (
+        <details
+            open={open}
+            onToggle={e => {
+                e.stopPropagation();
+                setOpen((e.target as HTMLDetailsElement).open);
+            }}
+            className="spector2-jsonvalue-key-value-expandable"
+        >
+            <summary>{arrayHasElements ? (open ? `[` : `[...],`) : `[],`}</summary>
+
+            {arrayHasElements && (
+                <div style={{ display: open ? '' : 'none' }}>
+                    <div className="spector2-jsonvalue-key-value-expandable-value">
+                        <JsonValueArray depth={childDepth} data={value} />
+                    </div>
+                    <div className="spector2-jsonvalue-close-symbol">{'],'}</div>
+                </div>
+            )}
+        </details>
+    );
+}
+
+function JsonValueArrayValue({ value, childDepth }: { value: any; childDepth: number }) {
+    const valueType = getValueType(value);
+    switch (valueType) {
+        default:
+        case ValueType.kBasic:
+            return <JsonValueArrayValueBasic value={value} childDepth={childDepth} />;
+
+        case ValueType.kObject:
+            return <JsonValueArrayValueObject value={value} childDepth={childDepth} />;
+
+        case ValueType.kArray:
+            return <JsonValueArrayValueArray value={value} childDepth={childDepth} />;
+    }
 }
 
 function JsonValueArray({ depth, data }: { depth?: number; data: any[] }) {
@@ -128,62 +265,9 @@ function JsonValueArray({ depth, data }: { depth?: number; data: any[] }) {
     return (
         <div className={`spector2-value-array spector2-value-depth${depth}`}>
             <div>
-                {data.map((value, ndx) => {
-                    const valueType = getValueType(value);
-                    switch (valueType) {
-                        default:
-                        case ValueType.kBasic:
-                            return (
-                                <div className="spector2-jsonvalue-key-value" key={`p${ndx}`}>
-                                    <div className="spector2-jsonvalue-value">
-                                        <JsonValue depth={childDepth} data={value} />,
-                                    </div>
-                                </div>
-                            );
-
-                        case ValueType.kObject:
-                            return (
-                                <details
-                                    open={true}
-                                    className="spector2-jsonvalue-key-value-expandable"
-                                    key={`p${ndx}`}
-                                >
-                                    {Object.keys(value).length ? (
-                                        <React.Fragment>
-                                            <summary>{'{'}</summary>
-                                            <div className="spector2-jsonvalue-key-value-expandable-value">
-                                                <JsonValue depth={childDepth} data={value} />
-                                            </div>
-                                            <div className="spector2-jsonvalue-close-symbol">{'},'}</div>
-                                        </React.Fragment>
-                                    ) : (
-                                        <summary>{`{},`}</summary>
-                                    )}
-                                </details>
-                            );
-
-                        case ValueType.kArray:
-                            return (
-                                <details
-                                    open={true}
-                                    className="spector2-jsonvalue-key-value-expandable"
-                                    key={`p${ndx}`}
-                                >
-                                    {value.length ? (
-                                        <React.Fragment>
-                                            <summary>{'['}</summary>
-                                            <div className="spector2-jsonvalue-key-value-expandable-value">
-                                                <JsonValueArray depth={childDepth} data={value} />
-                                            </div>
-                                            <div className="spector2-jsonvalue-close-symbol">{'],'}</div>
-                                        </React.Fragment>
-                                    ) : (
-                                        <summary>[],</summary>
-                                    )}
-                                </details>
-                            );
-                    }
-                })}
+                {data.map((value, ndx) => (
+                    <JsonValueArrayValue key={`a${childDepth}-${ndx}`} value={value} childDepth={childDepth} />
+                ))}
             </div>
         </div>
     );
