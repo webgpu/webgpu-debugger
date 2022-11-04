@@ -348,7 +348,6 @@ export class UIStateHelper {
 
     saveLayout = () => {
         if (this.paneAPI) {
-            console.log('save-layout');
             const layout = this.paneAPI.getLayoutJson();
             const paneTypes = Object.fromEntries(
                 Object.entries(this.state.paneIdToViewType).map(([paneId, viewType]) => {
@@ -363,7 +362,6 @@ export class UIStateHelper {
                 null,
                 2
             );
-            console.log(str);
             localStorage.setItem(spector2LocalStorageId, str);
         }
     };
