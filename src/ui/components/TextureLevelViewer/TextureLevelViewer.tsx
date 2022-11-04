@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useContext, PointerEvent } from 'react';
+import React, { useState, useRef, useEffect, useContext, CSSProperties } from 'react';
 import { ReplayTexture } from '../../../replay';
 import { getUnwrappedGPUCanvasContext } from '../../../capture';
 import { UIStateContext } from '../../contexts/UIStateContext';
@@ -6,6 +6,7 @@ import Checkbox from '../../components/Checkbox/Checkbox';
 import SelectSimple from '../../components/SelectSimple/SelectSimple';
 import Range from '../../components/Range/Range';
 import { TextureRenderer, CubeTextureRenderer, TextureColorPicker } from './TextureRenderer';
+import ColorPickerResult from './ColorPickerResult';
 
 import './TextureLevelViewer.css';
 
@@ -34,6 +35,9 @@ const TextureLevelViewer: React.FC<Props> = ({
     const [mipLevel, setMipLevel] = useState(baseMipLevel);
     const [arrayLayer, setArrayLayer] = useState(baseArrayLayer);
     const [display, setDisplay] = useState(displayType);
+    const [colorPosition, setColorPosition] = useState({ x: 0, y: 0 });
+    const [colorValues, setColorValues] = useState(new Float32Array(4));
+    const [colorResultStyle, setColorResultStyle] = useState({ display: 'none' } as CSSProperties);
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const { helper } = useContext(UIStateContext);
@@ -48,34 +52,6 @@ const TextureLevelViewer: React.FC<Props> = ({
     const maxMipLevel = baseMipLevel + mipLevelCount - 1;
     const maxArrayLayer = baseArrayLayer + arrayLayerCount - 1;
 
-    let angleX = 0;
-    let angleY = 0;
-    let dragging = false;
-    async function pointerDown(e: PointerEvent<HTMLCanvasElement>) {
-        if (display === 'cube') {
-            dragging = true;
-        } else {
-            const picker = TextureColorPicker.getColorPickerForDevice(texture.device.webgpuObject!);
-            const x = Math.floor(e.nativeEvent.offsetX * (e.target.width / e.target.offsetWidth));
-            const y = Math.floor(e.nativeEvent.offsetY * (e.target.height / e.target.offsetHeight));
-            const result = await picker.getColor(texture.webgpuObject, x, y, mipLevel, arrayLayer);
-            console.log(
-                `Color picker result for (${x}, ${y}): [${result[0]}, ${result[1]}, ${result[2]}, ${result[3]}]`
-            );
-        }
-    }
-
-    function pointerUp() {
-        dragging = false;
-    }
-
-    function pointerMove(e: PointerEvent<HTMLCanvasElement>) {
-        if (dragging) {
-            angleX += e.movementX * DEG_TO_RAD;
-            angleY += e.movementY * DEG_TO_RAD;
-        }
-    }
-
     useEffect(() => {
         const device = texture.device.webgpuObject!;
 
@@ -89,6 +65,46 @@ const TextureLevelViewer: React.FC<Props> = ({
             format: navigator.gpu.getPreferredCanvasFormat(),
             alphaMode: 'premultiplied',
         });
+
+        let angleX = 0;
+        let angleY = 0;
+        let dragging = false;
+        const pointerDown = (e: PointerEvent) => {
+            if (display === 'cube') {
+                dragging = true;
+            }
+        };
+        const pointerUp = () => {
+            dragging = false;
+        };
+        const pointerEnter = () => {};
+        const pointerLeave = () => {
+            setColorResultStyle({ display: 'none' });
+        };
+        const pointerMove = async (e: PointerEvent) => {
+            if (dragging) {
+                angleX += e.movementX * DEG_TO_RAD;
+                angleY += e.movementY * DEG_TO_RAD;
+            } else if (display === '2d') {
+                const picker = TextureColorPicker.getColorPickerForDevice(device);
+                const x = Math.floor(e.offsetX * (canvas.width / canvas.offsetWidth));
+                const y = Math.floor(e.offsetY * (canvas.height / canvas.offsetHeight));
+                const result = await picker.getColor(texture.webgpuObject, x, y, mipLevel, arrayLayer);
+                setColorPosition({ x, y });
+                setColorValues(result);
+                setColorResultStyle({
+                    display: 'block',
+                    left: e.offsetX + canvas.offsetLeft + 5,
+                    top: e.offsetY + canvas.offsetTop + 5,
+                });
+            }
+        };
+
+        canvas.addEventListener('pointerdown', pointerDown);
+        canvas.addEventListener('pointerup', pointerUp);
+        canvas.addEventListener('pointerenter', pointerEnter);
+        canvas.addEventListener('pointerleave', pointerLeave);
+        canvas.addEventListener('pointermove', pointerMove);
 
         let rafId = -1;
         const draw = () => {
@@ -111,7 +127,14 @@ const TextureLevelViewer: React.FC<Props> = ({
         draw();
 
         return () => {
+            setColorResultStyle({ display: 'none' });
             cancelAnimationFrame(rafId);
+
+            canvas.removeEventListener('pointerdown', pointerDown);
+            canvas.removeEventListener('pointerup', pointerUp);
+            canvas.removeEventListener('pointerenter', pointerEnter);
+            canvas.removeEventListener('pointerleave', pointerLeave);
+            canvas.removeEventListener('pointermove', pointerMove);
         };
     }, [texture, mipLevel, arrayLayer, display, helper.state.replayCount]);
 
@@ -149,13 +172,8 @@ const TextureLevelViewer: React.FC<Props> = ({
                 </div>
             )}
             <div className="spector2-textureviewer-canvascontainer">
-                <canvas
-                    ref={canvasRef}
-                    className={actualSize ? display : `fill ${display}`}
-                    onPointerDown={pointerDown}
-                    onPointerUp={pointerUp}
-                    onPointerMove={pointerMove}
-                />
+                <ColorPickerResult position={colorPosition} values={colorValues} style={colorResultStyle} />
+                <canvas ref={canvasRef} className={actualSize ? display : `fill ${display}`} />
             </div>
         </div>
     );

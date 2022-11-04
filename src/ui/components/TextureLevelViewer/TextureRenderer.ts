@@ -494,6 +494,7 @@ export class TextureColorPicker {
             code: `
             @group(0) @binding(0) var<uniform> pixelCoord : vec2<u32>;
             @group(0) @binding(1) var<storage, read_write> result : array<vec4<f32>>;
+            @group(0) @binding(1) var<storage, read_write> depthResult : array<f32>;
 
             @group(0) @binding(2) var img : texture_2d<f32>;
             @compute @workgroup_size(1)
@@ -504,8 +505,7 @@ export class TextureColorPicker {
             @group(0) @binding(2) var depthImg : texture_depth_2d;
             @compute @workgroup_size(1)
             fn depthPickerMain() {
-                let depth = textureLoad(depthImg, pixelCoord, 0);
-                result[0] = vec4(depth, 0.0, 0.0, 0.0);
+                depthResult[0] = textureLoad(depthImg, pixelCoord, 0);
             }
 
             @group(0) @binding(2) var multiImg : texture_multisampled_2d<f32>;
@@ -522,8 +522,7 @@ export class TextureColorPicker {
             fn multiDepthPickerMain() {
                 let sampleCount = textureNumSamples(multiDepthImg);
                 for (var i = 0u; i < sampleCount; i += 1u) {
-                    let depth = textureLoad(multiDepthImg, pixelCoord, i);
-                    result[i] = vec4(depth, 0.0, 0.0, 0.0);
+                    depthResult[i] = textureLoad(multiDepthImg, pixelCoord, i);
                 }
             }
         `,
@@ -697,7 +696,15 @@ export class TextureColorPicker {
 
         const result = await this.resolveReadbackBuffer(readbackBuffer);
 
-        return new Float32Array(result, 0, texture.sampleCount * 4);
+        switch (formatType) {
+            case 'color':
+                return new Float32Array(result, 0, texture.sampleCount * 4);
+            case 'depth':
+                return new Float32Array(result, 0, texture.sampleCount);
+            default:
+                console.warn(`Color picker not supported for texture format type ${formatType}`);
+                return new Float32Array(4);
+        }
     }
 
     // Get or create a texture color picker for the given device.
