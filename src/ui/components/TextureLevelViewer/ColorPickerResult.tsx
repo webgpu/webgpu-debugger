@@ -1,7 +1,6 @@
 import React, { CSSProperties } from 'react';
-import { TabFloating } from '../../../../dist/3rdParty/FlexLayout/src/view/TabFloating';
 
-import './TextureLevelViewer.css';
+import './ColorPickerResult.css';
 
 interface Props {
     position: { x: number; y: number };

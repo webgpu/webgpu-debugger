@@ -17,7 +17,8 @@
 - [X] Texture view
   - [X] Show textures, let you pick mips or show all mips?
   - [ ] Allow zooming
-  - [ ] allow inspecting colors under the cursor (show actual values)
+  - [x] allow inspecting colors under the cursor (show actual values)
+    - [ ] Allow copying of inspected color values
   - [ ] Magnifying glass
   - [ ] handle all texture formats
     - [ ] Formats that can't be put directly in a texture need to get rendered to a texture that can, 

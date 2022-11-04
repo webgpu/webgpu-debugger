@@ -5,7 +5,8 @@ import { UIStateContext } from '../../contexts/UIStateContext';
 import Checkbox from '../../components/Checkbox/Checkbox';
 import SelectSimple from '../../components/SelectSimple/SelectSimple';
 import Range from '../../components/Range/Range';
-import { TextureRenderer, CubeTextureRenderer, TextureColorPicker } from './TextureRenderer';
+import { TextureRenderer, CubeTextureRenderer } from './TextureRenderer';
+import { TextureColorPicker } from './TextureColorPicker';
 import ColorPickerResult from './ColorPickerResult';
 
 import './TextureLevelViewer.css';

@@ -1,0 +1,9 @@
+.spector2-colorpickerresult {
+  background-color: var(--spector2-bg-color);
+  position: absolute;
+  display: block;
+  border: 1px solid var(--spector2-table-cell-border-color);
+  border-radius: 3px;
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 50%);
+  width: 300px;
+}
