@@ -105,7 +105,7 @@ function JsonValueObjectValueArray({ propName, value, childDepth }: JsonValueObj
             className="spector2-jsonvalue-key-value-expandable"
         >
             <summary>
-                {propName}: {arrayHasElements ? (open ? `[` : `[...]`) : `[],`}
+                {propName}: {arrayHasElements ? (open ? `[` : `[...],`) : `[],`}
             </summary>
 
             {arrayHasElements && (
