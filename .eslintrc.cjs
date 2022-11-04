@@ -93,11 +93,14 @@ module.exports = {
         'require-trailing-comma/require-trailing-comma': [2],
         'semi-spacing': [2, { before: false, after: true }],
         semi: [2, 'always'],
-        'space-before-function-paren': [2, {
-            'anonymous': 'always',
-            'named': 'never',
-            'asyncArrow': 'always',
-        }],
+        'space-before-function-paren': [
+            2,
+            {
+                anonymous: 'always',
+                named: 'never',
+                asyncArrow: 'always',
+            },
+        ],
         'space-infix-ops': 2,
         'space-unary-ops': [2, { words: true, nonwords: false }],
         strict: [2, 'function'],
@@ -105,6 +108,7 @@ module.exports = {
         '@typescript-eslint/no-empty-function': 'off',
         '@typescript-eslint/no-explicit-any': 'off', // TODO: Reenable this and figure out how to fix code.
         '@typescript-eslint/no-non-null-assertion': 'off',
+        '@typescript-eslint/no-unused-vars': 2,
     },
     overrides: [
         {

@@ -64,7 +64,7 @@ export function execFileWithLiveOutput(exe, args) {
 async function main() {
     let success = false;
     try {
-        const { stdout, stderr } = await execFileWithLiveOutput('./node_modules/.bin/rollup', ['-c']);
+        const { stderr } = await execFileWithLiveOutput('./node_modules/.bin/rollup', ['-c']);
         success = !/\.tsx{0,1}: \(\d+:\d+\)/.test(stderr);
     } catch ({ stdout, stderr, error }) {
         //
