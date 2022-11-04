@@ -59,7 +59,9 @@ const TextureLevelViewer: React.FC<Props> = ({
             const x = Math.floor(e.nativeEvent.offsetX * (e.target.width / e.target.offsetWidth));
             const y = Math.floor(e.nativeEvent.offsetY * (e.target.height / e.target.offsetHeight));
             const result = await picker.getColor(texture.webgpuObject, x, y, mipLevel, arrayLayer);
-            console.log(`Color picker result for (${x}, ${y}): [${result[0]}, ${result[1]}, ${result[2]}, ${result[3]}]`);
+            console.log(
+                `Color picker result for (${x}, ${y}): [${result[0]}, ${result[1]}, ${result[2]}, ${result[3]}]`
+            );
         }
     }
 

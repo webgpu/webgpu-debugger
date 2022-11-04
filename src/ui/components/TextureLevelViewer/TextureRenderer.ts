@@ -606,7 +606,7 @@ export class TextureColorPicker {
         });
     }
 
-    readbackBuffers : GPUBuffer[] = new Array<GPUBuffer>();
+    readbackBuffers: GPUBuffer[] = [];
     getReadbackBuffer() {
         if (this.readbackBuffers.length) {
             return this.readbackBuffers.pop()!;
@@ -618,7 +618,7 @@ export class TextureColorPicker {
         }
     }
 
-    async resolveReadbackBuffer(readbackBuffer : GPUBuffer) {
+    async resolveReadbackBuffer(readbackBuffer: GPUBuffer) {
         await readbackBuffer.mapAsync(GPUMapMode.READ);
 
         const result = new ArrayBuffer(readbackBuffer.size);
