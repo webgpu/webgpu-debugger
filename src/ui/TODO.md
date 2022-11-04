@@ -39,16 +39,16 @@
         and then they can be regenerated from the capture (which is stored in
         a blob, can take no/less memory)
 
-- [ ] Load capture
-  - [ ] Load JSON
+- [X] Load capture
+  - [X] Load JSON
   - [ ] Load Zip
   - [ ] Load multiple JSON
   - [ ] Load multiple from zip 
   - [ ] Drag and Drop
 
-- [ ] Save Capture
+- [X] Save Capture
 
-- [ ] Add a most recently active view for each type of view
+- [X] Add a most recently active view for each type of view
 
       For example, when you click a buffer in the Steps view
       it should show the buffer in the most recent buffer view
@@ -79,12 +79,12 @@
 
 - [X] Let user drag/size UI (right now hard coded to 50%)
 
-- [ ] Let use drag and drop a value representing an object to create a new pane
+- [ ] Let user drag and drop a value representing an object to create a new pane
 
 - [ ] Add Icons for buttons
 
 - [ ] Add Icons for steps
 
-- [ ] Make it save layout to local storage
+- [X] Make it save layout to local storage
 
 - [ ] Add a syntax highlighter for shaders

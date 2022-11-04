@@ -142,16 +142,21 @@ interface IState {
     model: FlexLayout.Model;
 }
 
-class Debugger extends React.Component<any, IState> {
+interface IProps {
+    initialLayout?: FlexLayout.IJsonModel;
+}
+
+class Debugger extends React.Component<IProps, IState> {
     layoutRef?: React.RefObject<FlexLayout.Layout>;
 
-    constructor(props: any) {
+    constructor(props: IProps) {
         super(props);
+        const { initialLayout } = props;
 
         // add the enableClose flags
         // This is probably kind of silly to walk through and apply these.
         // Part of the design is left over from a previous pane library.
-        const layout = structuredClone(s_defaultLayout);
+        const layout = structuredClone(initialLayout ?? s_defaultLayout);
         for (const [paneId, viewData] of Object.entries(uiStateHelper.state.paneIdToViewType)) {
             const node = getJsonTabNodeByName(layout, paneId);
             node.enableClose = viewData.componentInfo.closable;
@@ -173,7 +178,12 @@ class Debugger extends React.Component<any, IState> {
             }
         };
 
-        uiStateHelper.setUpdatePaneFn(updatePane);
+        const getLayoutJson = () => this.state.model.toJson();
+
+        uiStateHelper.setPaneAPI({
+            updatePane,
+            getLayoutJson,
+        });
     }
     factory = (node: FlexLayout.TabNode) => {
         const component = node.getComponent();
@@ -222,6 +232,7 @@ class Debugger extends React.Component<any, IState> {
             const node = tabset.getSelectedNode() as FlexLayout.TabNode;
             uiStateHelper.setMostRecentPaneByPaneId(node.getName());
         }
+        uiStateHelper.saveLayout();
     };
     onRenderTab = (node: FlexLayout.TabNode, renderValues: FlexLayout.ITabRenderValues) => {
         const paneId = node.getName();

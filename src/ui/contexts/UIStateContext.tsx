@@ -6,10 +6,12 @@ import { arrayRemoveElementByValue } from '../lib/array-utils';
 import { requestUnwrappedAdapter } from '../../capture';
 import { loadReplay } from '../../replay';
 import { getDateForFilename } from '../lib/date-utils';
+import { spector2LocalStorageId } from '../globals';
 
 export type PaneComponentInfo = {
     component: PaneComponent;
     closable: boolean;
+    defaultName: string;
 };
 
 export type PaneComponent = React.FunctionComponent<{ data: any }> | React.ComponentClass<{ data: any }>;
@@ -76,6 +78,12 @@ export type UIStateSetterFn = <K extends keyof UIState>(
     callback?: (() => void) | undefined
 ) => void;
 
+// So we can communicate to FlexLayout in the Debugger component
+export interface PaneAPI {
+    updatePane: UpdatePaneFn;
+    getLayoutJson: () => any;
+}
+
 type UpdatePaneFn = (paneId: string, enableClose: boolean) => void;
 
 export class UIStateHelper {
@@ -90,7 +98,7 @@ export class UIStateHelper {
     replayAPI?: ReplayAPI;
     nextTraceId = 1;
 
-    updatePaneFn?: UpdatePaneFn;
+    paneAPI?: PaneAPI;
 
     setState: UIStateSetterFn = (state: any) => {
         if (!this.stateUpdateQueued) {
@@ -130,6 +138,10 @@ export class UIStateHelper {
     registerAPI(api: Partial<ReplayAPI>) {
         this.replayAPI = api as ReplayAPI;
     }
+
+    getComponentInfoByComponentName = (componentName: string) => {
+        return this.paneComponentInfosByName[componentName];
+    };
 
     registerPaneComponent = (name: string, componentInfo: PaneComponentInfo) => {
         this.paneComponentInfosByName[name] = componentInfo;
@@ -180,9 +192,10 @@ export class UIStateHelper {
         paneIdToViewType[paneId] = { componentInfo, name, data };
         this.setState({ paneIdToViewType });
         this.setMostRecentPaneIdForComponentType(componentName, paneId);
-        if (this.updatePaneFn) {
-            this.updatePaneFn(paneId, componentInfo.closable);
+        if (this.paneAPI) {
+            this.paneAPI.updatePane(paneId, componentInfo.closable);
         }
+        this.saveLayout();
     };
 
     deletePaneByPaneId(paneId: string) {
@@ -333,8 +346,30 @@ export class UIStateHelper {
         this.setGPUState(gpuState);
     };
 
-    setUpdatePaneFn = (updatePaneFn: UpdatePaneFn) => {
-        this.updatePaneFn = updatePaneFn;
+    saveLayout = () => {
+        if (this.paneAPI) {
+            console.log('save-layout');
+            const layout = this.paneAPI.getLayoutJson();
+            const paneTypes = Object.fromEntries(
+                Object.entries(this.state.paneIdToViewType).map(([paneId, viewType]) => {
+                    return [paneId, viewType.componentInfo.component.name];
+                })
+            );
+            const str = JSON.stringify(
+                {
+                    layout,
+                    paneTypes,
+                },
+                null,
+                2
+            );
+            console.log(str);
+            localStorage.setItem(spector2LocalStorageId, str);
+        }
+    };
+
+    setPaneAPI = (paneAPI: PaneAPI) => {
+        this.paneAPI = paneAPI;
     };
 }
 
