@@ -5,7 +5,7 @@ import { UIStateContext } from '../../contexts/UIStateContext';
 import Checkbox from '../../components/Checkbox/Checkbox';
 import SelectSimple from '../../components/SelectSimple/SelectSimple';
 import Range from '../../components/Range/Range';
-import { TextureRenderer, CubeTextureRenderer } from './TextureRenderer';
+import { TextureRenderer, CubeTextureRenderer, TextureColorPicker } from './TextureRenderer';
 
 import './TextureLevelViewer.css';
 
@@ -51,8 +51,16 @@ const TextureLevelViewer: React.FC<Props> = ({
     let angleX = 0;
     let angleY = 0;
     let dragging = false;
-    function pointerDown() {
-        dragging = true;
+    async function pointerDown(e: PointerEvent<HTMLCanvasElement>) {
+        if (display === 'cube') {
+            dragging = true;
+        } else {
+            const picker = TextureColorPicker.getColorPickerForDevice(texture.device.webgpuObject!);
+            const x = Math.floor(e.nativeEvent.offsetX * (e.target.width / e.target.offsetWidth));
+            const y = Math.floor(e.nativeEvent.offsetY * (e.target.height / e.target.offsetHeight));
+            const result = await picker.getColor(texture.webgpuObject, x, y, mipLevel, arrayLayer);
+            console.log(`Color picker result for (${x}, ${y}): [${result[0]}, ${result[1]}, ${result[2]}, ${result[3]}]`);
+        }
     }
 
     function pointerUp() {
@@ -60,7 +68,7 @@ const TextureLevelViewer: React.FC<Props> = ({
     }
 
     function pointerMove(e: PointerEvent<HTMLCanvasElement>) {
-        if (dragging && display === 'cube') {
+        if (dragging) {
             angleX += e.movementX * DEG_TO_RAD;
             angleY += e.movementY * DEG_TO_RAD;
         }
