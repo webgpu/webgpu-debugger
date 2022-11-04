@@ -195,7 +195,7 @@ export class TextureColorPicker {
                 entries,
             });
         } else {
-            console.warn(`No approprate pipeline found for texture type "${type}"`);
+            console.warn(`No appropriate pipeline found for texture type "${type}"`);
         }
 
         const commandEncoder = this.device.createCommandEncoder();
