@@ -34,6 +34,11 @@ export type TraceInfo = {
     replayUUID: string; // Because react wants state to be flat
 };
 
+export type UISettings = {
+    showCommandArgNames: boolean;
+    wrapCommands: boolean;
+};
+
 export type UIState = {
     paneIdToViewType: PaneIdToViewType;
     fullUI: boolean;
@@ -46,6 +51,9 @@ export type UIState = {
 
     // This exists solely to force react to respond. It's incremented when state arrives from each "replayTo"
     replayCount: number;
+
+    // persistent UI settings (start with p_).
+    uiSettings: UISettings;
 };
 
 export type SetStateArgs = Partial<UIState>;
@@ -60,6 +68,10 @@ export function createUIState(state: SetStateArgs = {}): UIState {
             replaysByUUID: {},
             freePaneIds: [],
             replayCount: 0,
+            uiSettings: {
+                showCommandArgNames: true,
+                wrapCommands: true,
+            },
         },
         ...state,
     };
@@ -77,6 +89,8 @@ export type UIStateSetterFn = <K extends keyof UIState>(
         | null,
     callback?: (() => void) | undefined
 ) => void;
+
+//export type UIStateSetterFn = (state: Partial<UIState>) => void;
 
 // So we can communicate to FlexLayout in the Debugger component
 export interface PaneAPI {
@@ -116,6 +130,16 @@ export class UIStateHelper {
             console.warn('!!!!! Ugh!! Attempt to update more state before previous state has been submitted');
         }
         this.state = { ...state };
+    };
+
+    setUISettings = (settings: Partial<UISettings>) => {
+        this.setState({
+            uiSettings: {
+                ...this.state.uiSettings,
+                ...settings,
+            },
+        });
+        this.saveLayout();
     };
 
     setFullUI = (full: boolean) => {
@@ -354,14 +378,11 @@ export class UIStateHelper {
                     return [paneId, viewType.componentInfo.component.name];
                 })
             );
-            const str = JSON.stringify(
-                {
-                    layout,
-                    paneTypes,
-                },
-                null,
-                2
-            );
+            const str = JSON.stringify({
+                layout,
+                paneTypes,
+                uiSettings: this.state.uiSettings,
+            });
             localStorage.setItem(spector2LocalStorageId, str);
         }
     };

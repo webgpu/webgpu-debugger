@@ -7,6 +7,7 @@ import { classNames } from '../../lib/css';
 import { canDisplayInline } from '../../components/VisValue/VisValue';
 
 import './StepsVis.css';
+import Checkbox from '../../components/Checkbox/Checkbox';
 
 type StepsState = {
     currentStep: number[];
@@ -15,6 +16,7 @@ type StepsState = {
 type StepsContextData = {
     state: StepsState;
     playTo(step: number[]): void;
+    showCommandArgNames: boolean;
 };
 
 const arrayEqual = (a: any[], b: any[]) => {
@@ -62,19 +64,23 @@ function Json({ data }: { data: any }) {
 }
 
 function Arg({ k, v }: { k: string; v: any }) {
+    const { showCommandArgNames } = useContext(StepsContext)!;
+    const argName = showCommandArgNames ? `: ${k}` : '';
     if (Array.isArray(v)) {
-        return <div className="spector2-cmd-arg">[...]: {k}</div>;
+        return <div className="spector2-cmd-arg">[...]{argName}</div>;
     }
     if (typeof v === 'object') {
         return (
             <div className="spector2-cmd-arg">
-                {canDisplayInline(v) ? <Value data={v} /> : <Json data={v} />}: {k}
+                {canDisplayInline(v) ? <Value data={v} /> : <Json data={v} />}
+                {argName}
             </div>
         );
     }
     return (
         <div className="spector2-cmd-arg">
-            <Value data={v} />: {k}
+            <Value data={v} />
+            {argName}
         </div>
     );
 }
@@ -197,6 +203,13 @@ export default function StepsVis({ data }: StepsVisProps) {
     const [state, setState] = useState<StepsState>({
         currentStep: [],
     });
+    const { wrapCommands, showCommandArgNames } = helper.state.uiSettings;
+    const setWrapCommands = (wrapCommands: boolean) => {
+        helper.setUISettings({ wrapCommands });
+    };
+    const setShowCommandArgNames = (showCommandArgNames: boolean) => {
+        helper.setUISettings({ showCommandArgNames });
+    };
 
     const playTo = (step: number[]) => {
         if (data) {
@@ -220,10 +233,16 @@ export default function StepsVis({ data }: StepsVisProps) {
                         onChange={helper.setCurrentTraceByIndex}
                     />
                 </div>
-                <hr />
-                <StepsContext.Provider value={{ state, playTo }}>
-                    <Commands commands={replay!.commands} commandId={[]} />
-                </StepsContext.Provider>
+                <div>
+                    <Checkbox label="wrap:" checked={wrapCommands} onChange={setWrapCommands} />
+                    <Checkbox label="show arg names:" checked={showCommandArgNames} onChange={setShowCommandArgNames} />
+                </div>
+                <div className="spector2-top-separator"></div>
+                <div style={{ whiteSpace: wrapCommands ? 'normal' : 'nowrap' }}>
+                    <StepsContext.Provider value={{ state, playTo, showCommandArgNames }}>
+                        <Commands commands={replay!.commands} commandId={[]} />
+                    </StepsContext.Provider>
+                </div>
             </div>
         </div>
     );

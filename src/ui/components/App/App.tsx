@@ -7,6 +7,7 @@ import {
     PaneComponentInfo,
     PaneIdToViewType,
     UIProps,
+    UISettings,
     UIState,
     UIStateContext,
     UIStateHelper,
@@ -27,22 +28,27 @@ const ObjectVisComponentInfo: PaneComponentInfo = { component: ObjectVis, closab
 const ResultVisComponentInfo: PaneComponentInfo = { component: ResultVis, closable: false, defaultName: 'Result' };
 const ReplayVisComponentInfo: PaneComponentInfo = { component: ReplayVis, closable: false, defaultName: 'Resources' };
 
-function getInitialLayout(uiStateHelper: UIStateHelper): {
+function getPersistentSettings(uiStateHelper: UIStateHelper): {
     layout?: FlexLayout.IJsonModel;
     paneIdToViewType: PaneIdToViewType;
+    uiSettings?: UISettings;
 } {
     try {
-        const layoutStr = localStorage.getItem(spector2LocalStorageId);
-        if (layoutStr && layoutStr.length > 1 && layoutStr[0] === '{') {
-            const layout = JSON.parse(layoutStr);
-            if (layout && layout.layout && layout.paneTypes) {
-                const paneTypes = layout.paneTypes as Record<string, string>;
+        const persistentSettingsStr = localStorage.getItem(spector2LocalStorageId);
+        if (persistentSettingsStr && persistentSettingsStr.length > 1 && persistentSettingsStr[0] === '{') {
+            const settings = JSON.parse(persistentSettingsStr);
+            if (settings && settings.layout && settings.paneTypes) {
+                const paneTypes = settings.paneTypes as Record<string, string>;
                 const paneIdToViewType: PaneIdToViewType = {};
                 for (const [paneId, componentName] of Object.entries(paneTypes)) {
                     const componentInfo = uiStateHelper.getComponentInfoByComponentName(componentName);
                     paneIdToViewType[paneId] = { componentInfo, name: componentInfo.defaultName, data: null };
                 }
-                return { layout: layout.layout as FlexLayout.IJsonModel, paneIdToViewType };
+                return {
+                    layout: settings.layout as FlexLayout.IJsonModel,
+                    paneIdToViewType,
+                    uiSettings: settings.uiSettings || {},
+                };
             }
         }
     } catch (e) {
@@ -61,6 +67,13 @@ function getInitialLayout(uiStateHelper: UIStateHelper): {
     return { paneIdToViewType };
 }
 
+function normalizeUISettings(uiSettings: Partial<UISettings> = {}) {
+    return {
+        ...createUIState().uiSettings,
+        ...uiSettings,
+    };
+}
+
 class App extends React.Component<UIProps, UIState> {
     #layout?: FlexLayout.IJsonModel;
 
@@ -74,7 +87,7 @@ class App extends React.Component<UIProps, UIState> {
         uiStateHelper.registerPaneComponent('ResultVis', ResultVisComponentInfo);
         uiStateHelper.registerPaneComponent('ReplayVis', ReplayVisComponentInfo);
 
-        const { layout, paneIdToViewType } = getInitialLayout(uiStateHelper);
+        const { layout, paneIdToViewType, uiSettings } = getPersistentSettings(uiStateHelper);
         this.#layout = layout;
 
         const freePaneIds: string[] = [];
@@ -88,6 +101,7 @@ class App extends React.Component<UIProps, UIState> {
         this.state = createUIState({
             paneIdToViewType,
             freePaneIds,
+            uiSettings: normalizeUISettings(uiSettings),
         });
 
         uiStateHelper.setStateFn = (...args) => {
