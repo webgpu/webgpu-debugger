@@ -70,7 +70,7 @@ const TextureLevelViewer: React.FC<Props> = ({
         let angleX = 0;
         let angleY = 0;
         let dragging = false;
-        const pointerDown = (e: PointerEvent) => {
+        const pointerDown = () => {
             if (display === 'cube') {
                 dragging = true;
             }
