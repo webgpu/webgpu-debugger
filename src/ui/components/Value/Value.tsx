@@ -5,6 +5,7 @@ import { getComponentForReplayClass, getSpecialPropertiesForClass, ValueComponen
 import ValueNumber from '../ValueNumber/ValueNumber';
 
 import './Value.css';
+import { isTypedArray } from '../../lib/typedarray-utils';
 
 /*
 function PlaceHolder({ data }: { data: any }) {
@@ -47,12 +48,35 @@ export function ValueObject({ depth, data }: { depth?: number; data: Record<stri
     );
 }
 
-function ValueArray({ depth, data }: { depth?: number; data: any[] }) {
+// 0 - 4 values (should be 0-8?)
+function ValueSmallArray({ depth, data }: { depth?: number; data: any[] }) {
     const childDepth = (depth || 0) + 1;
+    // convert typedarray to array so map works.
+    const arr = Array.isArray(data) ? data : Array.from(data);
     return (
         <table className={`spector2-value-array spector2-value-depth${depth}`}>
             <tbody>
-                {data.map((v, ndx) => (
+                <tr>
+                    {arr.map((v, ndx) => (
+                        <td key={`e${ndx}`}>
+                            <Value depth={childDepth} data={v} />
+                        </td>
+                    ))}
+                </tr>
+            </tbody>
+        </table>
+    );
+}
+
+// 4 or more values
+function ValueLargeArray({ depth, data }: { depth?: number; data: any[] }) {
+    const childDepth = (depth || 0) + 1;
+    // convert typedarray to array so map works.
+    const arr = Array.isArray(data) ? data : Array.from(data);
+    return (
+        <table className={`spector2-value-array spector2-value-depth${depth}`}>
+            <tbody>
+                {arr.map((v, ndx) => (
                     <tr key={`e${ndx}`}>
                         <td>{ndx}</td>
                         <td>
@@ -62,6 +86,14 @@ function ValueArray({ depth, data }: { depth?: number; data: any[] }) {
                 ))}
             </tbody>
         </table>
+    );
+}
+
+function ValueArray({ depth, data }: { depth?: number; data: any[] }) {
+    return data.length <= 4 ? (
+        <ValueSmallArray data={data} depth={depth} />
+    ) : (
+        <ValueLargeArray data={data} depth={depth} />
     );
 }
 
@@ -76,7 +108,7 @@ export default function Value({ depth, data }: { depth?: number; data: any }) {
         return <ValueNumber data={data} />;
     } else if (typeof data === 'string') {
         return <div className="spector2-value-string">&quot;{data}&quot;</div>;
-    } else if (Array.isArray(data)) {
+    } else if (Array.isArray(data) || isTypedArray(data)) {
         return <ValueArray depth={depth} data={data} />;
     } else if (typeof data === 'function') {
         return <div className="spector2-value-function">{data.name}</div>;
