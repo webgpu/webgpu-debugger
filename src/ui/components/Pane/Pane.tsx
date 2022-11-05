@@ -1,6 +1,7 @@
 import React, { useContext } from 'react';
 import { PaneContext } from '../../contexts/PaneContext';
 import { UIStateContext } from '../../contexts/UIStateContext';
+import DragScroll from '../DragScroll/DragScroll';
 
 interface PaneProps {
     id: string;
@@ -16,11 +17,13 @@ const Pane: React.FC<PaneProps> = ({ id }) => {
     // This is a hack. See Debugger.tsx
     return (
         <PaneContext.Provider value={{ paneId: id }}>
-            {viewData && viewData.data ? (
-                React.createElement(viewData.componentInfo.component, { data: viewData.data })
-            ) : (
-                <div>no data</div>
-            )}
+            <DragScroll>
+                {viewData && viewData.data ? (
+                    React.createElement(viewData.componentInfo.component, { data: viewData.data })
+                ) : (
+                    <div>no data</div>
+                )}
+            </DragScroll>
         </PaneContext.Provider>
     );
 };

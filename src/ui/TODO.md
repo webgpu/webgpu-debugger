@@ -3,7 +3,7 @@
 - [ ] If they don't already, every resources should get a number (1, 2, 3), otherwise, if the user
       does not label them they all show up the same
 
-- [ ] Don't show a close button on the Steps, Results, and State panes
+- [X] Don't show a close button on the Steps, Results, and State panes
 
 - [X] Buffer view
 
