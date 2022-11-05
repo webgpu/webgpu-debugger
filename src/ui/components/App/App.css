@@ -68,11 +68,6 @@
   padding: 0;
 }
 
-/* this makes the first column the shortest */
-.spector2 td:nth-child(1) {
-  width: 1px;
-}
-
 .spector2 td+td {
   border-left: 1px solid var(--spector2-table-cell-border-color);
 }

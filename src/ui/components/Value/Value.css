@@ -5,3 +5,8 @@
   font-weight: bold;
   white-space: nowrap;
 }
+
+.spector2-value-key {
+  /* make the key column as short as possible */
+  width: 1px;
+}
