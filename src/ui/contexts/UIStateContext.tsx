@@ -42,6 +42,7 @@ export type UISettings = {
 export type UIState = {
     paneIdToViewType: PaneIdToViewType;
     fullUI: boolean;
+    showSettings: boolean;
     traces: TraceInfo[];
     currentTraceIndex: number;
 
@@ -63,6 +64,7 @@ export function createUIState(state: SetStateArgs = {}): UIState {
         ...{
             paneIdToViewType: {},
             fullUI: false,
+            showSettings: false,
             traces: [],
             currentTraceIndex: 0,
             replaysByUUID: {},
@@ -144,6 +146,10 @@ export class UIStateHelper {
 
     setFullUI = (full: boolean) => {
         this.setState({ fullUI: full });
+    };
+
+    setShowSettings = (show: boolean) => {
+        this.setState({ showSettings: show });
     };
 
     toggleUI = () => {

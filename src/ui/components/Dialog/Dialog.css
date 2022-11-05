@@ -1,0 +1,39 @@
+.spector2-dialog {
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.spector2-dialog>* {
+  background-color: var(--spector2-bg-color);
+  z-index: calc(var(--spector2-z-index) + 1);
+  border-radius: 5px;
+  padding: 1em;
+  max-width: 90%;
+  max-height: 90%;
+  overflow: auto;
+  width: 800px;
+  outline: none;
+}
+
+.spector2-dialog-heading {
+  display: flex;
+  justify-content: space-between;
+  font-size: x-large;
+  font-weight: bold;
+  margin: 10px;
+  position: relative;
+  user-select: none;
+}
+
+.spector2-dialog-content {
+  margin: 10px;
+}
+
+.spector2-dialog-close {
+  position: absolute;
+  right: 0;
+  top: 0;
+  vertical-align: top;
+}

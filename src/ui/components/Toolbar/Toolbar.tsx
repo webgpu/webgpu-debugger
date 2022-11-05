@@ -46,6 +46,7 @@ export default function Toolbar() {
                 <button onClick={helper.toggleUI}>⌃</button>
             </div>
             <div className="spector2-toolbar-right">
+                {/*<button onClick={() => helper.setShowSettings(true)}>⚙️</button>*/}
                 <a href="https://github.com/Kangz/spector2" target="_blank" rel="noreferrer">
                     🐞
                 </a>

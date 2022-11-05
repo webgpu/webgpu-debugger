@@ -2,9 +2,10 @@ import React from 'react';
 import Toolbar from '../Toolbar/Toolbar';
 import Pane from '../Pane/Pane';
 import * as FlexLayout from 'flexlayout-react';
+import Dialog from '../Dialog/Dialog';
 
 import { TileContext } from '../../contexts/TileContext';
-import { uiStateHelper } from '../../contexts/UIStateContext';
+import { UIStateContext, uiStateHelper } from '../../contexts/UIStateContext';
 
 import 'flexlayout-react/style/dark.css';
 import './Debugger.css';
@@ -272,6 +273,15 @@ class Debugger extends React.Component<IProps, IState> {
                         />
                     </TileContext.Provider>
                 </div>
+                <UIStateContext.Consumer>
+                    {({ helper }) =>
+                        helper.state.showSettings && (
+                            <Dialog title="settings" onClose={() => helper.setShowSettings(false)}>
+                                <div>hello</div>
+                            </Dialog>
+                        )
+                    }
+                </UIStateContext.Consumer>
             </div>
         );
     }
