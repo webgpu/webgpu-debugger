@@ -10,7 +10,7 @@ export class TextureColorPicker {
         this.device = device;
         const shaderModule = device.createShaderModule({
             code: `
-          @group(0) @binding(0) var<uniform> pixelCoord : vec2<u32>;
+          @group(0) @binding(0) var<uniform> pixelCoord : vec2<i32>;
           @group(0) @binding(1) var<storage, read_write> result : array<vec4<f32>>;
           @group(0) @binding(1) var<storage, read_write> depthResult : array<f32>;
 
@@ -29,8 +29,8 @@ export class TextureColorPicker {
           @group(0) @binding(2) var multiImg : texture_multisampled_2d<f32>;
           @compute @workgroup_size(1)
           fn multiPickerMain() {
-              let sampleCount = textureNumSamples(multiImg);
-              for (var i = 0u; i < sampleCount; i += 1u) {
+              let sampleCount = i32(textureNumSamples(multiImg));
+              for (var i = 0i; i < sampleCount; i += 1i) {
                   result[i] = textureLoad(multiImg, pixelCoord, i);
               }
           }
@@ -38,8 +38,8 @@ export class TextureColorPicker {
           @group(0) @binding(2) var multiDepthImg : texture_depth_multisampled_2d;
           @compute @workgroup_size(1)
           fn multiDepthPickerMain() {
-              let sampleCount = textureNumSamples(multiDepthImg);
-              for (var i = 0u; i < sampleCount; i += 1u) {
+              let sampleCount = i32(textureNumSamples(multiDepthImg));
+              for (var i = 0i; i < sampleCount; i += 1i) {
                   depthResult[i] = textureLoad(multiDepthImg, pixelCoord, i);
               }
           }

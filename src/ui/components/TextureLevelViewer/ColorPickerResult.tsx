@@ -12,23 +12,25 @@ const ColorPickerResult: React.FC<Props> = ({ position, values, style = {} }: Pr
     return (
         <div className="spector2-colorpickerresult" style={style}>
             <table>
-                <tr>
-                    <td
-                        rowSpan={2}
-                        style={{
-                            width: '40px',
-                            backgroundColor: `rgb(${values[0] * 255}, ${values[1] * 255}, ${values[2] * 255})`,
-                        }}
-                    ></td>
-                    <td>Coord:</td>
-                    <td>
-                        [{position.x}, {position.y}]
-                    </td>
-                </tr>
-                <tr>
-                    <td>Values:</td>
-                    <td>[{values.join(', ')}]</td>
-                </tr>
+                <tbody>
+                    <tr>
+                        <td
+                            rowSpan={2}
+                            style={{
+                                width: '40px',
+                                backgroundColor: `rgb(${values[0] * 255}, ${values[1] * 255}, ${values[2] * 255})`,
+                            }}
+                        ></td>
+                        <td>Coord:</td>
+                        <td>
+                            [{position.x}, {position.y}]
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Values:</td>
+                        <td>[{values.join(', ')}]</td>
+                    </tr>
+                </tbody>
             </table>
         </div>
     );

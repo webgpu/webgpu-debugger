@@ -46,11 +46,11 @@ export class TextureRenderer {
             @group(0) @binding(1) var multiImg : texture_multisampled_2d<f32>;
             @fragment
             fn multiFragmentMain(@location(0) texCoord : vec2<f32>) -> @location(0) vec4<f32> {
-                let sampleCount = textureNumSamples(multiImg);
+                let sampleCount = i32(textureNumSamples(multiImg));
                 let sampleCoord = vec2<i32>(texCoord * vec2<f32>(textureDimensions(multiImg)));
 
                 var accumValue : vec4<f32>;
-                for (var i = 0u; i < sampleCount; i += 1u) {
+                for (var i = 0i; i < sampleCount; i += 1i) {
                     accumValue += textureLoad(multiImg, sampleCoord, i);
                 }
                 return accumValue / f32(sampleCount);
@@ -59,11 +59,11 @@ export class TextureRenderer {
             @group(0) @binding(1) var multiDepthImg : texture_depth_multisampled_2d;
             @fragment
             fn multiDepthFragmentMain(@location(0) texCoord : vec2<f32>) -> @location(0) vec4<f32> {
-                let sampleCount = textureNumSamples(multiDepthImg);
+                let sampleCount = i32(textureNumSamples(multiDepthImg));
                 let sampleCoord = vec2<i32>(texCoord * vec2<f32>(textureDimensions(multiDepthImg)));
 
                 var accumValue : f32;
-                for (var i = 0u; i < sampleCount; i += 1u) {
+                for (var i = 0i; i < sampleCount; i += 1i) {
                     accumValue += textureLoad(multiDepthImg, sampleCoord, i);
                 }
                 return vec4(vec3(accumValue) / f32(sampleCount), 1.0);
@@ -256,23 +256,23 @@ export class CubeTextureRenderer {
                 // PosX (Right)
                 0, 2, 4,
                 6, 4, 2,
-            
+
                 // NegX (Left)
                 5, 3, 1,
                 3, 5, 7,
-            
+
                 // PosY (Top)
                 4, 1, 0,
                 1, 4, 5,
-            
+
                 // NegY (Bottom)
                 2, 3, 6,
                 7, 6, 3,
-            
+
                 // PosZ (Front)
                 0, 1, 2,
                 3, 2, 1,
-            
+
                 // NegZ (Back)
                 6, 5, 4,
                 5, 6, 7,
