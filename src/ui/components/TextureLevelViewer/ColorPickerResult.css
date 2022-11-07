@@ -7,3 +7,7 @@
   box-shadow: 2px 2px 5px rgba(0, 0, 0, 50%);
   width: 200px;
 }
+
+.spector2-colorpickerresult-color {
+  width: 1.5em;
+}
