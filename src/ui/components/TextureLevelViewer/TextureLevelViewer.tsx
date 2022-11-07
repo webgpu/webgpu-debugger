@@ -98,11 +98,23 @@ const TextureLevelViewer: React.FC<Props> = ({
                 const result = await picker.getColor(texture.webgpuObject, x, y, mipLevel, arrayLayer);
                 setColorPosition({ x, y });
                 setColorSamples(result);
-                setColorResultStyle({
+
+                const colorResultStyle: CSSProperties = {
                     display: 'block',
-                    left: e.offsetX + canvas.offsetLeft + 5,
-                    top: e.offsetY + canvas.offsetTop + 5,
-                });
+                    top: e.offsetY + canvas.offsetTop,
+                };
+
+                // Flip the color result to the other side of the cursor it it's more than half way
+                // across the panel, so that it doesn't overflow.
+                const resultOffsetX = e.offsetX + canvas.offsetLeft;
+                const parentWidth = canvas.parentElement!.parentElement!.offsetWidth;
+                if (resultOffsetX > parentWidth / 2) {
+                    colorResultStyle.right = parentWidth - e.offsetX;
+                } else {
+                    colorResultStyle.left = resultOffsetX + 5;
+                }
+
+                setColorResultStyle(colorResultStyle);
             }
         };
 

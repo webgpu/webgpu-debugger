@@ -15,15 +15,18 @@ const ColorPickerResult: React.FC<Props> = ({ position, samples, style = {} }: P
             <table>
                 <tbody>
                     <tr>
-                        <td colSpan={2}>Pixel (x: {position.x}, y: {position.y})
+                        <td colSpan={2}>
+                            Pixel (x: {position.x}, y: {position.y})
+                        </td>
                     </tr>
                     <tr>
                         <td colSpan={2}>Samples:</td>
                     </tr>
                     {samples.map((sample, ndx) => (
                         <tr key={`e${ndx}`}>
-                            <td className="spector2-colorpickerresult-color"
-                                style={{backgroundColor: sample.cssColor}}
+                            <td
+                                className="spector2-colorpickerresult-color"
+                                style={{ backgroundColor: sample.cssColor }}
                             ></td>
                             <td>[{sample.values.join(', ')}]</td>
                         </tr>
