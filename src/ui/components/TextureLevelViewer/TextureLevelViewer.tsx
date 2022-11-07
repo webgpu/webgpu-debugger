@@ -37,7 +37,12 @@ const TextureLevelViewer: React.FC<Props> = ({
     const [arrayLayer, setArrayLayer] = useState(baseArrayLayer);
     const [display, setDisplay] = useState(displayType);
     const [colorPosition, setColorPosition] = useState({ x: 0, y: 0 });
-    const [colorValues, setColorValues] = useState(new Float32Array(4));
+    const [colorSamples, setColorSamples] = useState([
+        {
+            values: [],
+            cssColor: 'rgb(0, 0, 0)',
+        },
+    ]);
     const [colorResultStyle, setColorResultStyle] = useState({ display: 'none' } as CSSProperties);
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -92,7 +97,7 @@ const TextureLevelViewer: React.FC<Props> = ({
                 const y = Math.floor(e.offsetY * (canvas.height / canvas.offsetHeight));
                 const result = await picker.getColor(texture.webgpuObject, x, y, mipLevel, arrayLayer);
                 setColorPosition({ x, y });
-                setColorValues(result);
+                setColorSamples(result);
                 setColorResultStyle({
                     display: 'block',
                     left: e.offsetX + canvas.offsetLeft + 5,
@@ -140,7 +145,7 @@ const TextureLevelViewer: React.FC<Props> = ({
     }, [texture, mipLevel, arrayLayer, display, helper.state.replayCount]);
 
     return (
-        <div className="spector2-textureviewer" style={{ imageRendering: pixelated ? 'pixelated' : 'auto' }}>
+        <div className="spector2-textureviewer">
             <div>
                 <Checkbox label="Display actual size:" checked={actualSize} onChange={setActualSize} />
                 <Checkbox label="Pixelated:" checked={pixelated} onChange={setPixelated} />
@@ -172,8 +177,11 @@ const TextureLevelViewer: React.FC<Props> = ({
                     />
                 </div>
             )}
-            <div className="spector2-textureviewer-canvascontainer">
-                <ColorPickerResult position={colorPosition} values={colorValues} style={colorResultStyle} />
+            <div
+                className="spector2-textureviewer-canvascontainer"
+                style={{ imageRendering: pixelated ? 'pixelated' : 'auto' }}
+            >
+                <ColorPickerResult position={colorPosition} samples={colorSamples} style={colorResultStyle} />
                 <canvas ref={canvasRef} className={actualSize ? display : `fill ${display}`} />
             </div>
         </div>

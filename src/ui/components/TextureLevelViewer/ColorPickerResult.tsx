@@ -1,35 +1,39 @@
 import React, { CSSProperties } from 'react';
+import { TextureSampleResult } from './TextureColorPicker';
 
 import './ColorPickerResult.css';
 
 interface Props {
     position: { x: number; y: number };
-    values: Float32Array;
+    samples: Array<TextureSampleResult>;
     style: CSSProperties;
 }
 
-const ColorPickerResult: React.FC<Props> = ({ position, values, style = {} }: Props) => {
+const ColorPickerResult: React.FC<Props> = ({ position, samples, style = {} }: Props) => {
     return (
         <div className="spector2-colorpickerresult" style={style}>
             <table>
                 <tbody>
                     <tr>
-                        <td
-                            rowSpan={2}
-                            style={{
-                                width: '40px',
-                                backgroundColor: `rgb(${values[0] * 255}, ${values[1] * 255}, ${values[2] * 255})`,
-                            }}
-                        ></td>
                         <td>Coord:</td>
                         <td>
                             [{position.x}, {position.y}]
                         </td>
                     </tr>
                     <tr>
-                        <td>Values:</td>
-                        <td>[{values.join(', ')}]</td>
+                        <td colSpan={2}>Samples:</td>
                     </tr>
+                    {samples.map((sample, ndx) => (
+                        <tr key={`e${ndx}`}>
+                            <td
+                                style={{
+                                    width: '1em',
+                                    backgroundColor: sample.cssColor,
+                                }}
+                            ></td>
+                            <td>[{sample.values.join(', ')}]</td>
+                        </tr>
+                    ))}
                 </tbody>
             </table>
         </div>

@@ -1,5 +1,10 @@
 import { kTextureFormatInfo } from '../../../capture';
 
+export interface TextureSampleResult {
+    values: Array<number>;
+    cssColor: string;
+}
+
 export class TextureColorPicker {
     device: GPUDevice;
     pipelines: Map<string, GPUComputePipeline> = new Map<string, GPUComputePipeline>();
@@ -147,6 +152,57 @@ export class TextureColorPicker {
         return result;
     }
 
+    formatResultSamples(
+        result: ArrayBuffer,
+        sampleCount: number,
+        format: GPUTextureFormat,
+        formatType: string
+    ): Array<TextureSampleResult> {
+        const resultArray = new Float32Array(result);
+
+        let componentFormatter;
+        if (format.includes('unorm')) {
+            componentFormatter = (v: number) => Math.floor(v * 255);
+        } else if (format.includes('snorm')) {
+            componentFormatter = (v: number) => Math.floor(v * 127);
+        } else {
+            componentFormatter = (v: number) => v;
+        }
+
+        const sampleResults = [];
+
+        switch (formatType) {
+            case 'color':
+                for (let i = 0; i < sampleCount; ++i) {
+                    sampleResults.push({
+                        values: [
+                            componentFormatter(resultArray[i * 4]),
+                            componentFormatter(resultArray[i * 4 + 1]),
+                            componentFormatter(resultArray[i * 4 + 2]),
+                            componentFormatter(resultArray[i * 4 + 3]),
+                        ],
+                        cssColor: `rgb(${resultArray[i * 4] * 255}, ${resultArray[i * 4 + 1] * 255}, ${
+                            resultArray[i * 4 + 2] * 255
+                        })`,
+                    });
+                }
+                break;
+            case 'depth':
+                for (let i = 0; i < sampleCount; ++i) {
+                    sampleResults.push({
+                        values: [componentFormatter(resultArray[i])],
+                        cssColor: `rgb(${resultArray[i] * 255}, ${resultArray[i] * 255}, ${resultArray[i] * 255})`,
+                    });
+                }
+                break;
+            default:
+                console.warn(`Color picker does not currently support ${formatType} textures.`);
+                return [];
+        }
+
+        return sampleResults;
+    }
+
     async getColor(texture: GPUTexture, x: number, y: number, mipLevel: number, layer: number) {
         const formatInfo = kTextureFormatInfo[texture.format];
         let formatType = formatInfo?.type;
@@ -215,16 +271,7 @@ export class TextureColorPicker {
         this.device.queue.submit([commandEncoder.finish()]);
 
         const result = await this.resolveReadbackBuffer(readbackBuffer);
-
-        switch (formatType) {
-            case 'color':
-                return new Float32Array(result, 0, texture.sampleCount * 4);
-            case 'depth':
-                return new Float32Array(result, 0, texture.sampleCount);
-            default:
-                console.warn(`Color picker not supported for texture format type ${formatType}`);
-                return new Float32Array(4);
-        }
+        return this.formatResultSamples(result, texture.sampleCount, texture.format, formatType);
     }
 
     // Get or create a texture color picker for the given device.
