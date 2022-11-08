@@ -18,3 +18,16 @@
 .spector2-jsonvalue-close-symbol {
   margin-left: 1em;
 }
+
+.spector2-jsonvalue-array-small,
+.spector2-jsonvalue-array-small>*,
+.spector2-jsonvalue-array-small>*>* {
+  display: flex;
+}
+
+.spector2-jsonvalue-array-small .spector2-jsonvalue-close-symbol,
+.spector2-jsonvalue-array-small .spector2-jsonvalue-key-value,
+.spector2-jsonvalue-array-small .spector2-jsonvalue-key {
+  margin-left: 0;
+  margin-right: 0;
+}

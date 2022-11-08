@@ -1,0 +1,271 @@
+import { ReplayBuffer } from '../../../replay';
+
+type VertexDesc = {
+    buffer: ReplayBuffer;
+    offset: number;
+    stride: number;
+    size: number; // 1 - 4
+};
+
+export type BufferRenderParameters = {
+    position: VertexDesc;
+    color?: VertexDesc;
+    indexBuffer?: ReplayBuffer;
+    indexBufferType?: GPUIndexFormat;
+    primitiveTopology: GPUPrimitiveTopology;
+    worldViewMatrix: Float32Array | number[];
+    numVertices: number;
+    renderColor: Float32Array | number[];
+};
+
+export class BufferRenderer {
+    device: GPUDevice;
+    pipelines: Map<string, GPURenderPipeline> = new Map<string, GPURenderPipeline>();
+    vsUniformBuffer: GPUBuffer;
+    fsUniformBuffer: GPUBuffer;
+    vsUniformValues: Float32Array;
+    fsUniformValues: Float32Array;
+    worldViewProjection: Float32Array;
+    positionDesc: Float32Array;
+    colorDesc: Float32Array;
+    color: Float32Array;
+    vertexColorMix: Float32Array;
+
+    constructor(device: GPUDevice) {
+        this.device = device;
+
+        const shaderModule = device.createShaderModule({
+            code: `
+            @group(0) @binding(2) var<storage> positionData : array<f32>;
+            //@group(0) @binding(3) var<storage> colorData : array<f32>;
+
+            struct VertDesc {
+              offset: u32,
+              stride: u32,
+              size: u32,    // 1 to 4
+              padding: u32, // needed?
+            };
+            struct VSUniforms {
+              worldViewProjection: mat4x4<f32>,
+              position: VertDesc,
+              color: VertDesc,  // set to same as position if no color data.
+            };
+            @group(0) @binding(0) var<uniform> vsUniforms : VSUniforms;
+
+            struct VertexOut {
+                @builtin(position) position : vec4<f32>,
+                @location(0) color : vec4<f32>,
+            };
+
+            fn getVertex(desc: VertDesc, index: u32/*, vertData: array<f32>*/) -> vec4<f32> {
+              var vert = vec4<f32>(0, 0, 0, 1);
+              let offset = desc.stride * index + desc.offset;
+              for (var i = 0u; i < desc.size; i += 1) {
+                vert[i] = positionData[offset + i]; //vertData[offset + i];
+              }
+              return vert;
+            };
+
+            @vertex
+            fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> VertexOut {
+
+
+        var data = array<vec3<f32>, 36>(
+          vec3(1, -1, 1),   
+          vec3(-1, -1, 1),  
+          vec3(-1, -1, -1), 
+          vec3(1, -1, -1),  
+          vec3(1, -1, 1),   
+          vec3(-1, -1, -1), 
+
+          vec3(1, 1, 1),    
+          vec3(1, -1, 1),   
+          vec3(1, -1, -1),  
+          vec3(1, 1, -1),   
+          vec3(1, 1, 1),    
+          vec3(1, -1, -1),  
+
+          vec3(-1, 1, 1),   
+          vec3(1, 1, 1),    
+          vec3(1, 1, -1),   
+          vec3(-1, 1, -1),  
+          vec3(-1, 1, 1),   
+          vec3(1, 1, -1),   
+
+          vec3(-1, -1, 1),  
+          vec3(-1, 1, 1),   
+          vec3(-1, 1, -1),  
+          vec3(-1, -1, -1), 
+          vec3(-1, -1, 1),  
+          vec3(-1, 1, -1),  
+
+          vec3(1, 1, 1),    
+          vec3(-1, 1, 1),   
+          vec3(-1, -1, 1),  
+          vec3(1, -1, 1),   
+          vec3(1, 1, 1),    
+          vec3(-1, -1, 1),  
+
+          vec3(1, -1, -1),  
+          vec3(-1, -1, -1), 
+          vec3(-1, 1, -1),  
+          vec3(1, 1, -1),   
+          vec3(1, -1, -1),  
+          vec3(-1, 1, -1),  
+          );
+
+                var position = getVertex(vsUniforms.position, vertexIndex);//, positionData);
+                position *= 0.0;
+                position += vec4<f32>(data[vertexIndex], 1.0);
+                let color = getVertex(vsUniforms.color, vertexIndex);//, colorData);
+                var vsOut : VertexOut;
+                vsOut.position = vec4(position.xyz * 0.25, 1); //vsUniforms.worldViewProjection * position;
+                vsOut.color = color;
+                return vsOut;
+            }
+
+            struct FSUniforms {
+              color: vec4<f32>,
+              vertexColorMix: f32,
+            };
+            @group(0) @binding(1) var<uniform> fsUniforms : FSUniforms;
+
+            @fragment
+            fn fragmentMain(@location(0) vertexColor : vec4<f32>) -> @location(0) vec4<f32> {
+                return mix(fsUniforms.color, vertexColor, fsUniforms.vertexColorMix) + vec4<f32>(0, 1, 0, 1);
+            }
+        `,
+        });
+
+        const vertex: GPUVertexState = {
+            module: shaderModule,
+            entryPoint: 'vertexMain',
+        };
+        const primitive: GPUPrimitiveState = {
+            topology: 'line-list', //'triangle-strip',
+        };
+        const targets: GPUColorTargetState[] = [
+            {
+                format: navigator.gpu.getPreferredCanvasFormat(),
+                //blend: {
+                //    color: {
+                //        srcFactor: 'one', //src-alpha',
+                //        dstFactor: 'zero', //one-minus-src-alpha',
+                //    },
+                //    alpha: {
+                //        srcFactor: 'one',
+                //        dstFactor: 'zero',
+                //    },
+                //},
+            },
+        ];
+
+        this.pipelines.set(
+            'basic',
+            device.createRenderPipeline({
+                layout: 'auto',
+                vertex,
+                primitive,
+                fragment: {
+                    module: shaderModule,
+                    entryPoint: 'fragmentMain',
+                    targets,
+                },
+            })
+        );
+
+        this.vsUniformValues = new Float32Array(16 + 4 + 4);
+        this.fsUniformValues = new Float32Array(4 + 1);
+
+        this.vsUniformBuffer = device.createBuffer({
+            size: this.vsUniformValues.byteLength,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        });
+        this.fsUniformBuffer = device.createBuffer({
+            size: this.fsUniformValues.byteLength,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        });
+        this.worldViewProjection = this.vsUniformValues.subarray(0, 16);
+        this.positionDesc = this.vsUniformValues.subarray(16, 20);
+        this.colorDesc = this.vsUniformValues.subarray(20, 24);
+        this.color = this.fsUniformValues.subarray(0, 4);
+        this.vertexColorMix = this.fsUniformValues.subarray(4, 5);
+    }
+
+    render(context: GPUCanvasContext, vertDesc: BufferRenderParameters) {
+        const device = this.device;
+        const copyBuffer = device.createBuffer({
+            size: vertDesc.position.buffer.size,
+            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.STORAGE,
+        });
+        {
+            const commandEncoder = device.createCommandEncoder();
+            commandEncoder.copyBufferToBuffer(
+                vertDesc.position.buffer.webgpuObject,
+                0,
+                copyBuffer,
+                0,
+                vertDesc.position.buffer.size
+            );
+            device.queue.submit([commandEncoder.finish()]);
+        }
+
+        const pipeline = this.pipelines.get('basic')!;
+        const bindGroup = this.device.createBindGroup({
+            layout: pipeline.getBindGroupLayout(0),
+            entries: [
+                { binding: 0, resource: { buffer: this.vsUniformBuffer } },
+                { binding: 1, resource: { buffer: this.vsUniformBuffer } },
+                { binding: 2, resource: { buffer: copyBuffer } },
+                // { binding: 3, resource: { buffer: vertDesc.color ? vertDesc.color.buffer : vertDesc.position.buffer } },
+            ],
+        });
+
+        const setVertexDesc = (src: VertexDesc, dst: Float32Array) => {
+            dst[0] = src.offset;
+            dst[1] = src.stride;
+            dst[2] = src.size;
+        };
+
+        this.worldViewProjection.set(vertDesc.worldViewMatrix);
+        setVertexDesc(vertDesc.position, this.positionDesc);
+        setVertexDesc(vertDesc.color || vertDesc.position, this.colorDesc);
+        this.color.set(vertDesc.renderColor);
+
+        device.queue.writeBuffer(this.vsUniformBuffer, 0, this.vsUniformValues);
+        device.queue.writeBuffer(this.fsUniformBuffer, 0, this.fsUniformValues);
+
+        {
+            const commandEncoder = device.createCommandEncoder();
+            const passEncoder = commandEncoder.beginRenderPass({
+                colorAttachments: [
+                    {
+                        view: context.getCurrentTexture().createView(),
+                        clearValue: [0, 0, 1, 1],
+                        loadOp: 'clear',
+                        storeOp: 'store',
+                    },
+                ],
+            });
+
+            passEncoder.setBindGroup(0, bindGroup);
+            passEncoder.setPipeline(pipeline);
+            passEncoder.draw(vertDesc.numVertices);
+
+            passEncoder.end();
+            device.queue.submit([commandEncoder.finish()]);
+        }
+        copyBuffer.destroy();
+    }
+
+    // Get or create a texture renderer for the given device.
+    static rendererCache = new WeakMap();
+    static getRendererForDevice(device: GPUDevice) {
+        let renderer = BufferRenderer.rendererCache.get(device);
+        if (!renderer) {
+            renderer = new BufferRenderer(device);
+            BufferRenderer.rendererCache.set(device, renderer);
+        }
+        return renderer;
+    }
+}

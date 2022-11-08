@@ -8,6 +8,7 @@ import { ReplayBuffer } from '../../../../replay';
 import { ValueObject } from '../../../components/Value/Value';
 import ValueNumber from '../../../components/ValueNumber/ValueNumber';
 import { roundUpToMultipleOf } from '../../../lib/math-utils';
+import BufferViewer from '../../../components/BufferViewer/BufferViewer';
 
 import './BufferVis.css';
 
@@ -192,6 +193,8 @@ export default function BufferVis({ data }: { data: ReplayBuffer }) {
         <div className="spector2-vis">
             <div className="spector2-buffer-vis">
                 <ValueObject data={data} />
+                <div className="spector2-top-separator"></div>
+                <BufferViewer buffer={data} />
                 <div className="spector2-top-separator"></div>
                 <div className="spector2-buffer-vis-controls">
                     <SelectSimple label="" value={type} options={s_typesKeys} onChange={setType} />

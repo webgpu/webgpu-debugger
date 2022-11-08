@@ -10,6 +10,7 @@ import {
 import ValueNumber from '../ValueNumber/ValueNumber';
 
 import './JsonValue.css';
+import { isTypedArray } from '../../lib/typedarray-utils';
 
 enum ValueType {
     kBasic,
@@ -179,23 +180,23 @@ export function JsonValueObject({ depth, data }: { depth?: number; data: Record<
 }
 
 interface JsonValueArrayValueProps {
-    value: any;
-    childDepth: number;
+    data: any;
+    childDepth?: number;
 }
 
-function JsonValueArrayValueBasic({ value, childDepth }: JsonValueArrayValueProps) {
+function JsonValueArrayValueBasic({ data, childDepth }: JsonValueArrayValueProps) {
     return (
         <div className="spector2-jsonvalue-key-value">
             <div className="spector2-jsonvalue-value">
-                <JsonValue depth={childDepth} data={value} />,
+                <JsonValue depth={childDepth} data={data} />,
             </div>
         </div>
     );
 }
 
-function JsonValueArrayValueObject({ value, childDepth }: JsonValueArrayValueProps) {
+function JsonValueArrayValueObject({ data, childDepth = 0 }: JsonValueArrayValueProps) {
     const [open, setOpen] = useState(true);
-    const objectHasKeys = Object.keys(value).length > 0;
+    const objectHasKeys = Object.keys(data).length > 0;
     return (
         <details
             open={open}
@@ -210,7 +211,7 @@ function JsonValueArrayValueObject({ value, childDepth }: JsonValueArrayValuePro
             {objectHasKeys && (
                 <div style={{ display: open ? '' : 'none' }}>
                     <div className="spector2-jsonvalue-key-value-expandable-value">
-                        <JsonValue depth={childDepth} data={value} />
+                        <JsonValue depth={childDepth} data={data} />
                     </div>
                     <div className="spector2-jsonvalue-close-symbol">{'},'}</div>
                 </div>
@@ -219,9 +220,19 @@ function JsonValueArrayValueObject({ value, childDepth }: JsonValueArrayValuePro
     );
 }
 
-function JsonValueArrayValueArray({ value, childDepth }: JsonValueArrayValueProps) {
+export function JsonValueArrayValueArraySmall({ data, childDepth = 0 }: JsonValueArrayValueProps) {
+    return (
+        <div className="spector2-jsonvalue-array-small">
+            <div className="spector2-jsonvalue-close-symbol">[</div>
+            <JsonValueArray depth={childDepth} data={data} />
+            <div className="spector2-jsonvalue-close-symbol">]</div>
+        </div>
+    );
+}
+
+export function JsonValueArrayValueArrayLarge({ data, childDepth = 0 }: JsonValueArrayValueProps) {
     const [open, setOpen] = useState(true);
-    const arrayHasElements = value.length > 0;
+    const arrayHasElements = data.length > 0;
     return (
         <details
             open={open}
@@ -236,7 +247,7 @@ function JsonValueArrayValueArray({ value, childDepth }: JsonValueArrayValueProp
             {arrayHasElements && (
                 <div style={{ display: open ? '' : 'none' }}>
                     <div className="spector2-jsonvalue-key-value-expandable-value">
-                        <JsonValueArray depth={childDepth} data={value} />
+                        <JsonValueArray depth={childDepth} data={data} />
                     </div>
                     <div className="spector2-jsonvalue-close-symbol">{'],'}</div>
                 </div>
@@ -245,28 +256,38 @@ function JsonValueArrayValueArray({ value, childDepth }: JsonValueArrayValueProp
     );
 }
 
-function JsonValueArrayValue({ value, childDepth }: { value: any; childDepth: number }) {
-    const valueType = getValueType(value);
+export function JsonValueArrayValueArray({ data, childDepth = 0 }: JsonValueArrayValueProps) {
+    return data.length <= 4 ? (
+        <JsonValueArrayValueArraySmall data={data} childDepth={childDepth} />
+    ) : (
+        <JsonValueArrayValueArrayLarge data={data} childDepth={childDepth} />
+    );
+}
+
+function JsonValueArrayValue({ data, childDepth = 0 }: { data: any; childDepth: number }) {
+    const valueType = getValueType(data);
     switch (valueType) {
         default:
         case ValueType.kBasic:
-            return <JsonValueArrayValueBasic value={value} childDepth={childDepth} />;
+            return <JsonValueArrayValueBasic data={data} childDepth={childDepth} />;
 
         case ValueType.kObject:
-            return <JsonValueArrayValueObject value={value} childDepth={childDepth} />;
+            return <JsonValueArrayValueObject data={data} childDepth={childDepth} />;
 
         case ValueType.kArray:
-            return <JsonValueArrayValueArray value={value} childDepth={childDepth} />;
+            return <JsonValueArrayValueArray data={data} childDepth={childDepth} />;
     }
 }
 
 function JsonValueArray({ depth, data }: { depth?: number; data: any[] }) {
     const childDepth = (depth || 0) + 1;
+    // convert typedarray to array so map works.
+    const arr = Array.isArray(data) ? data : Array.from(data);
     return (
         <div className={`spector2-value-array spector2-value-depth${depth}`}>
             <div>
-                {data.map((value, ndx) => (
-                    <JsonValueArrayValue key={`a${childDepth}-${ndx}`} value={value} childDepth={childDepth} />
+                {arr.map((value, ndx) => (
+                    <JsonValueArrayValue key={`a${childDepth}-${ndx}`} data={value} childDepth={childDepth} />
                 ))}
             </div>
         </div>
@@ -284,7 +305,7 @@ export default function JsonValue({ depth, data }: { depth?: number; data: any }
         return <ValueNumber data={data} />;
     } else if (typeof data === 'string') {
         return <div className="spector2-value-string">&quot;{data}&quot;</div>;
-    } else if (Array.isArray(data)) {
+    } else if (Array.isArray(data) || isTypedArray(data)) {
         return <JsonValueArray depth={depth} data={data} />;
     } else if (typeof data === 'function') {
         return <div className="spector2-value-function">{data.name}</div>;
