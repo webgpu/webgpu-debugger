@@ -1,11 +1,21 @@
 import { kTextureFormatInfo } from '../../../capture';
 
-export interface TextureSampleResult {
+export interface TextureSampleValue {
     values: Array<number>;
     cssColor: string;
 }
 
-export class TextureColorPicker {
+export class TextureSamples {
+    position: { x: number; y: number };
+    samples: Array<TextureSampleValue>;
+
+    constructor(data: { samples?: Array<TextureSampleValue>; position?: { x: number; y: number } }) {
+        this.position = data.position ?? { x: 0, y: 0 };
+        this.samples = data.samples ?? [];
+    }
+}
+
+export class TextureInspector {
     device: GPUDevice;
     pipelines: Map<string, GPUComputePipeline> = new Map<string, GPUComputePipeline>();
     uniformBuffer: GPUBuffer;
@@ -50,31 +60,6 @@ export class TextureColorPicker {
           }
       `,
         });
-
-        /*
-        const vertex: GPUVertexState = {
-            module: shaderModule,
-            entryPoint: 'vertexMain',
-        };
-        const primitive: GPUPrimitiveState = {
-            topology: 'triangle-strip',
-        };
-        const targets: GPUColorTargetState[] = [
-            {
-                format: navigator.gpu.getPreferredCanvasFormat(),
-                blend: {
-                    color: {
-                        srcFactor: 'src-alpha',
-                        dstFactor: 'one-minus-src-alpha',
-                    },
-                    alpha: {
-                        srcFactor: 'one',
-                        dstFactor: 'zero',
-                    },
-                },
-            },
-        ];
-        */
 
         this.pipelines.set(
             'color',
@@ -157,7 +142,7 @@ export class TextureColorPicker {
         sampleCount: number,
         format: GPUTextureFormat,
         formatType: string
-    ): Array<TextureSampleResult> {
+    ): Array<TextureSampleValue> {
         const resultArray = new Float32Array(result);
 
         let componentFormatter;
@@ -203,7 +188,13 @@ export class TextureColorPicker {
         return sampleResults;
     }
 
-    async getColor(texture: GPUTexture, x: number, y: number, mipLevel: number, layer: number) {
+    async getSamples(
+        texture: GPUTexture,
+        x: number,
+        y: number,
+        mipLevel: number,
+        layer: number
+    ): Promise<TextureSamples> {
         const formatInfo = kTextureFormatInfo[texture.format];
         let formatType = formatInfo?.type;
         let aspect: GPUTextureAspect = 'all';
@@ -271,16 +262,19 @@ export class TextureColorPicker {
         this.device.queue.submit([commandEncoder.finish()]);
 
         const result = await this.resolveReadbackBuffer(readbackBuffer);
-        return this.formatResultSamples(result, texture.sampleCount, texture.format, formatType);
+        return new TextureSamples({
+            samples: this.formatResultSamples(result, texture.sampleCount, texture.format, formatType),
+            position: { x, y },
+        });
     }
 
     // Get or create a texture color picker for the given device.
     static pickerCache = new WeakMap();
-    static getColorPickerForDevice(device: GPUDevice) {
-        let picker = TextureColorPicker.pickerCache.get(device);
+    static getInspectorForDevice(device: GPUDevice) {
+        let picker = TextureInspector.pickerCache.get(device);
         if (!picker) {
-            picker = new TextureColorPicker(device);
-            TextureColorPicker.pickerCache.set(device, picker);
+            picker = new TextureInspector(device);
+            TextureInspector.pickerCache.set(device, picker);
         }
         return picker;
     }

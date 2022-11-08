@@ -1,4 +1,4 @@
-.spector2-colorpickerresult {
+.spector2-texture-samples-vis {
   background-color: var(--spector2-bg-color);
   position: absolute;
   display: block;
@@ -8,6 +8,6 @@
   width: 200px;
 }
 
-.spector2-colorpickerresult-color {
+.spector2-texture-samples-color {
   width: 1.5em;
 }

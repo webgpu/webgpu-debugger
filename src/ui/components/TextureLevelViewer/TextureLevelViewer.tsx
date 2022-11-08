@@ -6,8 +6,8 @@ import Checkbox from '../../components/Checkbox/Checkbox';
 import SelectSimple from '../../components/SelectSimple/SelectSimple';
 import Range from '../../components/Range/Range';
 import { TextureRenderer, CubeTextureRenderer } from './TextureRenderer';
-import { TextureColorPicker } from './TextureColorPicker';
-import ColorPickerResult from './ColorPickerResult';
+import { TextureInspector, TextureSamples } from '../TextureSamplesVis/TextureInspector';
+import TextureSamplesVis from '../TextureSamplesVis/TextureSamplesVis';
 
 import './TextureLevelViewer.css';
 
@@ -36,14 +36,8 @@ const TextureLevelViewer: React.FC<Props> = ({
     const [mipLevel, setMipLevel] = useState(baseMipLevel);
     const [arrayLayer, setArrayLayer] = useState(baseArrayLayer);
     const [display, setDisplay] = useState(displayType);
-    const [colorPosition, setColorPosition] = useState({ x: 0, y: 0 });
-    const [colorSamples, setColorSamples] = useState([
-        {
-            values: [],
-            cssColor: 'rgb(0, 0, 0)',
-        },
-    ]);
-    const [colorResultStyle, setColorResultStyle] = useState({ display: 'none' } as CSSProperties);
+    const [inspectorSamples, setInspectorSamples] = useState(new TextureSamples({}));
+    const [samplesInspectorStyle, setSamplesInspectorStyle] = useState({ display: 'none' } as CSSProperties);
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const { helper } = useContext(UIStateContext);
@@ -75,9 +69,11 @@ const TextureLevelViewer: React.FC<Props> = ({
         let angleX = 0;
         let angleY = 0;
         let dragging = false;
-        const pointerDown = () => {
+        const pointerDown = async () => {
             if (display === 'cube') {
                 dragging = true;
+            } else {
+                // TODO: Capture the texture samples and open them in another panel.
             }
         };
         const pointerUp = () => {
@@ -85,21 +81,20 @@ const TextureLevelViewer: React.FC<Props> = ({
         };
         const pointerEnter = () => {};
         const pointerLeave = () => {
-            setColorResultStyle({ display: 'none' });
+            setSamplesInspectorStyle({ display: 'none' });
         };
         const pointerMove = async (e: PointerEvent) => {
             if (dragging) {
                 angleX += e.movementX * DEG_TO_RAD;
                 angleY += e.movementY * DEG_TO_RAD;
             } else if (display === '2d') {
-                const picker = TextureColorPicker.getColorPickerForDevice(device);
+                const inspector = TextureInspector.getInspectorForDevice(device);
                 const x = Math.floor(e.offsetX * (canvas.width / canvas.offsetWidth));
                 const y = Math.floor(e.offsetY * (canvas.height / canvas.offsetHeight));
-                const result = await picker.getColor(texture.webgpuObject, x, y, mipLevel, arrayLayer);
-                setColorPosition({ x, y });
-                setColorSamples(result);
+                const samples = await inspector.getSamples(texture.webgpuObject, x, y, mipLevel, arrayLayer);
+                setInspectorSamples(samples);
 
-                const colorResultStyle: CSSProperties = {
+                const style: CSSProperties = {
                     display: 'block',
                     top: e.offsetY + canvas.offsetTop,
                 };
@@ -109,12 +104,14 @@ const TextureLevelViewer: React.FC<Props> = ({
                 const resultOffsetX = e.offsetX + canvas.offsetLeft;
                 const parentWidth = canvas.parentElement!.parentElement!.offsetWidth;
                 if (resultOffsetX > parentWidth / 2) {
-                    colorResultStyle.right = parentWidth - e.offsetX;
+                    style.right = parentWidth - e.offsetX;
                 } else {
-                    colorResultStyle.left = resultOffsetX + 5;
+                    style.left = resultOffsetX + 5;
                 }
 
-                setColorResultStyle(colorResultStyle);
+                // TODO: Also flip vertically if needed.
+
+                setSamplesInspectorStyle(style);
             }
         };
 
@@ -145,7 +142,7 @@ const TextureLevelViewer: React.FC<Props> = ({
         draw();
 
         return () => {
-            setColorResultStyle({ display: 'none' });
+            setSamplesInspectorStyle({ display: 'none' });
             cancelAnimationFrame(rafId);
 
             canvas.removeEventListener('pointerdown', pointerDown);
@@ -193,7 +190,7 @@ const TextureLevelViewer: React.FC<Props> = ({
                 className="spector2-textureviewer-canvascontainer"
                 style={{ imageRendering: pixelated ? 'pixelated' : 'auto' }}
             >
-                <ColorPickerResult position={colorPosition} samples={colorSamples} style={colorResultStyle} />
+                <TextureSamplesVis data={inspectorSamples} style={samplesInspectorStyle} />
                 <canvas ref={canvasRef} className={actualSize ? display : `fill ${display}`} />
             </div>
         </div>

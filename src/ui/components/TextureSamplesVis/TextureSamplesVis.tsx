@@ -1,31 +1,30 @@
 import React, { CSSProperties } from 'react';
-import { TextureSampleResult } from './TextureColorPicker';
+import { TextureSamples } from './TextureInspector';
 
-import './ColorPickerResult.css';
+import './TextureSamplesVis.css';
 
 interface Props {
-    position: { x: number; y: number };
-    samples: Array<TextureSampleResult>;
+    data: TextureSamples;
     style: CSSProperties;
 }
 
-const ColorPickerResult: React.FC<Props> = ({ position, samples, style = {} }: Props) => {
+export default function TextureSamplesVis({ data, style = {} }: Props) {
     return (
-        <div className="spector2-colorpickerresult" style={style}>
+        <div className="spector2-texture-samples-vis" style={style}>
             <table>
                 <tbody>
                     <tr>
                         <td colSpan={2}>
-                            Pixel (x: {position.x}, y: {position.y})
+                            Pixel (x: {data.position.x}, y: {data.position.y})
                         </td>
                     </tr>
                     <tr>
                         <td colSpan={2}>Samples:</td>
                     </tr>
-                    {samples.map((sample, ndx) => (
+                    {data.samples.map((sample, ndx) => (
                         <tr key={`e${ndx}`}>
                             <td
-                                className="spector2-colorpickerresult-color"
+                                className="spector2-texture-samples-color"
                                 style={{ backgroundColor: sample.cssColor }}
                             ></td>
                             <td>[{sample.values.join(', ')}]</td>
@@ -35,6 +34,4 @@ const ColorPickerResult: React.FC<Props> = ({ position, samples, style = {} }: P
             </table>
         </div>
     );
-};
-
-export default ColorPickerResult;
+}
