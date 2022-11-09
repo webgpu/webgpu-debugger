@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { GPUExtent3DDictFull } from '../lib/utils';
+import { kTextureFormatInfo } from '../capture';
 
 type RequestAdapterFn = (options: GPURequestAdapterOptions) => Promise<GPUAdapter>;
 
@@ -974,6 +975,10 @@ export class ReplayTexture extends ReplayObject {
                 { width, height, depthOrArrayLayers }
             );
         }
+    }
+
+    get formatType(): string {
+        return kTextureFormatInfo[this.format]?.type ?? '';
     }
 }
 

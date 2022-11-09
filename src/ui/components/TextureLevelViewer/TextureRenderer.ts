@@ -4,6 +4,7 @@ export class TextureRenderer {
     device: GPUDevice;
     pipelines: Map<string, GPURenderPipeline> = new Map<string, GPURenderPipeline>();
     sampler: GPUSampler;
+    uniformBuffer: GPUBuffer;
 
     constructor(device: GPUDevice) {
         this.device = device;
@@ -28,6 +29,11 @@ export class TextureRenderer {
                 return output;
             }
 
+            struct Uniforms {
+                range: vec2<f32>
+            };
+            @group(0) @binding(2) var<uniform> uniforms : Uniforms;
+
             @group(0) @binding(0) var imgSampler : sampler;
 
             @group(0) @binding(1) var img : texture_2d<f32>;
@@ -39,7 +45,10 @@ export class TextureRenderer {
             @group(0) @binding(1) var depthImg : texture_depth_2d;
             @fragment
             fn depthFragmentMain(@location(0) texCoord : vec2<f32>) -> @location(0) vec4<f32> {
-                let depth = textureSample(depthImg, imgSampler, texCoord);
+                let depth = (textureSample(depthImg, imgSampler, texCoord) - uniforms.range.x) / (uniforms.range.y - uniforms.range.x);
+                if (depth < 0.0 || depth > 1.0) {
+                    discard;
+                }
                 return vec4(depth, depth, depth, 1.0);
             }
 
@@ -64,9 +73,15 @@ export class TextureRenderer {
 
                 var accumValue : f32;
                 for (var i = 0i; i < sampleCount; i += 1i) {
-                    accumValue += textureLoad(multiDepthImg, sampleCoord, i);
+                    accumValue += (textureLoad(multiDepthImg, sampleCoord, i) - uniforms.range.x) / (uniforms.range.y - uniforms.range.x);
                 }
-                return vec4(vec3(accumValue) / f32(sampleCount), 1.0);
+
+                let depth = accumValue / f32(sampleCount);
+                if (depth < 0.0 || depth > 1.0) {
+                    discard;
+                }
+
+                return vec4(depth, depth, depth, 1.0);
             }
         `,
         });
@@ -151,9 +166,20 @@ export class TextureRenderer {
         );
 
         this.sampler = device.createSampler({});
+        this.uniformBuffer = device.createBuffer({
+            size: Float32Array.BYTES_PER_ELEMENT * 4,
+            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
+        });
     }
 
-    render(context: GPUCanvasContext, texture: GPUTexture, mipLevel: number, layer: number) {
+    render(
+        context: GPUCanvasContext,
+        texture: GPUTexture,
+        mipLevel: number,
+        layer: number,
+        rangeMin: number,
+        rangeMax: number
+    ) {
         const formatInfo = kTextureFormatInfo[texture.format];
         let formatType = formatInfo?.type;
         let aspect: GPUTextureAspect = 'all';
@@ -167,6 +193,13 @@ export class TextureRenderer {
 
         const pipeline = this.pipelines.get(type);
         let bindGroup;
+
+        const uniformArray = new Float32Array(this.uniformBuffer.size / Float32Array.BYTES_PER_ELEMENT);
+        // Range
+        uniformArray[0] = rangeMin;
+        uniformArray[1] = rangeMax;
+
+        this.device.queue.writeBuffer(this.uniformBuffer, 0, uniformArray);
 
         if (pipeline) {
             const entries: Array<GPUBindGroupEntry> = [
@@ -187,6 +220,13 @@ export class TextureRenderer {
                 entries.push({
                     binding: 0,
                     resource: this.sampler,
+                });
+            }
+
+            if (formatType === 'depth') {
+                entries.push({
+                    binding: 2,
+                    resource: { buffer: this.uniformBuffer },
                 });
             }
 

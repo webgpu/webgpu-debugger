@@ -39,6 +39,9 @@ const TextureLevelViewer: React.FC<Props> = ({
     const [inspectorSamples, setInspectorSamples] = useState(new TextureSamples({}));
     const [samplesInspectorStyle, setSamplesInspectorStyle] = useState({ display: 'none' } as CSSProperties);
 
+    const [valueRangeMin, setValueRangeMin] = useState(0);
+    const [valueRangeMax, setValueRangeMax] = useState(1.0);
+
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const { helper } = useContext(UIStateContext);
 
@@ -127,7 +130,14 @@ const TextureLevelViewer: React.FC<Props> = ({
                 case '2d':
                     {
                         const renderer = TextureRenderer.getRendererForDevice(device);
-                        renderer.render(context, texture.webgpuObject, mipLevel, arrayLayer);
+                        renderer.render(
+                            context,
+                            texture.webgpuObject,
+                            mipLevel,
+                            arrayLayer,
+                            valueRangeMin,
+                            valueRangeMax
+                        );
                     }
                     break;
                 case 'cube':
@@ -151,7 +161,7 @@ const TextureLevelViewer: React.FC<Props> = ({
             canvas.removeEventListener('pointerleave', pointerLeave);
             canvas.removeEventListener('pointermove', pointerMove);
         };
-    }, [texture, mipLevel, arrayLayer, display, helper.state.replayCount]);
+    }, [texture, mipLevel, arrayLayer, display, valueRangeMin, valueRangeMax, helper.state.replayCount]);
 
     return (
         <div className="spector2-textureviewer">
@@ -183,6 +193,26 @@ const TextureLevelViewer: React.FC<Props> = ({
                         value={mipLevel}
                         valueFormatFn={(v: number) => `${v} of [${baseMipLevel}, ${maxMipLevel}]`}
                         onChange={setMipLevel}
+                    />
+                </div>
+            )}
+            {(texture.formatType === 'depth' || texture.formatType === 'depth-stencil') && (
+                <div>
+                    <Range
+                        label="Depth Range Min:"
+                        min={0}
+                        max={valueRangeMax - 0.01}
+                        value={valueRangeMin}
+                        step={0.01}
+                        onChange={setValueRangeMin}
+                    />
+                    <Range
+                        label="Max:"
+                        min={valueRangeMin + 0.01}
+                        max={1.0}
+                        value={valueRangeMax}
+                        step={0.01}
+                        onChange={setValueRangeMax}
                     />
                 </div>
             )}
