@@ -278,8 +278,8 @@ export class Replay {
     }
 }
 
-let lastReplayObjectKey : React.Key = 0;
-const replayObjectKeys = new Map<ReplayObject, React.Key>;
+let lastReplayObjectKey: React.Key = 0;
+const replayObjectKeys = new Map<ReplayObject, React.Key>();
 
 class ReplayObject {
     replay: Replay;
@@ -298,13 +298,21 @@ class ReplayObject {
 
 export class ReplayAdapter extends ReplayObject {
     webgpuObject?: GPUAdapter;
+    adapterInfo: GPUAdapterInfo;
 
     constructor(replay, desc) {
         super(replay, desc);
+
+        if (this.webgpuObject) {
+            this.webgpuObject.requestAdapterInfo().then(adapterInfo => {
+                this.adapterInfo = adapterInfo;
+            });
+        }
     }
 
     async recreate(desc) {
         this.webgpuObject = await requestUnwrappedAdapter(desc);
+        this.adapterInfo = await this.webgpuObject.requestAdapterInfo();
     }
 }
 

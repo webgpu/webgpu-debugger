@@ -116,12 +116,40 @@ const GPUTextureUsageValue = ({ data }: { data: number }) => {
     return <div className="spector2-value-bitmask">{gpuTextureUsageToString(data)}</div>;
 };
 
+const GPUAdapterInfoValue = ({ data }: { data: GPUAdapterInfo }) => {
+    return (
+        <div className="spector2-jsonvalue-key-value-expandable-value">
+            {'{'}
+            <div className="spector2-jsonvalue-key-value">
+                <div className="spector2-jsonvalue-key">vendor:</div>
+                <div className="spector2-jsonvalue-value">{data.vendor},</div>
+            </div>
+            <div className="spector2-jsonvalue-key-value">
+                <div className="spector2-jsonvalue-key">architecture:</div>
+                <div className="spector2-jsonvalue-value">{data.architecture},</div>
+            </div>
+            <div className="spector2-jsonvalue-key-value">
+                <div className="spector2-jsonvalue-key">device:</div>
+                <div className="spector2-jsonvalue-value">{data.device},</div>
+            </div>
+            <div className="spector2-jsonvalue-key-value">
+                <div className="spector2-jsonvalue-key">description:</div>
+                <div className="spector2-jsonvalue-value">{data.description},</div>
+            </div>
+            {'}'}
+        </div>
+    );
+};
+
 const s_classToSpecialProperties = new Map<Function, PropertyNameToComponentMap>();
 s_classToSpecialProperties.set(ReplayBuffer, {
     usage: GPUBufferUsageValue,
 });
 s_classToSpecialProperties.set(ReplayTexture, {
     usage: GPUTextureUsageValue,
+});
+s_classToSpecialProperties.set(ReplayAdapter, {
+    adapterInfo: GPUAdapterInfoValue,
 });
 
 export const getSpecialPropertiesForClass = (Class: Function): PropertyNameToComponentMap =>

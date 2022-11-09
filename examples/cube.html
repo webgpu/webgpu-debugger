@@ -183,7 +183,10 @@
         });
         device.queue.writeBuffer(vertexBuffer, 0, Cube.vertexArray.buffer);
 
-        const shaderModule = device.createShaderModule({ code: shaderSrc });
+        const shaderModule = device.createShaderModule({
+          label: 'Cube Shader',
+          code: shaderSrc
+        });
 
         pipeline = device.createRenderPipeline({
           label: 'Cube Render Pipeline',
@@ -247,6 +250,7 @@
         function generateMipmap(gpuDevice, texture, textureDescriptor) {
           // Create a simple shader that renders a fullscreen textured quad.
           const mipmapShaderModule = gpuDevice.createShaderModule({
+            label: 'Mipmap Shader',
             code: `
               var<private> pos : array<vec2<f32>, 4> = array<vec2<f32>, 4>(
                 vec2<f32>(-1.0, 1.0), vec2<f32>(1.0, 1.0),
