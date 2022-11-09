@@ -1,0 +1,62 @@
+.spector2-dualrange {
+  display: flex;
+}
+
+.spector2-dualrange>div {
+  flex: 1, 1, auto;
+  margin-right: 8px;
+}
+
+.spector2-dualrange-container {
+  position: relative;
+  width: 150px;
+}
+
+.spector2-dualrange-track,
+.spector2-dualrange-range {
+  position: absolute;
+  height: 6px;
+  border-radius: 4px;
+}
+
+.spector2-dualrange-track {
+  background-color: var(--spector2-bg-color);
+  border: 1px solid var(--spector2-table-cell-border-color);
+  width: 100%;
+  z-index: 1;
+}
+
+.spector2-dualrange-range {
+  background-color: #99c8ff;
+  z-index: 2;
+}
+
+.spector2-dualrange-thumb,
+.spector2-dualrange-thumb::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.spector2-dualrange-thumb {
+  pointer-events: none;
+  position: absolute;
+  height: 0;
+  width: 150px;
+  z-index: 3;
+}
+
+.spector2-dualrange-thumb.raised-thumb {
+  z-index: 4;
+}
+
+.spector2-dualrange-thumb::-webkit-slider-thumb {
+  background-color: #99c8ff;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  height: 14px;
+  width: 14px;
+  margin-top: 2px;
+  pointer-events: all;
+  position: relative;
+}

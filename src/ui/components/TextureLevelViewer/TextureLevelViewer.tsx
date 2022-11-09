@@ -5,6 +5,7 @@ import { UIStateContext } from '../../contexts/UIStateContext';
 import Checkbox from '../../components/Checkbox/Checkbox';
 import SelectSimple from '../../components/SelectSimple/SelectSimple';
 import Range from '../../components/Range/Range';
+import DualRange from '../../components/Range/DualRange';
 import { TextureRenderer, CubeTextureRenderer } from './TextureRenderer';
 import { TextureInspector, TextureSamples } from '../TextureSamplesVis/TextureInspector';
 import TextureSamplesVis from '../TextureSamplesVis/TextureSamplesVis';
@@ -198,21 +199,17 @@ const TextureLevelViewer: React.FC<Props> = ({
             )}
             {(texture.formatType === 'depth' || texture.formatType === 'depth-stencil') && (
                 <div>
-                    <Range
-                        label="Depth Range Min:"
+                    <DualRange
+                        label="Depth Range:"
                         min={0}
-                        max={valueRangeMax - 0.01}
-                        value={valueRangeMin}
-                        step={0.01}
-                        onChange={setValueRangeMin}
-                    />
-                    <Range
-                        label="Max:"
-                        min={valueRangeMin + 0.01}
                         max={1.0}
-                        value={valueRangeMax}
+                        minValue={valueRangeMin}
+                        maxValue={valueRangeMax}
                         step={0.01}
-                        onChange={setValueRangeMax}
+                        onChange={(minVal: number, maxVal: number) => {
+                            setValueRangeMin(minVal);
+                            setValueRangeMax(maxVal);
+                        }}
                     />
                 </div>
             )}
