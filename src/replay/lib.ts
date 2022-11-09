@@ -1,6 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck
 
+import React from 'react';
 import { GPUExtent3DDictFull } from '../lib/utils';
 
 type RequestAdapterFn = (options: GPURequestAdapterOptions) => Promise<GPUAdapter>;
@@ -277,6 +278,9 @@ export class Replay {
     }
 }
 
+let lastReplayObjectKey : React.Key = 0;
+const replayObjectKeys = new Map<ReplayObject, React.Key>;
+
 class ReplayObject {
     replay: Replay;
     label: string;
@@ -284,6 +288,11 @@ class ReplayObject {
     constructor(replay, desc) {
         this.replay = replay;
         this.label = desc.label ?? '';
+        replayObjectKeys.set(this, lastReplayObjectKey++);
+    }
+
+    get replayObjectKey() {
+        return replayObjectKeys.get(this);
     }
 }
 

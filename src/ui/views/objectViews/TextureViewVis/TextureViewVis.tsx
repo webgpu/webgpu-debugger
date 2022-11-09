@@ -9,6 +9,7 @@ export default function TextureViewVis({ data }: { data: ReplayTextureView }) {
             <JsonValueObject data={data} />
             <div className="spector2-top-separator"></div>
             <TextureLevelViewer
+                key={data.replayObjectKey}
                 texture={data.texture}
                 baseMipLevel={data.baseMipLevel}
                 mipLevelCount={data.mipLevelCount}
