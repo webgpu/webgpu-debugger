@@ -13,6 +13,7 @@ import TextureSamplesVis from '../TextureSamplesVis/TextureSamplesVis';
 import './TextureLevelViewer.css';
 
 const s_displayTypes = ['2d', 'cube'];
+const s_aspectTypes = ['depth-only', 'stencil-only'];
 const DEG_TO_RAD = Math.PI / 180;
 
 interface Props {
@@ -37,6 +38,7 @@ const TextureLevelViewer: React.FC<Props> = ({
     const [mipLevel, setMipLevel] = useState(baseMipLevel);
     const [arrayLayer, setArrayLayer] = useState(baseArrayLayer);
     const [display, setDisplay] = useState(displayType);
+    const [aspect, setAspect] = useState('depth-only');
     const [inspectorSamples, setInspectorSamples] = useState(new TextureSamples({}));
     const [samplesInspectorStyle, setSamplesInspectorStyle] = useState({ display: 'none' } as CSSProperties);
 
@@ -95,7 +97,14 @@ const TextureLevelViewer: React.FC<Props> = ({
                 const inspector = TextureInspector.getInspectorForDevice(device);
                 const x = Math.floor(e.offsetX * (canvas.width / canvas.offsetWidth));
                 const y = Math.floor(e.offsetY * (canvas.height / canvas.offsetHeight));
-                const samples = await inspector.getSamples(texture.webgpuObject, x, y, mipLevel, arrayLayer);
+                const samples = await inspector.getSamples(
+                    texture.webgpuObject,
+                    x,
+                    y,
+                    mipLevel,
+                    arrayLayer,
+                    texture.formatType === 'depth-stencil' ? aspect : 'all'
+                );
                 setInspectorSamples(samples);
 
                 const style: CSSProperties = {
@@ -137,7 +146,8 @@ const TextureLevelViewer: React.FC<Props> = ({
                             mipLevel,
                             arrayLayer,
                             valueRangeMin,
-                            valueRangeMax
+                            valueRangeMax,
+                            texture.formatType === 'depth-stencil' ? aspect : 'all'
                         );
                     }
                     break;
@@ -162,7 +172,7 @@ const TextureLevelViewer: React.FC<Props> = ({
             canvas.removeEventListener('pointerleave', pointerLeave);
             canvas.removeEventListener('pointermove', pointerMove);
         };
-    }, [texture, mipLevel, arrayLayer, display, valueRangeMin, valueRangeMax, helper.state.replayCount]);
+    }, [texture, mipLevel, arrayLayer, display, aspect, valueRangeMin, valueRangeMax, helper.state.replayCount]);
 
     return (
         <div className="spector2-textureviewer">
@@ -171,6 +181,9 @@ const TextureLevelViewer: React.FC<Props> = ({
                 <Checkbox label="Pixelated:" checked={pixelated} onChange={setPixelated} />
                 {arrayLayerCount >= 6 && (
                     <SelectSimple label="Display as:" value={display} options={s_displayTypes} onChange={setDisplay} />
+                )}
+                {texture.formatType === 'depth-stencil' && (
+                    <SelectSimple label="Aspect:" value={aspect} options={s_aspectTypes} onChange={setAspect} />
                 )}
             </div>
             {arrayLayerCount > 1 && display === '2d' && (
@@ -197,15 +210,17 @@ const TextureLevelViewer: React.FC<Props> = ({
                     />
                 </div>
             )}
-            {(texture.formatType === 'depth' || texture.formatType === 'depth-stencil') && (
+            {(texture.formatType === 'depth' ||
+                texture.formatType === 'stencil' ||
+                texture.formatType === 'depth-stencil') && (
                 <div>
                     <DualRange
-                        label="Depth Range:"
+                        label={aspect === 'depth' ? 'Depth Range:' : 'Stencil Range:'}
                         min={0}
-                        max={1.0}
+                        max={aspect === 'depth' ? 1.0 : 255}
                         minValue={valueRangeMin}
                         maxValue={valueRangeMax}
-                        step={0.01}
+                        step={aspect === 'depth' ? 0.01 : 1}
                         onChange={(minVal: number, maxVal: number) => {
                             setValueRangeMin(minVal);
                             setValueRangeMax(maxVal);

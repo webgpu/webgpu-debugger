@@ -26,7 +26,7 @@
       import '../dist/spector2.js';
       import {mat4, vec3} from 'https://cdn.jsdelivr.net/npm/gl-matrix@3.4.3/esm/index.js';;
 
-      const depthFormat = "depth24plus";
+      const depthFormat = "depth24plus-stencil8";
       const sampleCount = 4;
 
       const uniformBufferSize = 4 * 16; // 4x4 matrix
@@ -206,12 +206,18 @@
 
           primitive: {
             topology: 'triangle-list',
-            cullMode: 'back',
+            cullMode: 'none',
           },
           depthStencil: {
             format: depthFormat,
             depthWriteEnabled: true,
             depthCompare: 'less',
+            stencilFront: {
+              passOp: 'increment-clamp',
+            },
+            stencilBack: {
+              passOp: 'increment-clamp',
+            }
           },
           multisample: { count: sampleCount, },
         });
@@ -222,7 +228,7 @@
             view: undefined,
             resolveTarget: undefined,
             loadOp: 'clear',
-            storeOp: 'store'
+            storeOp: 'store',
           }],
           depthStencilAttachment: {
             // view is acquired and set in render loop.
@@ -231,6 +237,8 @@
             depthClearValue: 1.0,
             depthLoadOp: 'clear',
             depthStoreOp: 'store',
+            stencilLoadOp: 'clear',
+            stencilStoreOp: 'store',
           }
         };
 

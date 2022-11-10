@@ -41,6 +41,12 @@ export class TextureInspector {
               depthResult[0] = textureLoad(depthImg, pixelCoord, 0);
           }
 
+          @group(0) @binding(2) var stencilImg : texture_2d<u32>;
+          @compute @workgroup_size(1)
+          fn stencilPickerMain() {
+            depthResult[0] = f32(textureLoad(stencilImg, pixelCoord, 0).x);
+          }
+
           @group(0) @binding(2) var multiImg : texture_multisampled_2d<f32>;
           @compute @workgroup_size(1)
           fn multiPickerMain() {
@@ -56,6 +62,15 @@ export class TextureInspector {
               let sampleCount = i32(textureNumSamples(multiDepthImg));
               for (var i = 0i; i < sampleCount; i += 1i) {
                   depthResult[i] = textureLoad(multiDepthImg, pixelCoord, i);
+              }
+          }
+
+          @group(0) @binding(2) var multiStencilImg : texture_multisampled_2d<u32>;
+          @compute @workgroup_size(1)
+          fn multiStencilPickerMain() {
+              let sampleCount = i32(textureNumSamples(multiStencilImg));
+              for (var i = 0i; i < sampleCount; i += 1i) {
+                depthResult[i] = f32(textureLoad(multiStencilImg, pixelCoord, i).x);
               }
           }
       `,
@@ -84,6 +99,17 @@ export class TextureInspector {
         );
 
         this.pipelines.set(
+            'stencil',
+            device.createComputePipeline({
+                layout: 'auto',
+                compute: {
+                    module: shaderModule,
+                    entryPoint: 'stencilPickerMain',
+                },
+            })
+        );
+
+        this.pipelines.set(
             'multisampled-color',
             device.createComputePipeline({
                 layout: 'auto',
@@ -101,6 +127,17 @@ export class TextureInspector {
                 compute: {
                     module: shaderModule,
                     entryPoint: 'multiDepthPickerMain',
+                },
+            })
+        );
+
+        this.pipelines.set(
+            'multisampled-stencil',
+            device.createComputePipeline({
+                layout: 'auto',
+                compute: {
+                    module: shaderModule,
+                    entryPoint: 'multiStencilPickerMain',
                 },
             })
         );
@@ -159,20 +196,20 @@ export class TextureInspector {
         switch (formatType) {
             case 'color':
                 for (let i = 0; i < sampleCount; ++i) {
+                    const values = [
+                        componentFormatter(resultArray[i * 4]),
+                        componentFormatter(resultArray[i * 4 + 1]),
+                        componentFormatter(resultArray[i * 4 + 2]),
+                        componentFormatter(resultArray[i * 4 + 3]),
+                    ];
                     sampleResults.push({
-                        values: [
-                            componentFormatter(resultArray[i * 4]),
-                            componentFormatter(resultArray[i * 4 + 1]),
-                            componentFormatter(resultArray[i * 4 + 2]),
-                            componentFormatter(resultArray[i * 4 + 3]),
-                        ],
-                        cssColor: `rgb(${resultArray[i * 4] * 255}, ${resultArray[i * 4 + 1] * 255}, ${
-                            resultArray[i * 4 + 2] * 255
-                        })`,
+                        values,
+                        cssColor: `rgb(${values[0]}, ${values[1]}, ${values[2]})`,
                     });
                 }
                 break;
             case 'depth':
+            case 'stencil':
                 for (let i = 0; i < sampleCount; ++i) {
                     sampleResults.push({
                         values: [componentFormatter(resultArray[i])],
@@ -193,16 +230,22 @@ export class TextureInspector {
         x: number,
         y: number,
         mipLevel: number,
-        layer: number
+        layer: number,
+        aspect: GPUTextureAspect = 'all'
     ): Promise<TextureSamples> {
         const formatInfo = kTextureFormatInfo[texture.format];
         let formatType = formatInfo?.type;
-        let aspect: GPUTextureAspect = 'all';
-        // TODO: For the moment force depth-stencil textures to only render the depth aspect.
-        // We want to be able to visualize the stencil aspect as well, though.
         if (formatType === 'depth-stencil') {
-            formatType = 'depth';
-            aspect = 'depth-only';
+            switch (aspect) {
+                case 'depth-only':
+                    formatType = 'depth';
+                    break;
+                case 'stencil-only':
+                    formatType = 'stencil';
+                    break;
+                default:
+                    throw new Error(`Cannot inspect a ${formatType} texture with an aspect of ${aspect}`);
+            }
         }
         const type = (texture.sampleCount > 1 ? 'multisampled-' : '') + formatType;
 

@@ -52,6 +52,17 @@ export class TextureRenderer {
                 return vec4(depth, depth, depth, 1.0);
             }
 
+            @group(0) @binding(1) var stencilImg : texture_2d<u32>;
+            @fragment
+            fn stencilFragmentMain(@location(0) texCoord : vec2<f32>) -> @location(0) vec4<f32> {
+                let sampleCoord = vec2<i32>(texCoord * vec2<f32>(textureDimensions(stencilImg)));
+                let stencil = (f32(textureLoad(stencilImg, sampleCoord, 0).x) - uniforms.range.x) / (uniforms.range.y - uniforms.range.x);
+                if (stencil < 0.0 || stencil > 1.0) {
+                    discard;
+                }
+                return vec4(stencil, 0.0, 0.0, 1.0);
+            }
+
             @group(0) @binding(1) var multiImg : texture_multisampled_2d<f32>;
             @fragment
             fn multiFragmentMain(@location(0) texCoord : vec2<f32>) -> @location(0) vec4<f32> {
@@ -82,6 +93,25 @@ export class TextureRenderer {
                 }
 
                 return vec4(depth, depth, depth, 1.0);
+            }
+
+            @group(0) @binding(1) var multiStencilImg : texture_multisampled_2d<u32>;
+            @fragment
+            fn multiStencilFragmentMain(@location(0) texCoord : vec2<f32>) -> @location(0) vec4<f32> {
+                let sampleCount = i32(textureNumSamples(multiStencilImg));
+                let sampleCoord = vec2<i32>(texCoord * vec2<f32>(textureDimensions(multiStencilImg)));
+
+                var accumValue : f32;
+                for (var i = 0i; i < sampleCount; i += 1i) {
+                    accumValue += (f32(textureLoad(multiStencilImg, sampleCoord, i).x) - uniforms.range.x) / (uniforms.range.y - uniforms.range.x);
+                }
+
+                let stencil = accumValue / f32(sampleCount);
+                if (stencil < 0.0 || stencil > 1.0) {
+                    discard;
+                }
+
+                return vec4(stencil, 0.0, 0.0, 1.0);
             }
         `,
         });
@@ -138,6 +168,20 @@ export class TextureRenderer {
         );
 
         this.pipelines.set(
+            'stencil',
+            device.createRenderPipeline({
+                layout: 'auto',
+                vertex,
+                primitive,
+                fragment: {
+                    module: shaderModule,
+                    entryPoint: 'stencilFragmentMain',
+                    targets,
+                },
+            })
+        );
+
+        this.pipelines.set(
             'multisampled-color',
             device.createRenderPipeline({
                 layout: 'auto',
@@ -165,6 +209,20 @@ export class TextureRenderer {
             })
         );
 
+        this.pipelines.set(
+            'multisampled-stencil',
+            device.createRenderPipeline({
+                layout: 'auto',
+                vertex,
+                primitive,
+                fragment: {
+                    module: shaderModule,
+                    entryPoint: 'multiStencilFragmentMain',
+                    targets,
+                },
+            })
+        );
+
         this.sampler = device.createSampler({});
         this.uniformBuffer = device.createBuffer({
             size: Float32Array.BYTES_PER_ELEMENT * 4,
@@ -178,16 +236,22 @@ export class TextureRenderer {
         mipLevel: number,
         layer: number,
         rangeMin: number,
-        rangeMax: number
+        rangeMax: number,
+        aspect: GPUTextureAspect = 'all'
     ) {
         const formatInfo = kTextureFormatInfo[texture.format];
         let formatType = formatInfo?.type;
-        let aspect: GPUTextureAspect = 'all';
-        // TODO: For the moment force depth-stencil textures to only render the depth aspect.
-        // We want to be able to visualize the stencil aspect as well, though.
         if (formatType === 'depth-stencil') {
-            formatType = 'depth';
-            aspect = 'depth-only';
+            switch (aspect) {
+                case 'depth-only':
+                    formatType = 'depth';
+                    break;
+                case 'stencil-only':
+                    formatType = 'stencil';
+                    break;
+                default:
+                    throw new Error(`Cannot render a ${formatType} texture with an aspect of ${aspect}`);
+            }
         }
         const type = (texture.sampleCount > 1 ? 'multisampled-' : '') + formatType;
 
@@ -223,7 +287,7 @@ export class TextureRenderer {
                 });
             }
 
-            if (formatType === 'depth') {
+            if (formatType === 'depth' || formatType === 'stencil') {
                 entries.push({
                     binding: 2,
                     resource: { buffer: this.uniformBuffer },
