@@ -50,7 +50,7 @@ export default function DualRange({
                 range.current.style.width = `${maxPercent - minPercent}%`;
             }
         }
-    }, [minVal, percent]);
+    }, [min, minVal, percent]);
 
     useEffect(() => {
         if (minValRef.current) {
@@ -61,11 +61,17 @@ export default function DualRange({
                 range.current.style.width = `${maxPercent - minPercent}%`;
             }
         }
-    }, [maxVal, percent]);
+    }, [max, maxVal, percent]);
 
     useEffect(() => {
         onChange(minVal, maxVal);
-    }, [minVal, maxVal, onChange]);
+    }, [min, max, minVal, maxVal, onChange]);
+
+    useEffect(() => {
+        // Clamp the min and max values to the update range.
+        setMinVal((v) => Math.min(max, Math.max(v, min)));
+        setMaxVal((v) => Math.min(max, Math.max(v, min)));
+    }, [min, max, onChange]);
 
     return (
         <label className={'spector2-dualrange'}>

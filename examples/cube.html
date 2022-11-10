@@ -213,10 +213,10 @@
             depthWriteEnabled: true,
             depthCompare: 'less',
             stencilFront: {
-              passOp: 'increment-clamp',
+              passOp: 'increment-wrap',
             },
             stencilBack: {
-              passOp: 'increment-clamp',
+              passOp: 'increment-wrap',
             }
           },
           multisample: { count: sampleCount, },
@@ -237,7 +237,7 @@
             depthClearValue: 1.0,
             depthLoadOp: 'clear',
             depthStoreOp: 'store',
-            stencilLoadOp: 'clear',
+            stencilLoadOp: 'load',
             stencilStoreOp: 'store',
           }
         };

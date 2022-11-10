@@ -36,6 +36,15 @@ export class TextureRenderer {
 
             @group(0) @binding(0) var imgSampler : sampler;
 
+            fn hueToRgb(hue : f32) -> vec3<f32> {
+                let hueFract = fract(hue);
+                let rgb = vec3<f32>(
+                    abs(hueFract * 6.0 - 3.0) - 1.0,
+                    2.0 - abs(hueFract * 6.0 - 2.0),
+                    2.0 - abs(hueFract * 6.0 - 4.0));
+                return saturate(rgb);
+            }
+
             @group(0) @binding(1) var img : texture_2d<f32>;
             @fragment
             fn fragmentMain(@location(0) texCoord : vec2<f32>) -> @location(0) vec4<f32> {
@@ -46,9 +55,6 @@ export class TextureRenderer {
             @fragment
             fn depthFragmentMain(@location(0) texCoord : vec2<f32>) -> @location(0) vec4<f32> {
                 let depth = (textureSample(depthImg, imgSampler, texCoord) - uniforms.range.x) / (uniforms.range.y - uniforms.range.x);
-                if (depth < 0.0 || depth > 1.0) {
-                    discard;
-                }
                 return vec4(depth, depth, depth, 1.0);
             }
 
@@ -56,11 +62,12 @@ export class TextureRenderer {
             @fragment
             fn stencilFragmentMain(@location(0) texCoord : vec2<f32>) -> @location(0) vec4<f32> {
                 let sampleCoord = vec2<i32>(texCoord * vec2<f32>(textureDimensions(stencilImg)));
-                let stencil = (f32(textureLoad(stencilImg, sampleCoord, 0).x) - uniforms.range.x) / (uniforms.range.y - uniforms.range.x);
-                if (stencil < 0.0 || stencil > 1.0) {
-                    discard;
+                var stencil = (f32(textureLoad(stencilImg, sampleCoord, 0).x) - uniforms.range.x) / (uniforms.range.y - uniforms.range.x);
+                if (stencil == 0.0) {
+                    return vec4(0.0, 0.0, 0.0, 1.0);
+                } else {
+                    return vec4(hueToRgb(stencil), 1.0);
                 }
-                return vec4(stencil, 0.0, 0.0, 1.0);
             }
 
             @group(0) @binding(1) var multiImg : texture_multisampled_2d<f32>;
@@ -88,10 +95,6 @@ export class TextureRenderer {
                 }
 
                 let depth = accumValue / f32(sampleCount);
-                if (depth < 0.0 || depth > 1.0) {
-                    discard;
-                }
-
                 return vec4(depth, depth, depth, 1.0);
             }
 
@@ -107,11 +110,11 @@ export class TextureRenderer {
                 }
 
                 let stencil = accumValue / f32(sampleCount);
-                if (stencil < 0.0 || stencil > 1.0) {
-                    discard;
+                if (stencil == 0.0) {
+                    return vec4(0.0, 0.0, 0.0, 1.0);
+                } else {
+                    return vec4(hueToRgb(stencil), 1.0);
                 }
-
-                return vec4(stencil, 0.0, 0.0, 1.0);
             }
         `,
         });

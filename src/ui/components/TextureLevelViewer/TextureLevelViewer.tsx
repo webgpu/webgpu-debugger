@@ -215,12 +215,12 @@ const TextureLevelViewer: React.FC<Props> = ({
                 texture.formatType === 'depth-stencil') && (
                 <div>
                     <DualRange
-                        label={aspect === 'depth' ? 'Depth Range:' : 'Stencil Range:'}
+                        label={aspect === 'depth-only' ? 'Depth Range:' : 'Stencil Range:'}
                         min={0}
-                        max={aspect === 'depth' ? 1.0 : 255}
+                        max={aspect === 'depth-only' ? 1.0 : 255}
                         minValue={valueRangeMin}
                         maxValue={valueRangeMax}
-                        step={aspect === 'depth' ? 0.01 : 1}
+                        step={aspect === 'depth-only' ? 0.01 : 1}
                         onChange={(minVal: number, maxVal: number) => {
                             setValueRangeMin(minVal);
                             setValueRangeMax(maxVal);
