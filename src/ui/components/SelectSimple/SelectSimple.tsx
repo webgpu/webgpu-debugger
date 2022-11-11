@@ -2,7 +2,7 @@ import React from 'react';
 
 interface SelectSimpleProps {
     value: string;
-    label: string;
+    label?: string;
     options: string[];
     onChange: (v: string) => void;
 }
@@ -10,7 +10,7 @@ interface SelectSimpleProps {
 // Given a array of strings shows a <select> element. Returns one of the strings onChange
 // If you want value by index see SelectSimpleIndex
 // If you need something more complicated like value/label pairs then make a new component.
-export default function SelectSimple({ label, value, options, onChange }: SelectSimpleProps) {
+export default function SelectSimple({ label = '', value, options, onChange }: SelectSimpleProps) {
     return (
         <label>
             {label}
