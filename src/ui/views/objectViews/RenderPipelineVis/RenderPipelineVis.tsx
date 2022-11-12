@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ReplayRenderPipeline } from '../../../../replay';
 import { JsonValueObject } from '../../../components/JsonValue/JsonValue';
-import { RenderPipelinePreviewLayoutVis } from '../../../components/RenderPipelinePreviewLayoutVis/RenderPipelinePreviewLayoutVis';
+import { DrawPreviewAttribLayout } from '../../../components/DrawPreviewAttribLayout/DrawPreviewAttribLayout';
 
 export default function RenderPipelineVis({ data }: { data: ReplayRenderPipeline }) {
     const [previewOpen] = useState(false);
@@ -9,7 +9,7 @@ export default function RenderPipelineVis({ data }: { data: ReplayRenderPipeline
         <div className="spector2-vis">
             <details open={previewOpen}>
                 <summary><b>Setup preview attributes</b></summary>
-                <RenderPipelinePreviewLayoutVis key={data.replayObjectKey} data={data.previewLayout} />
+                <DrawPreviewAttribLayout key={data.replayObjectKey} data={data} />
             </details>
             <hr/>
             <JsonValueObject data={data} />

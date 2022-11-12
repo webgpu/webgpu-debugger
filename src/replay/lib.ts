@@ -831,62 +831,15 @@ export class ReplayQueue extends ReplayObject {
     }
 }
 
-// This is a subset of the GPUVertexState that doesn't include the shader module
-export interface PreviewVertexLayout {
-    buffers : Array<GPUVertexBufferLayout?>;
-}
-
-export interface PreviewVertexAttribute extends GPUVertexAttribute {
-    buffer: number,
-    arrayStride: number,
-}
-
-export class RenderPipelinePreviewLayout {
-    vertexLayout: PreviewVertexLayout;
-    previewAttribs: Array<PreviewVertexAttribute> = [];
-
-    positionAttrib: number = -1;
-    normalAttrib: number = -1;
-    texCoordAttrib: number = -1;
-    colorAttrib: number = -1;
-
-    constructor(vertexLayout: PreviewVertexLayout) {
-        this.vertexLayout = vertexLayout;
-
-        let minShaderLocation = Number.MAX_SAFE_INTEGER;
-        for (let i = 0; i < this.vertexLayout.buffers.length; ++i) {
-            const buffer = this.vertexLayout.buffers[i];
-            if (!buffer) { continue; }
-
-            for (const attrib of buffer.attributes) {
-                let previewAttrib = {
-                    buffer: i,
-                    arrayStride: buffer.arrayStride,
-                    ...attrib
-                };
-                minShaderLocation = Math.min(previewAttrib.shaderLocation, minShaderLocation);
-                this.previewAttribs.push(previewAttrib);
-            }
-        }
-
-        // TODO: Do a better job of estimating this stuff.
-        this.positionAttrib = minShaderLocation;
-    }
-}
-
 export class ReplayRenderPipeline extends ReplayObject {
     device: ReplayDevice;
     desc: GPURenderPipelineDescriptor;
     webgpuObject?: GPURenderPipeline;
 
-    previewLayout: RenderPipelinePreviewLayout;
-
     constructor(replay, desc) {
         super(replay, desc);
         this.device = this.replay.devices[desc.deviceSerial];
         this.desc = desc;
-
-        this.previewLayout = new RenderPipelinePreviewLayout(this.desc.vertex);
     }
 
     async recreate(desc) {

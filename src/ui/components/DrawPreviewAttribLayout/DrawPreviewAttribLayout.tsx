@@ -1,27 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { RenderPipelinePreviewLayout, PreviewVertexAttribute } from '../../../replay';
+import { ReplayRenderPipeline } from '../../../replay';
+import { DrawPreviewPipeline, DrawPreviewVertexAttribute } from '../../components/DrawPreviewViewer/DrawPreviewRenderer';
 import SelectSimpleIndex from '../../components/SelectSimple/SelectSimpleIndex';
 
-interface Props {
-    data: RenderPipelinePreviewLayout;
-}
-
-function attribOptions(previewAttribs : Array<PreviewVertexAttribute>) {
+function attribOptions(previewAttribs : Array<DrawPreviewVertexAttribute>) {
     return previewAttribs.map(
-        (attrib: PreviewVertexAttribute) => `@location(${attrib.shaderLocation}): ${attrib.format}, buffer[${attrib.buffer}]+${attrib.offset}`
+        (attrib: DrawPreviewVertexAttribute) => `@location(${attrib.shaderLocation}): ${attrib.format}, buffer[${attrib.buffer}]+${attrib.offset}`
     );
 }
 
-export function RenderPipelinePreviewLayoutVis({ data }: Props) {
-    const [position, setPosition] = useState(data.positionAttrib);
-    const [texCoord, setTexCoord] = useState(data.texCoordAttrib);
-    const [normal, setNormal] = useState(data.normalAttrib);
-    const [color, setColor] = useState(data.colorAttrib);
+interface Props {
+    data: ReplayRenderPipeline;
+}
 
-    useEffect(() => { data.positionAttrib = position; }, [position]);
-    useEffect(() => { data.texCoordAttrib = texCoord; }, [texCoord]);
-    useEffect(() => { data.normalAttrib = normal; }, [normal]);
-    useEffect(() => { data.colorAttrib = color; }, [color]);
+export function DrawPreviewAttribLayout({ data }: Props) {
+    const drawPreview = DrawPreviewPipeline.getDrawPreviewPipeline(data);
+
+    const [position, setPosition] = useState(drawPreview.positionAttrib);
+    const [texCoord, setTexCoord] = useState(drawPreview.texCoordAttrib);
+    const [normal, setNormal] = useState(drawPreview.normalAttrib);
+    const [color, setColor] = useState(drawPreview.colorAttrib);
+
+    useEffect(() => { drawPreview.positionAttrib = position; }, [position]);
+    useEffect(() => { drawPreview.texCoordAttrib = texCoord; }, [texCoord]);
+    useEffect(() => { drawPreview.normalAttrib = normal; }, [normal]);
+    useEffect(() => { drawPreview.colorAttrib = color; }, [color]);
 
     return (
         <div className="spector2-render-pipeline-preview-layout-vis">
@@ -33,7 +36,7 @@ export function RenderPipelinePreviewLayoutVis({ data }: Props) {
                             <SelectSimpleIndex
                                 value={position}
                                 noneOption={'- None -'}
-                                options={attribOptions(data.previewAttribs)}
+                                options={attribOptions(drawPreview.previewAttribs)}
                                 onChange={setPosition}
                             />
                         </td>
@@ -44,7 +47,7 @@ export function RenderPipelinePreviewLayoutVis({ data }: Props) {
                             <SelectSimpleIndex
                                 value={texCoord}
                                 noneOption={'- None -'}
-                                options={attribOptions(data.previewAttribs)}
+                                options={attribOptions(drawPreview.previewAttribs)}
                                 onChange={setTexCoord}
                             />
                         </td>
@@ -55,7 +58,7 @@ export function RenderPipelinePreviewLayoutVis({ data }: Props) {
                             <SelectSimpleIndex
                                 value={normal}
                                 noneOption={'- None -'}
-                                options={attribOptions(data.previewAttribs)}
+                                options={attribOptions(drawPreview.previewAttribs)}
                                 onChange={setNormal}
                             />
                         </td>
@@ -66,7 +69,7 @@ export function RenderPipelinePreviewLayoutVis({ data }: Props) {
                             <SelectSimpleIndex
                                 value={color}
                                 noneOption={'- None -'}
-                                options={attribOptions(data.previewAttribs)}
+                                options={attribOptions(drawPreview.previewAttribs)}
                                 onChange={setColor}
                             />
                         </td>
