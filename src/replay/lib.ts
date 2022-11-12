@@ -421,6 +421,7 @@ export class ReplayRenderPass extends ReplayObject {
             bindGroups: [],
             vertexBuffers: [],
             indexBuffer: { buffer: null, offset: 0, size: 0 },
+            lastCommand: null,
         };
 
         const renderPass = encoder.beginRenderPass(renderPassDesc);
@@ -436,6 +437,7 @@ export class ReplayRenderPass extends ReplayObject {
 
         for (let i = 1; i <= commandIndex; i++) {
             const c = this.commands[i];
+            state.lastCommand = c;
             switch (c.name) {
                 case 'draw':
                     renderPass.draw(c.args.vertexCount, c.args.instanceCount, c.args.firstVertex, c.args.firstInstance);
@@ -470,7 +472,7 @@ export class ReplayRenderPass extends ReplayObject {
                         c.args.offset,
                         c.args.size
                     );
-                    state.indexBuffer = { buffer: c.args.buffer, offset: c.args.offset, size: c.args.size };
+                    state.indexBuffer = { buffer: c.args.buffer, offset: c.args.offset, size: c.args.size, indexFormat: c.args.indexFormat };
                     break;
                 case 'setPipeline':
                     renderPass.setPipeline(c.args.pipeline.webgpuObject);

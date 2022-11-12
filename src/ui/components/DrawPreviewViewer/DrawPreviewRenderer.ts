@@ -123,19 +123,19 @@ export class DrawPreviewPipeline {
         let vertexBuffers = [this.bufferForPreviewAttrib(this._positionAttrib, 0)];
 
         if (this._texCoordAttrib != -1) {
-            vertexInFields.push('@location(1) texCoord : vec4<f32>,');
+            vertexInFields.push('@location(1) texCoord : vec2<f32>,');
             vertexOutSetters.push('output.texCoord = input.texCoord;');
             vertexBuffers.push(this.bufferForPreviewAttrib(this._texCoordAttrib, 1));
         } else {
-            vertexOutSetters.push('output.texCoord = vec4(0.0, 0.0, 0.0, 1.0);');
+            vertexOutSetters.push('output.texCoord = vec2(0.0);');
         }
 
         if (this._normalAttrib != -1) {
-            vertexInFields.push('@location(2) normal : vec4<f32>,');
-            vertexOutSetters.push('output.normal = input.normal;');
+            vertexInFields.push('@location(2) normal : vec3<f32>,');
+            vertexOutSetters.push('output.normal = normalize(input.normal);');
             vertexBuffers.push(this.bufferForPreviewAttrib(this._normalAttrib, 2));
         } else {
-            vertexOutSetters.push('output.normal = vec4(0.0, 0.0, 1.0, 1.0);');
+            vertexOutSetters.push('output.normal = normalize(lightDir);');
         }
 
         if (this._colorAttrib != -1) {
@@ -143,18 +143,28 @@ export class DrawPreviewPipeline {
             vertexOutSetters.push('output.color = input.color;');
             vertexBuffers.push(this.bufferForPreviewAttrib(this._colorAttrib, 3));
         } else {
-            vertexOutSetters.push('output.color = vec4(1.0, 0.0, 1.0, 1.0);');
+            vertexOutSetters.push('output.color = vec4(1.0);');
         }
 
         const code = `
+            // Some hardcoded lighting
+            const lightDir = vec3(0.25, 0.5, 1.0);
+
+            struct Uniforms {
+                projection: mat4x4<f32>,
+                view: mat4x4<f32>,
+                model: mat4x4<f32>,
+            };
+            //@group(0) @binding(0) var<uniform> uniforms : Uniforms;
+
             struct VertexIn {
                 ${vertexInFields.join('\n')}
             };
 
             struct VertexOut {
                 @builtin(position) position : vec4<f32>,
-                @location(0) texCoord : vec4<f32>,
-                @location(1) normal : vec4<f32>,
+                @location(0) texCoord : vec2<f32>,
+                @location(1) normal : vec3<f32>,
                 @location(2) color : vec4<f32>,
             };
 
@@ -167,7 +177,13 @@ export class DrawPreviewPipeline {
 
             @fragment
             fn fragmentMain(input : VertexOut) -> @location(0) vec4<f32> {
-                return input.color;
+                // An extremely simple directional lighting model.
+                let N = normalize(input.normal);
+                let L = normalize(lightDir);
+                let NDotL = max(dot(N, L), 0.0);
+                let surfaceColor = (input.color.rgb * NDotL);
+
+                return vec4(surfaceColor, input.color.a);
             }`;
         const module = device.createShaderModule({ code });
 
@@ -177,17 +193,20 @@ export class DrawPreviewPipeline {
                 module,
                 entryPoint: 'vertexMain',
                 buffers: vertexBuffers,
+
             },
-            primitive: {
-                ...this.renderPipeline.desc.primitive,
-                cullMode: 'none'
-            },
+            primitive: this.renderPipeline.desc.primitive,
             fragment: {
                 module,
                 entryPoint: 'fragmentMain',
                 targets: [{
                     format: navigator.gpu.getPreferredCanvasFormat(),
                 }]
+            },
+            depthStencil: {
+                format: 'depth24plus',
+                depthWriteEnabled: true,
+                depthCompare: 'less',
             }
         });
 
@@ -197,16 +216,30 @@ export class DrawPreviewPipeline {
     render(context: GPUCanvasContext, state: any) {
         const device = this.device;
 
+        const currentTexture = context.getCurrentTexture();
+        // TODO: Cache this
+        const depthTexture = device.createTexture({
+            size: { width: currentTexture.width, height: currentTexture.width },
+            format: 'depth24plus',
+            usage: GPUTextureUsage.RENDER_ATTACHMENT,
+        });
+
         const commandEncoder = device.createCommandEncoder();
         const passEncoder = commandEncoder.beginRenderPass({
             colorAttachments: [
                 {
-                    view: context.getCurrentTexture().createView(),
+                    view: currentTexture.createView(),
                     loadOp: 'clear',
                     clearValue: [0.0, 0.0, 0.0, 0.5],
                     storeOp: 'store',
                 },
             ],
+            depthStencilAttachment: {
+                view: depthTexture.createView(),
+                depthLoadOp: 'clear',
+                depthClearValue: 1.0,
+                depthStoreOp: 'discard',
+            }
         });
 
         const pipeline = this.getPreviewRenderPipeline();
@@ -233,8 +266,19 @@ export class DrawPreviewPipeline {
                 passEncoder.setIndexBuffer(index.buffer.webgpuObject, index.indexFormat, index.offset, index.size);
             }
 
-            // TODO: Use actual command!
-            passEncoder.draw(36);
+            // TODO: HACK ALERT! Is there a better way to track this?
+            const c = state.lastCommand;
+            if (c?.name === 'draw') {
+                passEncoder.draw(c.args.vertexCount, c.args.instanceCount, c.args.firstVertex, c.args.firstInstance);
+            } else if (c?.name === 'drawIndexed') {
+                passEncoder.drawIndexed(
+                    c.args.indexCount,
+                    c.args.instanceCount,
+                    c.args.firstIndex,
+                    c.args.baseVertex,
+                    c.args.firstInstance
+                );
+            }
         }
 
         passEncoder.end();
