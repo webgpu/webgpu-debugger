@@ -1,4 +1,5 @@
 import { ReplayRenderPipeline } from "../../../replay";
+import { vec3, mat4 } from 'wgpu-matrix';
 
 // This is a subset of the GPUVertexState that doesn't include the shader module
 export interface DrawPreviewVertexAttribute extends GPUVertexAttribute {
@@ -112,14 +113,8 @@ export class DrawPreviewPipeline {
 
         const device = this.device;
 
-        let vertexInFields = [
-            `@location(0) position : vec4<f32>,`
-        ];
-
-        let vertexOutSetters = [
-            `output.position = input.position;`
-        ];
-
+        let vertexInFields = [];
+        let vertexOutSetters = [];
         let vertexBuffers = [this.bufferForPreviewAttrib(this._positionAttrib, 0)];
 
         if (this._texCoordAttrib != -1) {
@@ -132,7 +127,7 @@ export class DrawPreviewPipeline {
 
         if (this._normalAttrib != -1) {
             vertexInFields.push('@location(2) normal : vec3<f32>,');
-            vertexOutSetters.push('output.normal = normalize(input.normal);');
+            vertexOutSetters.push('output.normal = normalize((uniforms.model * vec4(input.normal, 0.0)).xyz);');
             vertexBuffers.push(this.bufferForPreviewAttrib(this._normalAttrib, 2));
         } else {
             vertexOutSetters.push('output.normal = normalize(lightDir);');
@@ -155,9 +150,10 @@ export class DrawPreviewPipeline {
                 view: mat4x4<f32>,
                 model: mat4x4<f32>,
             };
-            //@group(0) @binding(0) var<uniform> uniforms : Uniforms;
+            @group(0) @binding(0) var<uniform> uniforms : Uniforms;
 
             struct VertexIn {
+                @location(0) position : vec4<f32>,
                 ${vertexInFields.join('\n')}
             };
 
@@ -171,6 +167,7 @@ export class DrawPreviewPipeline {
             @vertex
             fn vertexMain(input : VertexIn) -> VertexOut {
                 var output : VertexOut;
+                output.position = uniforms.projection * uniforms.view * uniforms.model * input.position;
                 ${vertexOutSetters.join('\n')}
                 return output;
             }
@@ -217,12 +214,28 @@ export class DrawPreviewPipeline {
         const device = this.device;
 
         const currentTexture = context.getCurrentTexture();
-        // TODO: Cache this
+        // TODO: Cache these
         const depthTexture = device.createTexture({
             size: { width: currentTexture.width, height: currentTexture.width },
             format: 'depth24plus',
             usage: GPUTextureUsage.RENDER_ATTACHMENT,
         });
+
+        // TODO: Base view and projection on feedback from buffer about min and max sizes.
+        const projection = mat4.perspective(Math.PI * 0.5, currentTexture.width / currentTexture.width, 0.1, 10);
+        const view = mat4.translation([0, 0, -1]);
+        const model = mat4.rotationY(performance.now() / 1000);
+
+        const uniformBuffer = device.createBuffer({
+            size: Float32Array.BYTES_PER_ELEMENT * 48,
+            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
+            mappedAtCreation: true;
+        });
+        const uniformBufferArray = new Float32Array(uniformBuffer.getMappedRange());
+        uniformBufferArray.set(projection, 0);
+        uniformBufferArray.set(view, 16);
+        uniformBufferArray.set(model, 32);
+        uniformBuffer.unmap();
 
         const commandEncoder = device.createCommandEncoder();
         const passEncoder = commandEncoder.beginRenderPass({
@@ -245,6 +258,16 @@ export class DrawPreviewPipeline {
         const pipeline = this.getPreviewRenderPipeline();
         if (pipeline && state.vertexBuffers) {
             passEncoder.setPipeline(pipeline);
+
+            const bindGroup = device.createBindGroup({
+                layout: pipeline.getBindGroupLayout(0),
+                entries: [{
+                    binding: 0,
+                    resource: { buffer: uniformBuffer }
+                }]
+            });
+
+            passEncoder.setBindGroup(0, bindGroup);
 
             // TODO: Set uniforms for camera/rotation.
 
