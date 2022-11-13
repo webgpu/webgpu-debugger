@@ -4,7 +4,7 @@ import { getUnwrappedGPUCanvasContext } from '../../../capture';
 import { UIStateContext } from '../../contexts/UIStateContext';
 import { DrawPreviewAttribLayout } from '../../components/DrawPreviewAttribLayout/DrawPreviewAttribLayout';
 import Value from '../Value/Value';
-import { DrawPreviewPipeline } from './DrawPreviewRenderer';
+import { DrawPreviewPipeline, DrawPreviewRenderer } from './DrawPreviewRenderer';
 
 interface Props {
   state: any;
@@ -33,7 +33,7 @@ export function DrawPreviewViewer({ state }: Props) {
         alphaMode: 'premultiplied',
     });
 
-    const renderer = DrawPreviewPipeline.getDrawPreviewPipeline(pipeline);
+    const renderer = DrawPreviewRenderer.getRendererForDevice(device);
 
     let rafId = -1;
     const draw = () => {
