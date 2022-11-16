@@ -85,7 +85,9 @@ export default function DualRange({
                     step={step}
                     value={minVal}
                     onChange={e => setMinVal(Math.min(parseFloat(e.target.value), maxVal - step))}
-                    className={minVal > min ? 'spector2-dualrange-thumb raised-thumb' : 'spector2-dualrange-thumb'}
+                    className={
+                        minVal > min ? 'spector2-dualrange-thumb .spector2-raised-thumb' : 'spector2-dualrange-thumb'
+                    }
                 />
                 <input
                     ref={maxValRef}
@@ -95,7 +97,9 @@ export default function DualRange({
                     step={step}
                     value={maxVal}
                     onChange={e => setMaxVal(Math.max(parseFloat(e.target.value), minVal + step))}
-                    className={maxVal < max ? 'spector2-dualrange-thumb raised-thumb' : 'spector2-dualrange-thumb'}
+                    className={
+                        maxVal < max ? 'spector2-dualrange-thumb spector2-raised-thumb' : 'spector2-dualrange-thumb'
+                    }
                 />
                 <div className="spector2-dualrange-track" />
                 <div ref={range} className="spector2-dualrange-range" />
