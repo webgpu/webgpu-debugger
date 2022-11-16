@@ -1,3 +1,7 @@
+.spector2-steps-vis {
+  height: 100%;
+}
+
 .spector2-steps-vis-traces {
   display: flex;
 }

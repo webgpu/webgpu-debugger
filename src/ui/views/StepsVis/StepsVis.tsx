@@ -2,12 +2,15 @@ import React, { useState, useContext, useEffect } from 'react';
 import { Command, CommandArgs, QueueSubmitArgs, RenderPassArgs } from '../../../replay';
 import SelectSimpleIndex from '../../components/SelectSimple/SelectSimpleIndex';
 import Value from '../../components/Value/Value';
+import Checkbox from '../../components/Checkbox/Checkbox';
+import Overflow from '../../components/Overflow/Overflow';
+import RowHolder from '../../components/RowHolder/RowHolder';
+import Row from '../../components/Row/Row';
 import { ReplayInfo, UIStateContext } from '../../contexts/UIStateContext';
 import { classNames } from '../../lib/css';
 import { canDisplayInline } from '../../components/VisValue/VisValue';
 
 import './StepsVis.css';
-import Checkbox from '../../components/Checkbox/Checkbox';
 
 type StepsState = {
     currentStep: number[];
@@ -225,24 +228,34 @@ export default function StepsVis({ data }: StepsVisProps) {
     return (
         <div className="spector2-vis">
             <div className="spector2-steps-vis">
-                <div className="spector2-steps-vis-traces">
-                    <SelectSimpleIndex
-                        label=""
-                        value={helper.state.currentTraceIndex}
-                        options={helper.state.traces.map(t => t.name)}
-                        onChange={helper.setCurrentTraceByIndex}
-                    />
-                </div>
-                <div>
-                    <Checkbox label="wrap:" checked={wrapCommands} onChange={setWrapCommands} />
-                    <Checkbox label="show arg names:" checked={showCommandArgNames} onChange={setShowCommandArgNames} />
-                </div>
-                <div className="spector2-top-separator"></div>
-                <div style={{ whiteSpace: wrapCommands ? 'normal' : 'nowrap' }}>
-                    <StepsContext.Provider value={{ state, playTo, showCommandArgNames }}>
-                        <Commands commands={replay!.commands} commandId={[]} />
-                    </StepsContext.Provider>
-                </div>
+                <RowHolder>
+                    <Row className="spector2-steps-vis-traces">
+                        <SelectSimpleIndex
+                            label=""
+                            value={helper.state.currentTraceIndex}
+                            options={helper.state.traces.map(t => t.name)}
+                            onChange={helper.setCurrentTraceByIndex}
+                        />
+                    </Row>
+                    <Row>
+                        <Checkbox label="wrap:" checked={wrapCommands} onChange={setWrapCommands} />
+                        <Checkbox
+                            label="show arg names:"
+                            checked={showCommandArgNames}
+                            onChange={setShowCommandArgNames}
+                        />
+                    </Row>
+                    <Row className="spector2-top-separator"></Row>
+                    <Row expand={true} className="spector2-steps-steps">
+                        <Overflow>
+                            <div style={{ whiteSpace: wrapCommands ? 'normal' : 'nowrap' }}>
+                                <StepsContext.Provider value={{ state, playTo, showCommandArgNames }}>
+                                    <Commands commands={replay!.commands} commandId={[]} />
+                                </StepsContext.Provider>
+                            </div>
+                        </Overflow>
+                    </Row>
+                </RowHolder>
             </div>
         </div>
     );

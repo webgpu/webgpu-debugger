@@ -1,7 +1,9 @@
-export function classNames(...classes: (Record<string, boolean> | string)[]): string {
+export function classNames(...classes: (Record<string, boolean> | string | undefined)[]): string {
     const names = [];
     for (const cl of classes) {
-        if (typeof cl === 'string') {
+        if (typeof cl === 'undefined') {
+            //
+        } else if (typeof cl === 'string') {
             names.push(cl);
         } else {
             names.push(
