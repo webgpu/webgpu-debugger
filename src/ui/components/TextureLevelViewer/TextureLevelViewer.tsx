@@ -5,7 +5,7 @@ import { UIStateContext } from '../../contexts/UIStateContext';
 import Checkbox from '../../components/Checkbox/Checkbox';
 import SelectSimple from '../../components/SelectSimple/SelectSimple';
 import Range from '../../components/Range/Range';
-import DualRange from '../../components/Range/DualRange';
+import DualRange from '../DualRange/DualRange';
 import { TextureRenderer, CubeTextureRenderer } from './TextureRenderer';
 import { TextureInspector, TextureSamples } from '../TextureSamplesVis/TextureInspector';
 import TextureSamplesVis from '../TextureSamplesVis/TextureSamplesVis';
