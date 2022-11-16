@@ -69,8 +69,8 @@ export default function DualRange({
 
     useEffect(() => {
         // Clamp the min and max values to the update range.
-        setMinVal((v) => Math.min(max, Math.max(v, min)));
-        setMaxVal((v) => Math.min(max, Math.max(v, min)));
+        setMinVal(v => Math.min(max, Math.max(v, min)));
+        setMaxVal(v => Math.min(max, Math.max(v, min)));
     }, [min, max, onChange]);
 
     return (
