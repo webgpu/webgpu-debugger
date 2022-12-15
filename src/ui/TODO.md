@@ -89,3 +89,5 @@
 - [X] Make it save layout to local storage
 
 - [ ] Add a syntax highlighter for shaders
+
+- [ ] Capture line numbers (new Error())
