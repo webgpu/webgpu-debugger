@@ -68,7 +68,7 @@ class ObjectRegistry<GPUType extends Object, CaptureState extends CaptureStateBa
         this.objects = this.objects.filter(ref => ref.deref() !== undefined);
     }
 
-    [Symbol.iterator](): Iterator<CaptureState> {
+    [Symbol.iterator](): IterableIterator<CaptureState> {
         let i = 0;
         this.iterating = true;
 
@@ -100,23 +100,19 @@ export interface TraceObject {
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface TraceAdapter extends TraceObject {}
 
-//export interface TraceBindGroupEntry {
-//    textureViewSerial?: number;
-//    samplerSerial?: number;
-//    bufferSerial?: number;
-//    offset?: number;
-//    size?: number;
-//}
+export interface TraceBindGroupEntry {
+    binding: number;
+    textureViewSerial?: number;
+    samplerSerial?: number;
+    bufferSerial?: number;
+    offset?: number;
+    size?: number;
+}
 
 export interface TraceBindGroup extends TraceObject {
     deviceSerial: number;
     layoutSerial: number;
-    entries: [TraceBindGroupEntry];
-}
-
-export interface TraceImplicitBindGroupLayout {
-    renderPipelineSerial: number;
-    groupIndex: number;
+    entries: TraceBindGroupEntry[];
 }
 
 export interface TraceBindGroupBufferEntry {
@@ -143,7 +139,7 @@ export interface TraceBindGroupStorageTextureEntry {
 
 export type TraceBindGroupExternalTextureEntry = {};
 
-export interface TraceBindGroupEntry {
+export interface TraceExplicitBindGroupEntry {
     binding: number;
     visibility: number;
     buffer?: TraceBindGroupBufferEntry;
@@ -153,17 +149,15 @@ export interface TraceBindGroupEntry {
     externalTexture?: TraceBindGroupExternalTextureEntry;
 }
 
-//export interface TraceBindGroupEntry {
-//    buffer?: TraceBindBufferEntry;
-//    sampler?: TraceBindSamplerEntry;
-//    texture?: TraceBindTextureEntry;
-//    storageTexture?: TraceBindStorageTextureEntry;
-//    externalTexture?: TraceExternalTextureEntry;
-//}
-
-export interface TraceExplicitBindGroupLayout {
+export interface TraceExplicitBindGroupLayout extends TraceObject {
     deviceSerial: number;
-    entries: [TraceBindGroupEntry];
+    entries: TraceExplicitBindGroupEntry[];
+}
+
+export interface TraceImplicitBindGroupLayout extends TraceObject {
+    deviceSerial: number;
+    renderPipelineSerial: number;
+    groupIndex: number;
 }
 
 export type TraceBindGroupLayout = TraceImplicitBindGroupLayout | TraceExplicitBindGroupLayout;
@@ -179,18 +173,189 @@ export interface TraceBuffer extends TraceObject {
     };
 }
 
-export type TraceCommandBuffer = TraceObject;
+export interface TraceCommandBufferCommandCopyTextureToTexture {
+    name: 'copyTextureToTexture';
+    args: {
+        source: TraceImageCopyTexture;
+        destination: TraceImageCopyTexture;
+        copySize: GPUExtent3D;
+    };
+}
 
-export type TraceDevice = TraceObject;
+export interface TraceCommandBufferCommandCopyBufferToTexture {
+    name: 'copyBufferToTexture';
+    args: {
+        source: TraceImageCopyBuffer;
+        destination: TraceImageCopyTexture;
+        copySize: GPUExtent3D;
+    };
+}
 
-export interface TracePipelineLayout {
+export interface TraceCommandBufferCommandPopDebugGroup {
+    name: 'popDebugGroup';
+}
+
+export interface TraceCommandBufferCommandPushDebugGroup {
+    name: 'pushDebugGroup';
+    args: {
+        groupLabel: string;
+    };
+}
+
+export interface TraceCommandBuffer extends TraceObject {
+    commands: TraceCommandBufferCommand[];
+    deviceSerial: number;
+}
+
+export interface TraceRenderPassColorAttachment {
+    viewSerial: number;
+    resolveTargetSerial?: number;
+    clearValue: GPUColorDict;
+    loadOp: GPULoadOp;
+    storeOp: GPUStoreOp;
+}
+
+export interface TraceRenderPassTimestampWrite {
+    querySetSerial: number;
+    queryIndex: number;
+    location: GPURenderPassTimestampLocation;
+}
+
+export interface TraceRenderPassDepthStencilAttachment {
+    viewSerial: number;
+    depthClearValue: number;
+    depthLoadOp?: GPULoadOp;
+    depthStoreOp?: GPUStoreOp;
+    depthReadOnly: boolean;
+    stencilClearValue: number;
+    stencilLoadOp?: GPULoadOp;
+    stencilStoreOp?: GPUStoreOp;
+    stencilReadOnly: boolean;
+}
+
+export interface TraceCommandBeginRenderPassArgs {
+    colorAttachments: TraceRenderPassColorAttachment[];
+    timestampWrites: TraceRenderPassTimestampWrite[];
+    occlusionQuerySetSerial?: number;
+    maxDrawCount: number;
+    depthStencilAttachment?: TraceRenderPassDepthStencilAttachment;
+}
+
+export interface TraceCommandBufferCommandBeginRenderPass {
+    name: 'beginRenderPass';
+    args: TraceCommandBeginRenderPassArgs;
+}
+
+export interface TraceCommandBufferCommandDraw {
+    name: 'draw';
+    args: {
+        vertexCount: number;
+        instanceCount: number;
+        firstVertex: number;
+        firstInstance: number;
+    };
+}
+
+export interface TraceCommandBufferCommandDrawIndexed {
+    name: 'drawIndexed';
+    args: {
+        indexCount: number;
+        instanceCount: number;
+        firstIndex: number;
+        baseVertex: number;
+        firstInstance: number;
+    };
+}
+
+export interface TraceCommandBufferCommandSetBindGroup {
+    name: 'setBindGroup';
+    args: {
+        index: number;
+        bindGroupSerial: number;
+    };
+}
+
+export interface TraceCommandBufferCommandSetIndexBuffer {
+    name: 'setIndexBuffer';
+    args: {
+        bufferSerial: number;
+        indexFormat: GPUIndexFormat;
+        offset: number;
+        size: number;
+    };
+}
+
+export interface TraceCommandBufferCommandSetPipeline {
+    name: 'setPipeline';
+    args: {
+        pipelineSerial: number;
+    };
+}
+
+export interface TraceCommandBufferCommandSetVertexBuffer {
+    name: 'setVertexBuffer';
+    args: {
+        slot: number;
+        bufferSerial: number;
+        offset: number;
+        size: number;
+    };
+}
+
+export interface TraceCommandBufferCommandSetScissorRect {
+    name: 'setScissorRect';
+    args: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+    };
+}
+
+export interface TraceCommandBufferCommandSetViewport {
+    name: 'setViewport';
+    args: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        minDepth: number;
+        maxDepth: number;
+    };
+}
+
+export interface TraceCommandBufferCommandEndPass {
+    name: 'endPass';
+}
+
+export type TraceCommandBufferCommand =
+    | TraceCommandBufferCommandCopyTextureToTexture
+    | TraceCommandBufferCommandCopyBufferToTexture
+    | TraceCommandBufferCommandPopDebugGroup
+    | TraceCommandBufferCommandPushDebugGroup
+    | TraceCommandBufferCommandBeginRenderPass
+    | TraceCommandBufferCommandDraw
+    | TraceCommandBufferCommandDrawIndexed
+    | TraceCommandBufferCommandSetBindGroup
+    | TraceCommandBufferCommandSetIndexBuffer
+    | TraceCommandBufferCommandSetPipeline
+    | TraceCommandBufferCommandSetVertexBuffer
+    | TraceCommandBufferCommandSetScissorRect
+    | TraceCommandBufferCommandSetViewport
+    | TraceCommandBufferCommandEndPass;
+
+export interface TraceDevice extends TraceObject {
+    adapterSerial: number;
+}
+
+export interface TracePipelineLayout extends TraceObject {
     deviceSerial: number;
     bindGroupLayoutsSerial: number[];
 }
 
 export interface TraceQuerySet extends TraceObject {
     deviceSerial: number;
-    type: string;
+    type: GPUQueryType;
     count: number;
     state: string;
 }
@@ -199,7 +364,7 @@ export interface TraceQueue extends TraceObject {
     deviceSerial: number;
 }
 
-export interface TraceSamplerState {
+export interface TraceSamplerState extends TraceObject {
     addressModeU: GPUAddressMode;
     addressModeV: GPUAddressMode;
     addressModeW: GPUAddressMode;
@@ -246,11 +411,12 @@ export interface TraceShaderModule extends TraceObject {
     code: string;
 }
 
+export interface TraceData {
+    size: number;
+    serial: number;
+}
 export interface TraceTextureInitialData {
-    data: {
-        size: number;
-        serial: number;
-    };
+    data: TraceData;
     mipLevel: number;
     bytesPerRow: number;
 }
@@ -280,6 +446,88 @@ export interface TraceTextureView extends TraceObject {
     arrayLayerCount?: number;
 }
 
+export interface TraceQueueCommandSubmit {
+    name: 'queueSubmit';
+    queueSerial: number;
+    args: {
+        commandBufferSerials: number[];
+    };
+}
+
+export interface TraceQueueCommandWriteBuffer {
+    name: 'queueWriteBuffer';
+    queueSerial: number;
+    args: {
+        bufferSerial: number;
+        bufferOffset: number;
+        data: TraceData;
+    };
+}
+
+export interface TraceImageCopyTexture {
+    textureSerial: number;
+    mipLevel: number;
+    origin: GPUOrigin3D;
+    aspect: GPUTextureAspect;
+}
+
+export interface TraceImageCopyBuffer {
+    bufferSerial: number;
+    offset: number;
+    bytesPerRow?: number;
+    rowsPerImage?: number;
+}
+
+export interface TraceQueueCommandWriteTexture {
+    name: 'queueWriteTexture';
+    queueSerial: number;
+    args: {
+        destination: TraceImageCopyTexture;
+        data: TraceData;
+        dataLayout: GPUImageDataLayout;
+        size: GPUExtent3D;
+    };
+}
+
+export interface TraceQueueCommandPresent {
+    name: 'present';
+    args: {
+        canvasContextSerial: number;
+        textureSerial: number;
+    };
+}
+
+export interface TraceQueueCommandTextureDestroy {
+    name: 'textureDestroy';
+    textureSerial: number;
+}
+
+export interface TraceBufferUpdate {
+    data: TraceData;
+    offset: number;
+    size: number;
+}
+
+export interface TraceQueueCommandBufferUpdateData {
+    name: 'bufferUpdateData';
+    bufferSerial: number;
+    updates: TraceBufferUpdate[];
+}
+
+export interface TraceQueueCommandBufferUnmap {
+    name: 'bufferUnmap';
+    bufferSerial: number;
+}
+
+export type TraceQueueCommand =
+    | TraceQueueCommandSubmit
+    | TraceQueueCommandWriteBuffer
+    | TraceQueueCommandWriteTexture
+    | TraceQueueCommandPresent
+    | TraceQueueCommandTextureDestroy
+    | TraceQueueCommandBufferUpdateData
+    | TraceQueueCommandBufferUnmap;
+
 export interface Trace {
     objects: {
         adapters: Record<string, TraceAdapter>;
@@ -287,20 +535,20 @@ export interface Trace {
         bindGroupLayouts: Record<string, TraceBindGroupLayout>;
         buffers: Record<string, TraceBuffer>;
         commandBuffers: Record<string, TraceCommandBuffer>;
-        //commandEncoders: {},
-        //canvasContexts: {},
+        commandEncoders: Record<string, any>; // TODO: Add correct type
+        canvasContexts: Record<string, any>; // TODO: Add correct type
         devices: Record<string, TraceDevice>;
         pipelineLayouts: Record<string, TracePipelineLayout>;
         querySets: Record<string, TraceQuerySet>;
         queues: Record<string, TraceQueue>;
         samplers: Record<string, TraceSampler>;
-        //renderPassEncoders: {},
+        renderPassEncoders: Record<string, any>; // TODO: Add correct type
         renderPipelines: Record<string, TraceRenderPipeline>;
         shaderModules: Record<string, TraceShaderModule>;
         textures: Record<string, TraceTexture>;
         textureViews: Record<string, TraceTextureView>;
     };
-    commands: [];
+    commands: TraceQueueCommand[];
     data: Record<string, number[]>;
 }
 
@@ -520,7 +768,7 @@ export class Spector2 {
             GPUType extends Object,
             CaptureState extends CaptureStateAsync<GPUType, TraceType>,
             TraceType extends TraceObject
-        >(registry: ObjectRegistry<GPUType, CaptureState>, pendingPromises: Promise<TraceType>[]) {
+        >(registry: ObjectRegistry<GPUType, CaptureState>, pendingPromises: Promise<void>[]) {
             const result: Record<string, TraceType> = {};
             // TODO have some context where objects can ask for a device?
             for (const obj of registry) {
@@ -583,12 +831,12 @@ export class Spector2 {
         this.pendingTraceOperations.push(promise);
     }
 
-    traceCommand(command) {
+    traceCommand(command: TraceQueueCommand) {
         console.assert(this.tracing || this.pendingTraceOperations.length > 0);
-        this.trace.commands.push(command);
+        this.trace!.commands.push(command);
     }
 
-    traceData(buffer: ArrayBuffer, offset: number, size: number) {
+    traceData(buffer: ArrayBuffer, offset?: number, size?: number) {
         console.assert(this.tracing || this.pendingTraceOperations.length > 0);
         offset ??= 0;
         size ??= buffer.byteLength - offset;
@@ -604,9 +852,17 @@ export class Spector2 {
         return dataRef;
     }
 
-    registerObjectIn(typePlural, webgpuObject: GPUObjectBase, state) {
+    registerObjectIn(typePlural: string, webgpuObject: GPUObjectBase, state: any) {
+        // TODO: fixing these 2 lines to be typescript happy seems like a bunch of
+        // work. You'd probably have to put both the first collections and the second
+        // in some map/record of named collections
+
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         this[typePlural].add(webgpuObject, state);
         if (this.tracing) {
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
             this.trace.objects[typePlural][state.traceSerial] = state.serialize();
         }
     }
@@ -626,7 +882,7 @@ export class Spector2 {
     }
 }
 
-const spector2 = typeof GPUDevice !== 'undefined' ? new Spector2() : null;
+const spector2 = new Spector2();
 export { spector2 };
 
 class BaseState<T> {
@@ -661,32 +917,51 @@ class AdapterState extends BaseState<GPUAdapter> {
         spector2.registerObjectIn(
             'queues',
             device.queue,
-            new QueueState(spector2.devices.get(device), {} /*TODO desc*/)
+            new QueueState(spector2.devices.get(device)!, {} /*TODO desc*/)
         );
         return device;
     }
 }
 
+interface BindGroupEntry {
+    binding: number;
+    textureView?: TextureViewState;
+    sampler?: SamplerState;
+    buffer?: BufferState;
+    offset?: number;
+    size?: number;
+}
+
 class BindGroupState extends BaseState<GPUBindGroup> {
     device: DeviceState;
+    layout: BindGroupLayoutState;
+    entries: BindGroupEntry[];
 
     constructor(device: DeviceState, desc: GPUBindGroupDescriptor) {
         super(desc);
         this.device = device;
-        this.layout = spector2.bindGroupLayouts.get(desc.layout);
+        this.layout = spector2.bindGroupLayouts.get(desc.layout)!;
 
-        this.entries = desc.entries.map(e => {
-            const entry = { binding: e.binding };
-            if (spector2.textureViews.has(e.resource)) {
-                entry.textureView = spector2.textureViews.get(e.resource);
-            } else if (spector2.samplers.has(e.resource)) {
-                entry.sampler = spector2.samplers.get(e.resource);
-            } else if (e.resource.buffer !== undefined) {
-                entry.buffer = spector2.buffers.get(e.resource.buffer);
-                entry.offset = e.resource.offset ?? 0;
-                entry.size = e.resource.size ?? Math.max(0, entry.buffer.size - entry.offset);
+        this.entries = (desc.entries as GPUBindGroupEntry[]).map(e => {
+            const entry: BindGroupEntry = { binding: e.binding };
+            const textureViewState = spector2.textureViews.get(e.resource as GPUTextureView);
+            if (textureViewState) {
+                entry.textureView = textureViewState;
             } else {
-                console.assert('Unhandled binding type.');
+                const samplerState = spector2.samplers.get(e.resource as GPUSampler);
+                if (samplerState) {
+                    entry.sampler = samplerState;
+                } else {
+                    const bufferBinding = e.resource as GPUBufferBinding;
+                    if (bufferBinding.buffer !== undefined) {
+                        const bufferState = spector2.buffers.get(bufferBinding.buffer)!;
+                        entry.buffer = bufferState;
+                        entry.offset = bufferBinding.offset ?? 0;
+                        entry.size = bufferBinding.size ?? Math.max(0, bufferState.size - entry.offset);
+                    } else {
+                        console.assert(false, 'Unhandled binding type.');
+                    }
+                }
             }
             return entry;
         });
@@ -697,7 +972,7 @@ class BindGroupState extends BaseState<GPUBindGroup> {
             deviceSerial: this.device.traceSerial,
             layoutSerial: this.layout.traceSerial,
             entries: this.entries.map(e => {
-                const entry = { binding: e.binding };
+                const entry: TraceBindGroupEntry = { binding: e.binding };
                 if (e.textureView !== undefined) {
                     entry.textureViewSerial = e.textureView.traceSerial;
                 }
@@ -717,8 +992,10 @@ class BindGroupState extends BaseState<GPUBindGroup> {
 
 class BindGroupLayoutState extends BaseState<GPUBindGroupLayout> {
     device: DeviceState;
-    implicit: boolean;
-    entries?: TraceBindGroupEntry[];
+    implicit?: boolean;
+    entries?: TraceExplicitBindGroupEntry[];
+    parentRenderPipeline: any;
+    pipelineGroupIndex: any;
 
     constructor(device: DeviceState, desc: GPUBindGroupLayoutDescriptor) {
         super(desc);
@@ -735,7 +1012,7 @@ class BindGroupLayoutState extends BaseState<GPUBindGroupLayout> {
         }
 
         this.entries = (desc.entries as GPUBindGroupLayoutEntry[]).map(e => {
-            const entry: TraceBindGroupEntry = { binding: e.binding, visibility: e.visibility };
+            const entry: TraceExplicitBindGroupEntry = { binding: e.binding, visibility: e.visibility };
             if (e.buffer) {
                 entry.buffer = {
                     type: e.buffer.type ?? 'uniform',
@@ -769,17 +1046,20 @@ class BindGroupLayoutState extends BaseState<GPUBindGroupLayout> {
         });
     }
 
-    serialize() {
+    serialize(): TraceBindGroupLayout {
         if (this.implicit) {
-            return {
+            const b: TraceImplicitBindGroupLayout = {
+                deviceSerial: this.device.traceSerial,
                 renderPipelineSerial: this.parentRenderPipeline.traceSerial,
                 groupIndex: this.pipelineGroupIndex,
             };
+            return b;
         } else {
-            return {
+            const b: TraceExplicitBindGroupLayout = {
                 deviceSerial: this.device.traceSerial,
-                entries: this.entries, // TODO deep copy?
+                entries: this.entries!, // TODO deep copy?
             };
+            return b;
         }
     }
 }
@@ -895,20 +1175,25 @@ class BufferState extends BaseState<GPUBuffer> {
 }
 
 class CommandBufferState extends BaseState<GPUCommandBuffer> {
-    constructor(encoder, desc) {
+    device: DeviceState;
+    commands: any;
+
+    constructor(encoder: CommandEncoderState, desc: GPUCommandBufferDescriptor) {
         super(desc);
         this.device = encoder.device;
         this.commands = encoder.commands;
         // TODO get commands?
     }
 
-    serialize() {
+    serialize(): TraceCommandBuffer {
         return { commands: this.commands, deviceSerial: this.device.traceSerial };
     }
 }
 
 class CommandEncoderState extends BaseState<GPUCommandEncoder> {
     device: DeviceState;
+    commands: TraceCommandBufferCommand[];
+    referencedObjects: Set<any>;
 
     constructor(device: DeviceState, desc: GPUCommandEncoderDescriptor) {
         super(desc);
@@ -921,11 +1206,11 @@ class CommandEncoderState extends BaseState<GPUCommandEncoder> {
         return {};
     }
 
-    reference(object) {
+    reference(object: any) {
         this.referencedObjects.add(object);
     }
 
-    addCommand(command) {
+    addCommand(command: TraceCommandBufferCommand) {
         this.commands.push(command);
     }
 
@@ -941,13 +1226,13 @@ class CommandEncoderState extends BaseState<GPUCommandEncoder> {
             name: 'copyTextureToTexture',
             args: {
                 source: {
-                    textureSerial: spector2.textures.get(source.texture).traceSerial,
+                    textureSerial: spector2.textures.get(source.texture)!.traceSerial,
                     mipLevel: source.mipLevel ?? 0,
                     origin: source.origin ?? {}, // TODO copy
                     aspect: source.aspect ?? 'all',
                 },
                 destination: {
-                    textureSerial: spector2.textures.get(destination.texture).traceSerial,
+                    textureSerial: spector2.textures.get(destination.texture)!.traceSerial,
                     mipLevel: destination.mipLevel ?? 0,
                     origin: destination.origin ?? {}, // TODO copy
                     aspect: destination.aspect ?? 'all',
@@ -965,13 +1250,13 @@ class CommandEncoderState extends BaseState<GPUCommandEncoder> {
             name: 'copyBufferToTexture',
             args: {
                 source: {
-                    bufferSerial: spector2.buffers.get(source.buffer).traceSerial,
+                    bufferSerial: spector2.buffers.get(source.buffer)!.traceSerial,
                     offset: source.offset ?? 0,
                     bytesPerRow: source.bytesPerRow,
                     rowsPerImage: source.rowsPerImage,
                 },
                 destination: {
-                    textureSerial: spector2.textures.get(destination.texture).traceSerial,
+                    textureSerial: spector2.textures.get(destination.texture)!.traceSerial,
                     mipLevel: destination.mipLevel ?? 0,
                     origin: destination.origin ?? {}, // TODO copy
                     aspect: destination.aspect ?? 'all',
@@ -1009,7 +1294,7 @@ class CanvasContextState extends BaseState<GPUCanvasContext> {
     canvas: HTMLCanvasElement | OffscreenCanvas;
     getCurrentTextureCount: number;
     device?: DeviceState;
-    format = '';
+    format: GPUTextureFormat = 'rgba8unorm';
     usage = 0;
     viewFormats: GPUTextureFormat[] = [];
     colorSpace = '';
@@ -1027,7 +1312,7 @@ class CanvasContextState extends BaseState<GPUCanvasContext> {
         this.usage = config.usage ?? GPUTextureUsage.RENDER_ATTACHMENT;
         // TODO: remove
         this.usage |= GPUTextureUsage.TEXTURE_BINDING;
-        this.viewFormats = config.viewFormats ?? []; // TODO clone the inside
+        this.viewFormats = (config.viewFormats as GPUTextureFormat[]) ?? []; // TODO clone the inside
         this.colorSpace = config.colorSpace ?? 'srgb';
         this.alphaMode = config.alphaMode ?? 'opaque';
 
@@ -1048,14 +1333,14 @@ class CanvasContextState extends BaseState<GPUCanvasContext> {
     getCurrentTexture() {
         const texture = spector2.canvasContextProto.getCurrentTexture.call(this.webgpuObject);
         const textureState = new TextureState(
-            this.device,
+            this.device!,
             {
                 format: this.format,
                 size: { width: this.canvas.width, height: this.canvas.height, depthOrArrayLayers: 1 },
                 usage: this.usage,
                 viewFormats: this.viewFormats,
             },
-            /* swapChainId */ `gct: ${this.canvas.id || '*'}-${this.getCurrentTextureCount++}`
+            /* swapChainId */ `gct: ${(this.canvas as HTMLCanvasElement).id || '*'}-${this.getCurrentTextureCount++}`
         );
         spector2.registerObjectIn('textures', texture, textureState);
 
@@ -1093,7 +1378,7 @@ class DeviceState extends BaseState<GPUDevice> {
         this.adapter = adapter;
     }
 
-    serialize() {
+    serialize(): TraceDevice {
         return { adapterSerial: this.adapter.traceSerial };
     }
 
@@ -1191,7 +1476,7 @@ class PipelineLayoutState extends BaseState<GPUPipelineLayout> {
 
 class QuerySetState extends BaseState<GPUQuerySet> {
     device: DeviceState;
-    type: string;
+    type: GPUQueryType;
     count: number;
     state: string;
 
@@ -1253,7 +1538,7 @@ class QueueState extends BaseState<GPUQueue> {
             name: 'queueWriteBuffer',
             queueSerial: this.traceSerial,
             args: {
-                bufferSerial: spector2.buffers.get(buffer).traceSerial,
+                bufferSerial: spector2.buffers.get(buffer)!.traceSerial,
                 bufferOffset,
                 data: serializedData,
             },
@@ -1281,7 +1566,7 @@ class QueueState extends BaseState<GPUQueue> {
             queueSerial: this.traceSerial,
             args: {
                 destination: {
-                    textureSerial: spector2.textures.get(destination.texture).traceSerial,
+                    textureSerial: spector2.textures.get(destination.texture)!.traceSerial,
                     mipLevel: destination.mipLevel ?? 0,
                     origin: destination.origin ?? {}, // TODO copy
                     aspect: destination.aspect ?? 'all',
@@ -1320,42 +1605,44 @@ class QueueState extends BaseState<GPUQueue> {
         spector2.traceCommand({
             name: 'queueSubmit',
             queueSerial: this.traceSerial,
-            args: { commandBufferSerials: commandBuffers.map(c => spector2.commandBuffers.get(c).traceSerial) },
+            args: { commandBufferSerials: commandBuffers.map(c => spector2.commandBuffers.get(c)!.traceSerial) },
         });
     }
 }
 
 class RenderPassEncoderState extends BaseState<GPURenderPassEncoder> {
-    constructor(encoder, desc) {
+    encoder: CommandEncoderState;
+
+    constructor(encoder: CommandEncoderState, desc: GPURenderPassDescriptor) {
         super(desc);
         this.encoder = encoder;
-        const serializeDesc = {
-            colorAttachments: desc.colorAttachments.map(a => {
+        const serializeDesc: TraceCommandBeginRenderPassArgs = {
+            colorAttachments: (desc.colorAttachments as GPURenderPassColorAttachment[]).map(a => {
                 this.encoder.reference(a.view);
                 this.encoder.reference(a.resolveTarget);
                 return {
-                    viewSerial: spector2.textureViews.get(a.view).traceSerial,
+                    viewSerial: spector2.textureViews.get(a.view)!.traceSerial,
                     resolveTargetSerial: a.resolveTarget
-                        ? spector2.textureViews.get(a.resolveTarget).traceSerial
+                        ? spector2.textureViews.get(a.resolveTarget)!.traceSerial
                         : undefined,
 
-                    clearValue: a.clearValue ?? { r: 0, g: 0, b: 0, a: 0 },
+                    clearValue: (a.clearValue ?? { r: 0, g: 0, b: 0, a: 0 }) as GPUColorDict,
                     loadOp: a.loadOp,
                     storeOp: a.storeOp,
                 };
             }),
 
-            timestampWrites: (desc.timestampWrites ?? []).map(w => {
+            timestampWrites: ((desc.timestampWrites ?? []) as GPURenderPassTimestampWrite[]).map(w => {
                 this.encoder.reference(w.querySet);
                 return {
-                    querySetSerial: spector2.querySets.get(w.querySet).traceSerial,
+                    querySetSerial: spector2.querySets.get(w.querySet)!.traceSerial,
                     queryIndex: w.queryIndex,
-                    location: e.location,
+                    location: w.location,
                 };
             }),
 
             occlusionQuerySetSerial: desc.occlusionQuerySet
-                ? spector2.querySets.get(desc.occlusionQuerySet).traceSerial
+                ? spector2.querySets.get(desc.occlusionQuerySet)!.traceSerial
                 : undefined,
             maxDrawCount: desc.maxDrawCount ?? 50000000, // Yes that's the spec default.
         };
@@ -1365,7 +1652,7 @@ class RenderPassEncoderState extends BaseState<GPURenderPassEncoder> {
         if (ds !== undefined) {
             this.encoder.reference(ds.view);
             serializeDesc.depthStencilAttachment = {
-                viewSerial: spector2.textureViews.get(ds.view).traceSerial,
+                viewSerial: spector2.textureViews.get(ds.view)!.traceSerial,
 
                 depthClearValue: ds.depthClearValue ?? 0,
                 depthLoadOp: ds.depthLoadOp,
@@ -1379,7 +1666,10 @@ class RenderPassEncoderState extends BaseState<GPURenderPassEncoder> {
             };
         }
 
-        this.encoder.addCommand({ name: 'beginRenderPass', args: serializeDesc });
+        this.encoder.addCommand({
+            name: 'beginRenderPass',
+            args: serializeDesc,
+        });
     }
 
     serialize() {
@@ -1458,15 +1748,15 @@ class RenderPassEncoderState extends BaseState<GPURenderPassEncoder> {
             name: 'setBindGroup',
             args: {
                 index,
-                bindGroupSerial: spector2.bindGroups.get(bindGroup).traceSerial,
+                bindGroupSerial: spector2.bindGroups.get(bindGroup)!.traceSerial,
             },
         });
     }
 
-    setIndexBuffer(buffer: GPUBuffer, indexFormat: string, offset?: number, size?: number) {
+    setIndexBuffer(buffer: GPUBuffer, indexFormat: GPUIndexFormat, offset?: number, size?: number) {
         spector2.renderPassEncoderProto.setIndexBuffer.call(this.webgpuObject, buffer, indexFormat, offset, size);
         this.encoder.reference(buffer);
-        const bufferState = spector2.buffers.get(buffer);
+        const bufferState = spector2.buffers.get(buffer)!;
         offset = offset ?? 0;
         size = size ?? Math.max(0, bufferState.size - offset);
         this.encoder.addCommand({
@@ -1486,7 +1776,7 @@ class RenderPassEncoderState extends BaseState<GPURenderPassEncoder> {
         this.encoder.addCommand({
             name: 'setPipeline',
             args: {
-                pipelineSerial: spector2.renderPipelines.get(pipeline).traceSerial,
+                pipelineSerial: spector2.renderPipelines.get(pipeline)!.traceSerial,
             },
         });
     }
@@ -1494,7 +1784,7 @@ class RenderPassEncoderState extends BaseState<GPURenderPassEncoder> {
     setVertexBuffer(slot: number, buffer: GPUBuffer, offset?: number, size?: number) {
         spector2.renderPassEncoderProto.setVertexBuffer.call(this.webgpuObject, slot, buffer, offset, size);
         this.encoder.reference(buffer);
-        const bufferState = spector2.buffers.get(buffer);
+        const bufferState = spector2.buffers.get(buffer)!;
         offset = offset ?? 0;
         size = size ?? Math.max(0, bufferState.size - offset);
         this.encoder.addCommand({
@@ -1510,17 +1800,23 @@ class RenderPassEncoderState extends BaseState<GPURenderPassEncoder> {
 
     setScissorRect(x: number, y: number, width: number, height: number) {
         spector2.renderPassEncoderProto.setScissorRect.call(this.webgpuObject, x, y, width, height);
-        this.encoder.addCommand({ name: 'setScissorRect', args: { x, y, width, height } });
+        this.encoder.addCommand({
+            name: 'setScissorRect',
+            args: { x, y, width, height },
+        });
     }
 
     setViewport(x: number, y: number, width: number, height: number, minDepth: number, maxDepth: number) {
         spector2.renderPassEncoderProto.setViewport.call(this.webgpuObject, x, y, width, height, minDepth, maxDepth);
-        this.encoder.addCommand({ name: 'setViewport', args: { x, y, width, height, minDepth, maxDepth } });
+        this.encoder.addCommand({
+            name: 'setViewport',
+            args: { x, y, width, height, minDepth, maxDepth },
+        });
     }
 
     end() {
         spector2.renderPassEncoderProto.end.call(this.webgpuObject);
-        this.encoder.addCommand({ name: 'endPass', args: {} });
+        this.encoder.addCommand({ name: 'endPass' });
     }
 }
 
@@ -1768,16 +2064,126 @@ type TextureFormatInfo = {
     blockByteSize?: number;
 };
 
-export const kTextureFormatInfo: Record<GPUTextureFormat, TextureFormatInfo> = {
-    rgba8unorm: { type: 'color', blockWidth: 1, blockHeight: 1, blockByteSize: 4 },
-    'rgba8unorm-srgb': { type: 'color', blockWidth: 1, blockHeight: 1, blockByteSize: 4 },
-    bgra8unorm: { type: 'color', blockWidth: 1, blockHeight: 1, blockByteSize: 4 },
-    rgba16float: { type: 'color', blockWidth: 1, blockHeight: 1, blockByteSize: 8 },
-    rgba32float: { type: 'color', blockWidth: 1, blockHeight: 1, blockByteSize: 16 },
+const c111 = { type: 'color', blockWidth: 1, blockHeight: 1, blockByteSize: 1 };
+const c112 = { type: 'color', blockWidth: 1, blockHeight: 1, blockByteSize: 2 };
+const c114 = { type: 'color', blockWidth: 1, blockHeight: 1, blockByteSize: 4 };
+const c118 = { type: 'color', blockWidth: 1, blockHeight: 1, blockByteSize: 8 };
+const c1116 = { type: 'color', blockWidth: 1, blockHeight: 1, blockByteSize: 16 };
 
+const c448 = { type: 'color', blockWidth: 4, blockHeight: 4, blockByteSize: 8 };
+const c4416 = { type: 'color', blockWidth: 4, blockHeight: 4, blockByteSize: 16 };
+const c5416 = { type: 'color', blockWidth: 5, blockHeight: 4, blockByteSize: 16 };
+
+const c5516 = { type: 'color', blockWidth: 5, blockHeight: 5, blockByteSize: 16 };
+const c6516 = { type: 'color', blockWidth: 6, blockHeight: 5, blockByteSize: 16 };
+const c6616 = { type: 'color', blockWidth: 6, blockHeight: 6, blockByteSize: 16 };
+const c8516 = { type: 'color', blockWidth: 8, blockHeight: 5, blockByteSize: 16 };
+const c8616 = { type: 'color', blockWidth: 8, blockHeight: 6, blockByteSize: 16 };
+const c8816 = { type: 'color', blockWidth: 8, blockHeight: 8, blockByteSize: 16 };
+const c10516 = { type: 'color', blockWidth: 10, blockHeight: 5, blockByteSize: 16 };
+const c10616 = { type: 'color', blockWidth: 10, blockHeight: 6, blockByteSize: 16 };
+const c10816 = { type: 'color', blockWidth: 10, blockHeight: 8, blockByteSize: 16 };
+const c101016 = { type: 'color', blockWidth: 10, blockHeight: 10, blockByteSize: 16 };
+const c121016 = { type: 'color', blockWidth: 12, blockHeight: 10, blockByteSize: 16 };
+const c121216 = { type: 'color', blockWidth: 12, blockHeight: 12, blockByteSize: 16 };
+
+export const kTextureFormatInfo: Record<GPUTextureFormat, TextureFormatInfo> = {
+    r8unorm: c111,
+    r8snorm: c111,
+    r8uint: c111,
+    r8sint: c111,
+    rg8unorm: c112,
+    rg8snorm: c112,
+    rg8uint: c112,
+    rg8sint: c112,
+    rgba8unorm: c114,
+    'rgba8unorm-srgb': c114,
+    rgba8snorm: c114,
+    rgba8uint: c114,
+    rgba8sint: c114,
+    bgra8unorm: c114,
+    'bgra8unorm-srgb': c114,
+    r16uint: c112,
+    r16sint: c112,
+    r16float: c112,
+    rg16uint: c114,
+    rg16sint: c114,
+    rg16float: c114,
+    rgba16uint: c118,
+    rgba16sint: c118,
+    rgba16float: c118,
+    r32uint: c114,
+    r32sint: c114,
+    r32float: c114,
+    rg32uint: c118,
+    rg32sint: c118,
+    rg32float: c118,
+    rgba32uint: c1116,
+    rgba32sint: c1116,
+    rgba32float: c1116,
+    rgb10a2unorm: c114,
+    rg11b10ufloat: c114,
+
+    stencil8: { type: 'stencil' },
+    depth16unorm: { type: 'depth', blockWidth: 1, blockHeight: 1, blockByteSize: 2 },
     depth32float: { type: 'depth', blockWidth: 1, blockHeight: 1, blockByteSize: 4 },
     'depth24plus-stencil8': { type: 'depth-stencil' },
     depth24plus: { type: 'depth', blockWidth: 1, blockHeight: 1, blockByteSize: 4 },
+    'depth32float-stencil8': { type: 'depth-stencil' },
+    rgb9e5ufloat: c114,
+
+    'bc1-rgba-unorm': c448,
+    'bc1-rgba-unorm-srgb': c448,
+    'bc2-rgba-unorm': c4416,
+    'bc2-rgba-unorm-srgb': c4416,
+    'bc3-rgba-unorm': c4416,
+    'bc3-rgba-unorm-srgb': c4416,
+    'bc4-r-unorm': c448,
+    'bc4-r-snorm': c448,
+    'bc5-rg-unorm': c4416,
+    'bc5-rg-snorm': c4416,
+    'bc6h-rgb-ufloat': c4416,
+    'bc6h-rgb-float': c4416,
+    'bc7-rgba-unorm': c4416,
+    'bc7-rgba-unorm-srgb': c4416,
+    'etc2-rgb8unorm': c448,
+    'etc2-rgb8unorm-srgb': c448,
+    'etc2-rgb8a1unorm': c448,
+    'etc2-rgb8a1unorm-srgb': c448,
+    'etc2-rgba8unorm': c4416,
+    'etc2-rgba8unorm-srgb': c4416,
+    'eac-r11unorm': c448,
+    'eac-r11snorm': c448,
+    'eac-rg11unorm': c4416,
+    'eac-rg11snorm': c4416,
+    'astc-4x4-unorm': c4416,
+    'astc-4x4-unorm-srgb': c4416,
+    'astc-5x4-unorm': c5416,
+    'astc-5x4-unorm-srgb': c5416,
+    'astc-5x5-unorm': c5516,
+    'astc-5x5-unorm-srgb': c5516,
+    'astc-6x5-unorm': c6516,
+    'astc-6x5-unorm-srgb': c6516,
+    'astc-6x6-unorm': c6616,
+    'astc-6x6-unorm-srgb': c6616,
+    'astc-8x5-unorm': c8516,
+    'astc-8x5-unorm-srgb': c8516,
+    'astc-8x6-unorm': c8616,
+    'astc-8x6-unorm-srgb': c8616,
+    'astc-8x8-unorm': c8816,
+    'astc-8x8-unorm-srgb': c8816,
+    'astc-10x5-unorm': c10516,
+    'astc-10x5-unorm-srgb': c10516,
+    'astc-10x6-unorm': c10616,
+    'astc-10x6-unorm-srgb': c10616,
+    'astc-10x8-unorm': c10816,
+    'astc-10x8-unorm-srgb': c10816,
+    'astc-10x10-unorm': c101016,
+    'astc-10x10-unorm-srgb': c101016,
+    'astc-12x10-unorm': c121016,
+    'astc-12x10-unorm-srgb': c121016,
+    'astc-12x12-unorm': c121216,
+    'astc-12x12-unorm-srgb': c121216,
 };
 const kBytesPerRowAlignment = 256;
 
@@ -1811,7 +2217,7 @@ class TextureState extends BaseState<GPUTexture> {
         this.viewFormats = [...(desc.viewFormats ?? [])]; // deep copy
     }
 
-    async serializeAsync(): TraceTexture {
+    async serializeAsync(): Promise<TraceTexture> {
         // Always serialize the creation parameters and add the initial data if possible.
         const result = this.serialize();
 
@@ -1841,8 +2247,9 @@ class TextureState extends BaseState<GPUTexture> {
 
         const formatInfo = kTextureFormatInfo[this.format]!;
 
-        const readbacks = [];
-        let mapPromises = [];
+        type Readback = { buffer: GPUBuffer; bytesPerRow: number; mipLevel: number };
+        const readbacks: Readback[] = [];
+        let mapPromises: Promise<void>[] = [];
 
         spector2.doWebGPUOp(() => {
             // TODO pool encoders?
@@ -1855,13 +2262,13 @@ class TextureState extends BaseState<GPUTexture> {
                 const bytesPerRow = align(width * formatInfo.blockByteSize, kBytesPerRowAlignment);
                 const bufferSize = bytesPerRow * height * depthOrArrayLayers;
 
-                const readbackBuffer = this.device.webgpuObject.createBuffer({
+                const readbackBuffer = this.device.webgpuObject!.createBuffer({
                     size: bufferSize,
                     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
                 });
 
                 encoder.copyTextureToBuffer(
-                    { texture: this.webgpuObject, mipLevel: mip },
+                    { texture: this.webgpuObject!, mipLevel: mip },
                     { buffer: readbackBuffer, bytesPerRow, rowsPerImage: height },
                     { width, height, depthOrArrayLayers }
                 );
@@ -1869,14 +2276,14 @@ class TextureState extends BaseState<GPUTexture> {
                 readbacks.push({ buffer: readbackBuffer, bytesPerRow, mipLevel: mip });
             }
 
-            this.device.webgpuObject.queue.submit([encoder.finish()]);
+            this.device.webgpuObject!.queue.submit([encoder.finish()]);
 
             mapPromises = readbacks.map(r => r.buffer.mapAsync(GPUMapMode.READ));
         });
 
         await Promise.all(mapPromises);
 
-        const initialData = [];
+        const initialData: TraceTextureInitialData[] = [];
         spector2.doWebGPUOp(() => {
             for (const { buffer, bytesPerRow, mipLevel } of readbacks) {
                 initialData.push({
@@ -1907,7 +2314,7 @@ class TextureState extends BaseState<GPUTexture> {
         };
     }
 
-    createView(viewDesc) {
+    createView(viewDesc: GPUTextureViewDescriptor) {
         const view = spector2.textureProto.createView.call(this.webgpuObject, viewDesc);
         spector2.registerObjectIn('textureViews', view, new TextureViewState(this, viewDesc ?? {}));
         return view;

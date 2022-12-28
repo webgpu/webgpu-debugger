@@ -9,11 +9,21 @@ import {
     TraceBindGroup,
     TraceBindGroupLayout,
     TraceBuffer,
+    TraceBufferUpdate,
     TraceCommandBuffer,
+    TraceData,
     TraceDevice,
+    TraceExplicitBindGroupLayout,
     TracePipelineLayout,
     TraceQuerySet,
     TraceQueue,
+    TraceQueueCommandBufferUnmap,
+    TraceQueueCommandBufferUpdateData,
+    TraceQueueCommandPresent,
+    TraceQueueCommandSubmit,
+    TraceQueueCommandTextureDestroy,
+    TraceQueueCommandWriteBuffer,
+    TraceQueueCommandWriteTexture,
     TraceRenderPipeline,
     TraceSampler,
     TraceShaderModule,
@@ -33,27 +43,275 @@ export async function loadReplay(trace: Trace, requestUnwrappedAdapterFn: Reques
     return replay;
 }
 
-export type CommandArgs = Record<string, any>;
+export interface ReplayImageCopyTexture {
+    texture: ReplayTexture;
+    mipLevel: number;
+    origin: GPUOrigin3D;
+    aspect: GPUTextureAspect;
+}
 
-export type Command = {
-    name: string;
-    args: CommandArgs;
-};
+export interface ReplayImageCopyBuffer {
+    buffer: ReplayBuffer;
+    offset: number;
+    bytesPerRow?: number;
+    rowsPerImage?: number;
+}
 
-export type CommandBuffer = {
-    commands: Command[];
-};
+export interface ReplayCommandBufferCommandCopyTextureToTexture {
+    name: 'copyTextureToTexture';
+    args: {
+        source: ReplayImageCopyTexture;
+        destination: ReplayImageCopyTexture;
+        copySize: GPUExtent3D;
+    };
+}
 
-export type QueueSubmitArgs = {
-    commandBuffers: CommandBuffer[];
-};
+export interface ReplayCommandBufferCommandCopyBufferToTexture {
+    name: 'copyBufferToTexture';
+    args: {
+        source: ReplayImageCopyBuffer;
+        destination: ReplayImageCopyTexture;
+        copySize: GPUExtent3D;
+    };
+}
 
-export type RenderPassArgs = {
-    commands: Command[];
-};
+export interface ReplayRenderPassColorAttachment {
+    view: GPUTextureView;
+    viewState: ReplayTexture;
+    resolveTarget?: GPUTextureView;
+    resolveTargetState?: ReplayTextureView;
+    clearValue: GPUColorDict;
+    loadOp: GPULoadOp;
+    storeOp: GPUStoreOp;
+}
+
+export interface ReplayRenderPassTimestampWrite {
+    querySet: GPUQuerySet;
+    querySetState: ReplayQuerySet;
+    queryIndex: number;
+    location: GPURenderPassTimestampLocation;
+}
+
+export interface ReplayRenderPassDepthStencilAttachment {
+    view: GPUTextureView;
+    viewState: ReplayTextureView;
+    depthClearValue: number;
+    depthLoadOp?: GPULoadOp;
+    depthStoreOp?: GPUStoreOp;
+    depthReadOnly: boolean;
+    stencilClearValue: number;
+    stencilLoadOp?: GPULoadOp;
+    stencilStoreOp?: GPUStoreOp;
+    stencilReadOnly: boolean;
+}
+
+export interface ReplayCommandBeginRenderPassArgs {
+    colorAttachments: ReplayRenderPassColorAttachment[];
+    timestampWrites: ReplayRenderPassTimestampWrite[];
+    occlusionQuerySet?: GPUQuerySet;
+    occlusionQuerySetState?: ReplayQuerySet;
+    maxDrawCount: number;
+    depthStencilAttachment?: ReplayRenderPassDepthStencilAttachment;
+}
+
+// Pseudo command. This command exists in the command buffer
+// where as the beingRenderPass exists in the renderPass
+export interface ReplayCommandBufferCommandRenderPass {
+    name: 'renderPass';
+    renderPass: ReplayRenderPass;
+}
+
+export interface ReplayCommandBufferCommandBeginRenderPass {
+    name: 'beginRenderPass';
+    args: ReplayCommandBeginRenderPassArgs;
+}
+
+export interface ReplayCommandBufferCommandEndPass {
+    name: 'endPass';
+}
+
+export interface ReplayCommandBufferCommandDraw {
+    name: 'draw';
+    args: {
+        vertexCount: number;
+        instanceCount: number;
+        firstVertex: number;
+        firstInstance: number;
+    };
+}
+
+export interface ReplayCommandBufferCommandDrawIndexed {
+    name: 'drawIndexed';
+    args: {
+        indexCount: number;
+        instanceCount: number;
+        firstIndex: number;
+        baseVertex: number;
+        firstInstance: number;
+    };
+}
+
+export interface ReplayCommandBufferCommandPopDebugGroup {
+    name: 'popDebugGroup';
+}
+
+export interface ReplayCommandBufferCommandPushDebugGroup {
+    name: 'pushDebugGroup';
+    args: {
+        groupLabel: string;
+    };
+}
+
+export interface ReplayCommandBufferCommandSetBindGroup {
+    name: 'setBindGroup';
+    args: {
+        index: number;
+        bindGroup: ReplayBindGroup;
+    };
+}
+
+export interface ReplayCommandBufferCommandSetIndexBuffer {
+    name: 'setIndexBuffer';
+    args: {
+        buffer: ReplayBuffer;
+        indexFormat: GPUIndexFormat;
+        offset: number;
+        size: number;
+    };
+}
+
+export interface ReplayCommandBufferCommandSetPipeline {
+    name: 'setPipeline';
+    args: {
+        pipeline: ReplayRenderPipeline;
+    };
+}
+
+export interface ReplayCommandBufferCommandSetVertexBuffer {
+    name: 'setVertexBuffer';
+    args: {
+        slot: number;
+        buffer: ReplayBuffer;
+        offset: number;
+        size: number;
+    };
+}
+
+export interface ReplayCommandBufferCommandSetScissorRect {
+    name: 'setScissorRect';
+    args: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+    };
+}
+
+export interface ReplayCommandBufferCommandSetViewport {
+    name: 'setViewport';
+    args: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        minDepth: number;
+        maxDepth: number;
+    };
+}
+
+export type ReplayCommandBufferCommand =
+    | ReplayCommandBufferCommandCopyTextureToTexture
+    | ReplayCommandBufferCommandCopyBufferToTexture
+    | ReplayCommandBufferCommandPopDebugGroup
+    | ReplayCommandBufferCommandPushDebugGroup
+    | ReplayCommandBufferCommandBeginRenderPass
+    | ReplayCommandBufferCommandDraw
+    | ReplayCommandBufferCommandDrawIndexed
+    | ReplayCommandBufferCommandRenderPass
+    | ReplayCommandBufferCommandSetBindGroup
+    | ReplayCommandBufferCommandSetIndexBuffer
+    | ReplayCommandBufferCommandSetPipeline
+    | ReplayCommandBufferCommandSetVertexBuffer
+    | ReplayCommandBufferCommandSetScissorRect
+    | ReplayCommandBufferCommandSetViewport
+    | ReplayCommandBufferCommandEndPass;
+
+export interface ReplayCommandSubmit {
+    name: 'queueSubmit';
+    queue: ReplayQueue;
+    args: {
+        commandBuffers: ReplayCommandBuffer[];
+    };
+}
+
+export interface ReplayCommandWriteBuffer {
+    name: 'queueWriteBuffer';
+    queue: ReplayQueue;
+    args: {
+        buffer: ReplayBuffer;
+        bufferOffset: number;
+        data: TraceData;
+    };
+}
+
+export interface ReplayCommandWriteTexture {
+    name: 'queueWriteTexture';
+    queue: ReplayQueue;
+    args: {
+        destination: {
+            textureState: ReplayTexture;
+            texture: GPUTexture;
+            mipLevel: number;
+            origin: any;
+            aspect: GPUTextureAspect;
+        };
+        data: TraceData;
+        dataLayout: GPUImageDataLayout;
+        size: GPUExtent3D;
+    };
+}
+
+export interface ReplayCommandBad {
+    name: 'bad-command';
+}
+
+export interface ReplayCommandPresent {
+    name: 'present';
+    args: {
+        texture: ReplayTexture;
+        canvasContextSerial: number;
+    };
+}
+
+export interface ReplayCommandTextureDestroy {
+    name: 'textureDestroy';
+    texture: ReplayTexture;
+}
+
+export interface ReplayCommandBufferUpdateData {
+    name: 'bufferUpdateData';
+    buffer: ReplayBuffer;
+    updates: TraceBufferUpdate[];
+}
+
+export interface ReplayCommandBufferUnmap {
+    name: 'bufferUnmap';
+    buffer: ReplayBuffer;
+}
+
+export type ReplayQueueCommand =
+    | ReplayCommandSubmit
+    | ReplayCommandWriteBuffer
+    | ReplayCommandWriteTexture
+    | ReplayCommandPresent
+    | ReplayCommandTextureDestroy
+    | ReplayCommandBufferUpdateData
+    | ReplayCommandBufferUnmap
+    | ReplayCommandBad;
 
 export class Replay {
-    commands: Command[] = [];
+    commands: ReplayQueueCommand[] = [];
+    state: any;
 
     adapters: Record<string, ReplayAdapter> = {};
     devices: Record<string, ReplayDevice> = {};
@@ -198,44 +456,90 @@ export class Replay {
         // GPUCommandEncoder, GPURenderPassEncoder, GPUCanvasContext not needed for replay?
 
         this.commands = trace.commands.map(command => {
-            const c = window.structuredClone(command);
+            const c = window.structuredClone(command); // Do we need this?
             switch (c.name) {
-                case 'queueSubmit':
-                    c.queue = this.queues[c.queueSerial];
-                    delete c.queueSerial;
-                    c.args.commandBuffers = c.args.commandBufferSerials.map(serial => this.commandBuffers[serial]);
-                    delete c.args.commandBufferSerials;
-                    break;
-                case 'queueWriteBuffer':
-                    c.queue = this.queues[c.queueSerial];
-                    delete c.queueSerial;
-                    c.args.buffer = this.buffers[c.args.bufferSerial];
-                    delete c.args.bufferSerial;
-                    break;
-                case 'queueWriteTexture':
-                    c.queue = this.queues[c.queueSerial];
-                    delete c.queueSerial;
-                    c.args.destination.textureState = this.textures[c.args.destination.textureSerial];
-                    c.args.destination.texture = c.args.destination.textureState.webgpuObject;
-                    delete c.args.destination.textureSerial;
-                    break;
-                case 'present':
-                    c.args.texture = this.textures[c.args.textureSerial];
-                    delete c.args.textureSerial;
-                    break;
-                case 'textureDestroy':
-                    c.texture = this.textures[c.textureSerial];
-                    delete c.textureSerial;
-                    break;
-                case 'bufferUpdateData':
-                case 'bufferUnmap':
-                    c.buffer = this.buffers[c.bufferSerial];
-                    delete c.bufferSerial;
-                    break;
+                case 'queueSubmit': {
+                    const cmd = c as TraceQueueCommandSubmit;
+                    return {
+                        name: 'queueSubmit',
+                        queue: this.queues[cmd.queueSerial],
+                        args: {
+                            commandBuffers: cmd.args.commandBufferSerials.map(serial => this.commandBuffers[serial]),
+                        },
+                    };
+                }
+                case 'queueWriteBuffer': {
+                    const cmd = c as TraceQueueCommandWriteBuffer;
+                    return {
+                        name: 'queueWriteBuffer',
+                        queue: this.queues[cmd.queueSerial],
+                        args: {
+                            buffer: this.buffers[cmd.args.bufferSerial],
+                            bufferOffset: cmd.args.bufferOffset,
+                            data: cmd.args.data,
+                        },
+                    };
+                }
+                case 'queueWriteTexture': {
+                    const cmd = c as TraceQueueCommandWriteTexture;
+                    const args = cmd.args;
+                    const destination = args.destination;
+                    const textureState = this.textures[destination.textureSerial];
+                    const texture = textureState.webgpuObject;
+                    return {
+                        name: 'queueWriteTexture',
+                        queue: this.queues[cmd.queueSerial],
+                        args: {
+                            destination: {
+                                textureState,
+                                texture,
+                                mipLevel: destination.mipLevel,
+                                origin: destination.origin,
+                                aspect: destination.aspect,
+                            },
+                            data: args.data,
+                            dataLayout: args.dataLayout,
+                            size: args.size,
+                        },
+                    };
+                }
+                case 'present': {
+                    const cmd = c as TraceQueueCommandPresent;
+                    const args = cmd.args;
+                    return {
+                        name: 'present',
+                        args: {
+                            texture: this.textures[args.textureSerial],
+                            canvasContextSerial: args.canvasContextSerial,
+                        },
+                    };
+                }
+                case 'textureDestroy': {
+                    const cmd = c as TraceQueueCommandTextureDestroy;
+                    return {
+                        name: 'textureDestroy',
+                        texture: this.textures[cmd.textureSerial],
+                    };
+                }
+                case 'bufferUpdateData': {
+                    const cmd = c as TraceQueueCommandBufferUpdateData;
+                    return {
+                        name: 'bufferUpdateData',
+                        buffer: this.buffers[cmd.bufferSerial],
+                        updates: cmd.updates,
+                    };
+                }
+                case 'bufferUnmap': {
+                    const cmd = c as TraceQueueCommandBufferUnmap;
+                    return {
+                        name: 'bufferUnmap',
+                        buffer: this.buffers[cmd.bufferSerial],
+                    };
+                }
                 default:
                     console.assert(false, `Unhandled command type '${c.name}'`);
+                    return { name: 'bad-command' };
             }
-            return c;
         });
     }
 
@@ -246,7 +550,7 @@ export class Replay {
     }
 
     // Note sure what the correct abstraction is for partial replays etc.
-    execute(command) {
+    execute(command: ReplayQueueCommand) {
         switch (command.name) {
             case 'queueSubmit':
                 command.queue.executeSubmit(command.args.commandBuffers);
@@ -283,7 +587,7 @@ export class Replay {
                 break;
 
             default:
-                console.assert(false, `Unhandled command type '${c.name}'`);
+                console.assert(false, `Unhandled command type '${command.name}'`);
         }
     }
 
@@ -317,11 +621,11 @@ export class Replay {
         return [this.commands.length];
     }
 
-    async replayTo(path) {
+    async replayTo(path: number[]) {
         this.state = {}; // TODO: hack, remove
         // TODO resetState
         path = path.slice();
-        const replayLevel = path.shift();
+        const replayLevel = path.shift()!;
         for (let i = 0; i <= replayLevel; i++) {
             const c = this.commands[i];
             if (c.name === 'queueSubmit') {
@@ -385,6 +689,8 @@ export class ReplayAdapter extends ReplayResourceObject<GPUAdapter> {
 }
 
 export class ReplayRenderPass extends ReplayObject {
+    commands: ReplayCommandBufferCommand[];
+
     constructor(replay: Replay, desc) {
         super(replay, desc);
         this.commands = [];
@@ -440,21 +746,22 @@ export class ReplayRenderPass extends ReplayObject {
     encodeUpTo(path, encoder) {
         const commandIndex = path.shift();
 
+        console.assert(this.commands.length > 0);
         console.assert(this.commands[0].name === 'beginRenderPass');
         console.assert(this.commands[this.commands.length - 1].name === 'endPass');
 
-        const renderPassDesc = this.commands[0].args;
+        const renderPassDesc = (this.commands[0] as ReplayCommandBufferCommandBeginRenderPass).args;
 
         if (commandIndex !== this.commands.length) {
             for (const a of renderPassDesc.colorAttachments ?? []) {
                 if (a.storeOp === 'discard') {
-                    console.warning("Don't know how to turn discard into stores yet");
+                    console.warn("Don't know how to turn discard into stores yet");
                 }
             }
             const ds = renderPassDesc.depthStencilAttachment;
             if (ds) {
                 if (ds.stencilStoreOp === 'discard' || ds.depthStoreOp === 'discard') {
-                    console.warning("Don't know how to turn discard into stores yet");
+                    console.warn("Don't know how to turn discard into stores yet");
                 }
             }
         }
@@ -600,7 +907,7 @@ export class ReplayRenderPass extends ReplayObject {
 }
 
 export class ReplayCommandBuffer extends ReplayObject {
-    commands: Command[];
+    commands: ReplayCommandBufferCommand[];
 
     constructor(replay: Replay, desc: TraceCommandBuffer) {
         super(replay, desc);
@@ -811,13 +1118,14 @@ export class ReplayBindGroupLayout extends ReplayObject {
     device: ReplayDevice;
     desc: GPUBindGroupLayoutDescriptor;
     webgpuObject?: GPUBindGroupLayout;
+    implicit: boolean;
 
     constructor(replay: Replay, desc: TraceBindGroupLayout) {
         super(replay, desc);
         this.device = this.replay.devices[desc.deviceSerial];
         this.desc = window.structuredClone(desc);
 
-        this.implicit = desc.entries === undefined;
+        this.implicit = (desc as TraceExplicitBindGroupLayout).entries === undefined;
         if (this.implicit) {
             return;
         }
