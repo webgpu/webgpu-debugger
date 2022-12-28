@@ -20,7 +20,7 @@ function init() {
 }
 
 export async function captureFrame() {
-    const trace = await capture.traceFrame();
+    const trace = await capture?.traceFrame();
     uiStateHelper.addTrace(trace);
 }
 

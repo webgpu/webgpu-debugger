@@ -1,12 +1,31 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck
 /* eslint-disable @typescript-eslint/ban-types */
-import { gpuExtent3DDictFullFromGPUExtent3D } from '../lib/utils';
+import { gpuExtent3DDictFullFromGPUExtent3D, GPUExtent3DDictFull } from '../lib/utils';
 
-type CaptureStateBase<T> = {
-    webgpuObject: T | null;
+type TypedArray =
+    | Int8Array
+    | Uint8Array
+    | Int16Array
+    | Uint16Array
+    | Int32Array
+    | Uint32Array
+    | Float32Array
+    | Float64Array;
+
+interface CaptureStateBase<GPUType> {
+    webgpuObject: GPUType | null;
     traceSerial: number;
-};
+    label?: string;
+}
+
+interface CaptureStateSync<GPUType, TraceType> extends CaptureStateBase<GPUType> {
+    serialize: () => TraceType;
+}
+
+interface CaptureStateAsync<GPUType, TraceType> extends CaptureStateBase<GPUType> {
+    serializeAsync: () => Promise<TraceType>;
+}
 
 class ObjectRegistry<GPUType extends Object, CaptureState extends CaptureStateBase<GPUType>> {
     iterating: boolean;
@@ -74,6 +93,217 @@ type Proto = Record<string, Function>;
 type ClassFuncs = { Class: Function; proto: Proto; wrappers: Proto };
 type RequestAdapterFn = (options?: GPURequestAdapterOptions | undefined) => Promise<GPUAdapter | null>;
 
+export interface TraceObject {
+    label?: string;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface TraceAdapter extends TraceObject {}
+
+//export interface TraceBindGroupEntry {
+//    textureViewSerial?: number;
+//    samplerSerial?: number;
+//    bufferSerial?: number;
+//    offset?: number;
+//    size?: number;
+//}
+
+export interface TraceBindGroup extends TraceObject {
+    deviceSerial: number;
+    layoutSerial: number;
+    entries: [TraceBindGroupEntry];
+}
+
+export interface TraceImplicitBindGroupLayout {
+    renderPipelineSerial: number;
+    groupIndex: number;
+}
+
+export interface TraceBindGroupBufferEntry {
+    type: string;
+    hasDynamicOffset: boolean;
+    minBindingSize: number;
+}
+
+export interface TraceBindGroupSamplerEntry {
+    type: string;
+}
+
+export interface TraceBindGroupTextureEntry {
+    sampleType: string;
+    viewDimension: string;
+    multisampled: boolean;
+}
+
+export interface TraceBindGroupStorageTextureEntry {
+    access: string;
+    format: string;
+    viewDimension: string;
+}
+
+export type TraceBindGroupExternalTextureEntry = {};
+
+export interface TraceBindGroupEntry {
+    binding: number;
+    visibility: number;
+    buffer?: TraceBindGroupBufferEntry;
+    sampler?: TraceBindGroupSamplerEntry;
+    texture?: TraceBindGroupTextureEntry;
+    storageTexture?: TraceBindGroupStorageTextureEntry;
+    externalTexture?: TraceBindGroupExternalTextureEntry;
+}
+
+//export interface TraceBindGroupEntry {
+//    buffer?: TraceBindBufferEntry;
+//    sampler?: TraceBindSamplerEntry;
+//    texture?: TraceBindTextureEntry;
+//    storageTexture?: TraceBindStorageTextureEntry;
+//    externalTexture?: TraceExternalTextureEntry;
+//}
+
+export interface TraceExplicitBindGroupLayout {
+    deviceSerial: number;
+    entries: [TraceBindGroupEntry];
+}
+
+export type TraceBindGroupLayout = TraceImplicitBindGroupLayout | TraceExplicitBindGroupLayout;
+
+export interface TraceBuffer extends TraceObject {
+    deviceSerial: number;
+    usage: number;
+    size: number;
+    state: string;
+    initialData?: {
+        size: number;
+        serial: number;
+    };
+}
+
+export type TraceCommandBuffer = TraceObject;
+
+export type TraceDevice = TraceObject;
+
+export interface TracePipelineLayout {
+    deviceSerial: number;
+    bindGroupLayoutsSerial: number[];
+}
+
+export interface TraceQuerySet extends TraceObject {
+    deviceSerial: number;
+    type: string;
+    count: number;
+    state: string;
+}
+
+export interface TraceQueue extends TraceObject {
+    deviceSerial: number;
+}
+
+export interface TraceSamplerState {
+    addressModeU: GPUAddressMode;
+    addressModeV: GPUAddressMode;
+    addressModeW: GPUAddressMode;
+    magFilter: GPUFilterMode;
+    minFilter: GPUFilterMode;
+    mipmapFilter: GPUMipmapFilterMode;
+    lodMinClamp: number;
+    lodMaxClamp: number;
+    compare?: GPUCompareFunction;
+    maxAnisotropy: number;
+}
+
+export interface TraceSampler extends TraceSamplerState {
+    deviceSerial: number;
+}
+
+export interface TraceVertexState {
+    moduleSerial: number;
+    entryPoint: string;
+    constants: Record<string, number>;
+    buffers: GPUVertexBufferLayout[];
+}
+
+export interface TraceFragmentState {
+    moduleSerial: number;
+    entryPoint: string;
+    constants: Record<string, number>;
+    targets: GPUColorTargetState[];
+}
+
+export interface TraceRenderPipeline extends TraceObject {
+    deviceSerial: number;
+    layoutSerial?: number;
+    layout?: string;
+    vertex: TraceVertexState;
+    primitive: GPUPrimitiveState;
+    depthStencil?: GPUDepthStencilState;
+    multisample: GPUMultisampleState;
+    fragment?: TraceFragmentState;
+}
+
+export interface TraceShaderModule extends TraceObject {
+    deviceSerial: number;
+    code: string;
+}
+
+export interface TraceTextureInitialData {
+    data: {
+        size: number;
+        serial: number;
+    };
+    mipLevel: number;
+    bytesPerRow: number;
+}
+
+export interface TraceTexture extends TraceObject {
+    deviceSerial: number;
+    state: string;
+    format: GPUTextureFormat;
+    usage: GPUTextureUsageFlags;
+    size: GPUExtent3DDictFull;
+    dimension: GPUTextureDimension;
+    sampleCount: number;
+    mipLevelCount: number;
+    viewFormats: GPUTextureFormat[];
+    swapChainId?: string;
+    initialData?: TraceTextureInitialData[];
+}
+
+export interface TraceTextureView extends TraceObject {
+    textureSerial: number;
+    format: GPUTextureFormat;
+    dimension: GPUTextureViewDimension;
+    aspect: GPUTextureAspect;
+    baseMipLevel: number;
+    mipLevelCount?: number;
+    baseArrayLayer: number;
+    arrayLayerCount?: number;
+}
+
+export interface Trace {
+    objects: {
+        adapters: Record<string, TraceAdapter>;
+        bindGroups: Record<string, TraceBindGroup>;
+        bindGroupLayouts: Record<string, TraceBindGroupLayout>;
+        buffers: Record<string, TraceBuffer>;
+        commandBuffers: Record<string, TraceCommandBuffer>;
+        //commandEncoders: {},
+        //canvasContexts: {},
+        devices: Record<string, TraceDevice>;
+        pipelineLayouts: Record<string, TracePipelineLayout>;
+        querySets: Record<string, TraceQuerySet>;
+        queues: Record<string, TraceQueue>;
+        samplers: Record<string, TraceSampler>;
+        //renderPassEncoders: {},
+        renderPipelines: Record<string, TraceRenderPipeline>;
+        shaderModules: Record<string, TraceShaderModule>;
+        textures: Record<string, TraceTexture>;
+        textureViews: Record<string, TraceTextureView>;
+    };
+    commands: [];
+    data: Record<string, number[]>;
+}
+
 export class Spector2 {
     tracing = false;
     dataSerial = 0;
@@ -110,6 +340,9 @@ export class Spector2 {
 
     canvasGetContext: Function;
     gpuRequestAdapter: RequestAdapterFn;
+
+    trace?: Trace;
+    pendingTraceOperations: Promise<void>[] = [];
 
     wrappers: {
         classes: ClassFuncs[];
@@ -266,8 +499,12 @@ export class Spector2 {
     // TODO add support for prune all.
     // TODO make something to trace easily instead of start stop trace.
     startTracing() {
-        function serializeAllObjects(registry) {
-            const result = {};
+        function serializeAllObjects<
+            GPUType extends Object,
+            CaptureState extends CaptureStateSync<GPUType, TraceType>,
+            TraceType extends TraceObject
+        >(registry: ObjectRegistry<GPUType, CaptureState>) {
+            const result: Record<string, TraceType> = {};
             for (const obj of registry) {
                 const serializedObj = obj.serialize();
                 if (obj.label) {
@@ -279,8 +516,12 @@ export class Spector2 {
         }
 
         // Yuck
-        function serializeAsyncAllObjects(registry, pendingPromises) {
-            const result = {};
+        function serializeAsyncAllObjects<
+            GPUType extends Object,
+            CaptureState extends CaptureStateAsync<GPUType, TraceType>,
+            TraceType extends TraceObject
+        >(registry: ObjectRegistry<GPUType, CaptureState>, pendingPromises: Promise<TraceType>[]) {
+            const result: Record<string, TraceType> = {};
             // TODO have some context where objects can ask for a device?
             for (const obj of registry) {
                 pendingPromises.push(
@@ -337,7 +578,7 @@ export class Spector2 {
         return this.tracing;
     }
 
-    addPendingTraceOperation(promise) {
+    addPendingTraceOperation(promise: Promise<void>) {
         console.assert(this.tracing || this.pendingTraceOperations.length > 0);
         this.pendingTraceOperations.push(promise);
     }
@@ -347,19 +588,14 @@ export class Spector2 {
         this.trace.commands.push(command);
     }
 
-    traceData(buffer, offset, size) {
+    traceData(buffer: ArrayBuffer, offset: number, size: number) {
         console.assert(this.tracing || this.pendingTraceOperations.length > 0);
         offset ??= 0;
         size ??= buffer.byteLength - offset;
 
         const byteArray = new Uint8Array(buffer, offset, size);
         // Worst serialization ever!
-        const badArray = [];
-        for (let i = 0; i < byteArray.byteLength; i++) {
-            badArray.push(byteArray[i]);
-        }
-
-        this.trace.data[this.dataSerial] = badArray;
+        this.trace!.data[this.dataSerial] = Array.from(byteArray);
         const dataRef = {
             size,
             serial: this.dataSerial,
@@ -368,7 +604,7 @@ export class Spector2 {
         return dataRef;
     }
 
-    registerObjectIn(typePlural, webgpuObject, state) {
+    registerObjectIn(typePlural, webgpuObject: GPUObjectBase, state) {
         this[typePlural].add(webgpuObject, state);
         if (this.tracing) {
             this.trace.objects[typePlural][state.traceSerial] = state.serialize();
@@ -378,7 +614,7 @@ export class Spector2 {
     async traceFrame() {
         this.startTracing();
 
-        await new Promise(resolve => {
+        await new Promise<void>(resolve => {
             requestAnimationFrame(() => {
                 setTimeout(() => {
                     resolve();
@@ -390,7 +626,7 @@ export class Spector2 {
     }
 }
 
-const spector2 = new Spector2();
+const spector2 = typeof GPUDevice !== 'undefined' ? new Spector2() : null;
 export { spector2 };
 
 class BaseState<T> {
@@ -398,7 +634,7 @@ class BaseState<T> {
     traceSerial: number;
     label?: string;
 
-    constructor(desc) {
+    constructor(desc: GPUObjectDescriptorBase) {
         // TODO what about the setter for labels?
         if (desc.label) {
             this.label = desc.label;
@@ -409,15 +645,17 @@ class BaseState<T> {
 }
 
 class AdapterState extends BaseState<GPUAdapter> {
-    constructor() {
-        super({});
+    // TODO: do we need the adaptor options?
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    constructor(options: GPURequestAdapterOptions | undefined) {
+        super({} as GPUObjectBase);
     }
 
     serialize() {
         return {};
     }
 
-    async requestDevice(desc) {
+    async requestDevice(desc: GPUDeviceDescriptor) {
         const device = await spector2.adapterProto.requestDevice.call(this.webgpuObject, desc);
         spector2.registerObjectIn('devices', device, new DeviceState(this, desc ?? {}));
         spector2.registerObjectIn(
@@ -430,7 +668,9 @@ class AdapterState extends BaseState<GPUAdapter> {
 }
 
 class BindGroupState extends BaseState<GPUBindGroup> {
-    constructor(device, desc) {
+    device: DeviceState;
+
+    constructor(device: DeviceState, desc: GPUBindGroupDescriptor) {
         super(desc);
         this.device = device;
         this.layout = spector2.bindGroupLayouts.get(desc.layout);
@@ -452,7 +692,7 @@ class BindGroupState extends BaseState<GPUBindGroup> {
         });
     }
 
-    serialize() {
+    serialize(): TraceBindGroup {
         return {
             deviceSerial: this.device.traceSerial,
             layoutSerial: this.layout.traceSerial,
@@ -476,10 +716,17 @@ class BindGroupState extends BaseState<GPUBindGroup> {
 }
 
 class BindGroupLayoutState extends BaseState<GPUBindGroupLayout> {
-    constructor(device, desc) {
+    device: DeviceState;
+    implicit: boolean;
+    entries?: TraceBindGroupEntry[];
+
+    constructor(device: DeviceState, desc: GPUBindGroupLayoutDescriptor) {
         super(desc);
         this.device = device;
 
+        // TODO: this is confusing. Sometimes this is called with a GPUBindGroupLayoutDescriptor
+        // and sometimes it's called from RenderPipelineState.getBindGroupLayout with entirely
+        // different parameters. Should this be refactored?
         this.implicit = desc.implicit;
         if (this.implicit) {
             this.parentRenderPipeline = desc.renderPipeline;
@@ -487,8 +734,8 @@ class BindGroupLayoutState extends BaseState<GPUBindGroupLayout> {
             return;
         }
 
-        this.entries = desc.entries.map(e => {
-            const entry = { binding: e.binding, visibility: e.visibility };
+        this.entries = (desc.entries as GPUBindGroupLayoutEntry[]).map(e => {
+            const entry: TraceBindGroupEntry = { binding: e.binding, visibility: e.visibility };
             if (e.buffer) {
                 entry.buffer = {
                     type: e.buffer.type ?? 'uniform',
@@ -537,8 +784,20 @@ class BindGroupLayoutState extends BaseState<GPUBindGroupLayout> {
     }
 }
 
+type MappedRange = {
+    arrayBuf: ArrayBuffer;
+    offset: number;
+    size: number;
+};
+
 class BufferState extends BaseState<GPUBuffer> {
-    constructor(device, desc) {
+    device: DeviceState;
+    usage: number;
+    size: number;
+    state: string;
+    mappedRanges: MappedRange[];
+
+    constructor(device: DeviceState, desc: GPUBufferDescriptor) {
         super(desc);
         this.device = device;
         this.usage = desc.usage;
@@ -547,7 +806,7 @@ class BufferState extends BaseState<GPUBuffer> {
         this.mappedRanges = [];
     }
 
-    async serializeAsync() {
+    async serializeAsync(): Promise<TraceBuffer> {
         // Always serialize the creation parameters and add the initial data if possible.
         const result = this.serialize();
 
@@ -557,34 +816,34 @@ class BufferState extends BaseState<GPUBuffer> {
         }
 
         // Immediately copy the buffer contents to save its initial data to the side.
-        let initialDataBuffer = null;
+        let initialDataBuffer: GPUBuffer | undefined;
         let mapPromise = null;
         spector2.doWebGPUOp(() => {
-            initialDataBuffer = this.device.webgpuObject.createBuffer({
+            initialDataBuffer = this.device.webgpuObject?.createBuffer({
                 size: this.size,
                 usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
             });
 
             // TODO pool encoders?
-            const encoder = this.device.webgpuObject.createCommandEncoder();
-            encoder.copyBufferToBuffer(this.webgpuObject, 0, initialDataBuffer, 0, this.size);
-            this.device.webgpuObject.queue.submit([encoder.finish()]);
+            const encoder = this.device.webgpuObject!.createCommandEncoder();
+            encoder.copyBufferToBuffer(this.webgpuObject!, 0, initialDataBuffer!, 0, this.size);
+            this.device.webgpuObject!.queue.submit([encoder.finish()]);
 
-            mapPromise = initialDataBuffer.mapAsync(GPUMapMode.READ);
+            mapPromise = initialDataBuffer!.mapAsync(GPUMapMode.READ);
         });
 
         await mapPromise;
 
         spector2.doWebGPUOp(() => {
-            const data = initialDataBuffer.getMappedRange();
+            const data = initialDataBuffer!.getMappedRange();
             result.initialData = spector2.traceData(data, 0, this.size);
-            initialDataBuffer.destroy();
+            initialDataBuffer!.destroy();
         });
 
         return result;
     }
 
-    serialize() {
+    serialize(): TraceBuffer {
         // Still called on creation during the trace
         return {
             deviceSerial: this.device.traceSerial,
@@ -594,7 +853,7 @@ class BufferState extends BaseState<GPUBuffer> {
         };
     }
 
-    getMappedRange(offset, size) {
+    getMappedRange(offset: number, size: number) {
         // TODO: support getting multiple small ranges and updating them on unmap.
         console.assert(offset === undefined && size === undefined);
 
@@ -649,7 +908,9 @@ class CommandBufferState extends BaseState<GPUCommandBuffer> {
 }
 
 class CommandEncoderState extends BaseState<GPUCommandEncoder> {
-    constructor(device, desc) {
+    device: DeviceState;
+
+    constructor(device: DeviceState, desc: GPUCommandEncoderDescriptor) {
         super(desc);
         this.device = device;
         this.commands = [];
@@ -668,13 +929,13 @@ class CommandEncoderState extends BaseState<GPUCommandEncoder> {
         this.commands.push(command);
     }
 
-    beginRenderPass(desc) {
+    beginRenderPass(desc: GPURenderPassDescriptor) {
         const pass = spector2.commandEncoderProto.beginRenderPass.call(this.webgpuObject, desc);
         spector2.registerObjectIn('renderPassEncoders', pass, new RenderPassEncoderState(this, desc));
         return pass;
     }
 
-    copyTextureToTexture(source, destination, copySize) {
+    copyTextureToTexture(source: GPUImageCopyTexture, destination: GPUImageCopyTexture, copySize: GPUExtent3D) {
         spector2.commandEncoderProto.copyTextureToTexture.call(this.webgpuObject, source, destination, copySize);
         this.addCommand({
             name: 'copyTextureToTexture',
@@ -698,7 +959,7 @@ class CommandEncoderState extends BaseState<GPUCommandEncoder> {
         this.reference(destination.texture);
     }
 
-    copyBufferToTexture(source, destination, copySize) {
+    copyBufferToTexture(source: GPUImageCopyBuffer, destination: GPUImageCopyTexture, copySize: GPUExtent3D) {
         spector2.commandEncoderProto.copyBufferToTexture.call(this.webgpuObject, source, destination, copySize);
         this.addCommand({
             name: 'copyBufferToTexture',
@@ -722,7 +983,7 @@ class CommandEncoderState extends BaseState<GPUCommandEncoder> {
         this.reference(destination.texture);
     }
 
-    finish(desc) {
+    finish(desc: GPUCommandBufferDescriptor) {
         const commandBuffer = spector2.commandEncoderProto.finish.call(this.webgpuObject, desc);
         spector2.registerObjectIn('commandBuffers', commandBuffer, new CommandBufferState(this, desc ?? {}));
         return commandBuffer;
@@ -733,7 +994,7 @@ class CommandEncoderState extends BaseState<GPUCommandEncoder> {
         this.addCommand({ name: 'popDebugGroup' });
     }
 
-    pushDebugGroup(groupLabel) {
+    pushDebugGroup(groupLabel: string) {
         spector2.commandEncoderProto.pushDebugGroup.call(this.webgpuObject, groupLabel);
         this.addCommand({
             name: 'pushDebugGroup',
@@ -745,13 +1006,22 @@ class CommandEncoderState extends BaseState<GPUCommandEncoder> {
 }
 
 class CanvasContextState extends BaseState<GPUCanvasContext> {
-    constructor(canvas) {
+    canvas: HTMLCanvasElement | OffscreenCanvas;
+    getCurrentTextureCount: number;
+    device?: DeviceState;
+    format = '';
+    usage = 0;
+    viewFormats: GPUTextureFormat[] = [];
+    colorSpace = '';
+    alphaMode = '';
+
+    constructor(canvas: HTMLCanvasElement | OffscreenCanvas) {
         super({});
         this.canvas = canvas;
         this.getCurrentTextureCount = 0;
     }
 
-    configure(config) {
+    configure(config: GPUCanvasConfiguration) {
         this.device = spector2.devices.get(config.device);
         this.format = config.format;
         this.usage = config.usage ?? GPUTextureUsage.RENDER_ATTACHMENT;
@@ -762,7 +1032,7 @@ class CanvasContextState extends BaseState<GPUCanvasContext> {
         this.alphaMode = config.alphaMode ?? 'opaque';
 
         spector2.canvasContextProto.configure.call(this.webgpuObject, {
-            device: this.device.webgpuObject,
+            device: this.device!.webgpuObject,
             format: this.format,
             usage: this.usage | GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST | GPUTextureUsage.TEXTURE_BINDING,
             viewFormats: this.viewFormats,
@@ -792,7 +1062,7 @@ class CanvasContextState extends BaseState<GPUCanvasContext> {
         // Mark the texture as presented right after the animation frame.
         const recordingThePresent = spector2.recordingTrace();
 
-        const presentPromise = new Promise(resolve => {
+        const presentPromise = new Promise<void>(resolve => {
             requestAnimationFrame(() => {
                 setTimeout(() => {
                     if (recordingThePresent) {
@@ -816,7 +1086,9 @@ class CanvasContextState extends BaseState<GPUCanvasContext> {
 }
 
 class DeviceState extends BaseState<GPUDevice> {
-    constructor(adapter, desc) {
+    adapter: AdapterState;
+
+    constructor(adapter: AdapterState, desc: GPUDeviceDescriptor) {
         super(desc);
         this.adapter = adapter;
     }
@@ -825,19 +1097,19 @@ class DeviceState extends BaseState<GPUDevice> {
         return { adapterSerial: this.adapter.traceSerial };
     }
 
-    createBindGroup(desc) {
+    createBindGroup(desc: GPUBindGroupDescriptor) {
         const bg = spector2.deviceProto.createBindGroup.call(this.webgpuObject, desc);
         spector2.registerObjectIn('bindGroups', bg, new BindGroupState(this, desc));
         return bg;
     }
 
-    createBindGroupLayout(desc) {
+    createBindGroupLayout(desc: GPUBindGroupLayoutDescriptor) {
         const bgl = spector2.deviceProto.createBindGroupLayout.call(this.webgpuObject, desc);
         spector2.registerObjectIn('bindGroupLayouts', bgl, new BindGroupLayoutState(this, desc));
         return bgl;
     }
 
-    createBuffer(desc) {
+    createBuffer(desc: GPUBufferDescriptor) {
         let newUsage = desc.usage;
         if ((desc.usage & (GPUBufferUsage.MAP_READ | GPUBufferUsage.MAP_WRITE)) === 0) {
             newUsage = desc.usage | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST;
@@ -850,44 +1122,44 @@ class DeviceState extends BaseState<GPUDevice> {
         return buffer;
     }
 
-    createCommandEncoder(desc) {
+    createCommandEncoder(desc: GPUCommandEncoderDescriptor) {
         const encoder = spector2.deviceProto.createCommandEncoder.call(this.webgpuObject, desc);
         spector2.registerObjectIn('commandEncoders', encoder, new CommandEncoderState(this, desc ?? {}));
         return encoder;
     }
 
-    createPipelineLayout(desc) {
+    createPipelineLayout(desc: GPUPipelineLayoutDescriptor) {
         const layout = spector2.deviceProto.createPipelineLayout.call(this.webgpuObject, desc);
         spector2.registerObjectIn('pipelineLayouts', layout, new PipelineLayoutState(this, desc));
         return layout;
     }
 
-    createQuerySet(desc) {
+    createQuerySet(desc: GPUQuerySetDescriptor) {
         // TODO modify the desc for non-mappable buffers, see what to do for mappable.
         const querySet = spector2.deviceProto.createQuerySet.call(this.webgpuObject, desc);
         spector2.registerObjectIn('querySets', querySet, new QuerySetState(this, desc));
         return querySet;
     }
 
-    createRenderPipeline(desc) {
+    createRenderPipeline(desc: GPURenderPipelineDescriptor) {
         const pipeline = spector2.deviceProto.createRenderPipeline.call(this.webgpuObject, desc);
         spector2.registerObjectIn('renderPipelines', pipeline, new RenderPipelineState(this, desc));
         return pipeline;
     }
 
-    createSampler(desc) {
+    createSampler(desc: GPUSamplerDescriptor) {
         const module = spector2.deviceProto.createSampler.call(this.webgpuObject, desc);
         spector2.registerObjectIn('samplers', module, new SamplerState(this, desc ?? {}));
         return module;
     }
 
-    createShaderModule(desc) {
+    createShaderModule(desc: GPUShaderModuleDescriptor) {
         const module = spector2.deviceProto.createShaderModule.call(this.webgpuObject, desc);
         spector2.registerObjectIn('shaderModules', module, new ShaderModuleState(this, desc));
         return module;
     }
 
-    createTexture(desc) {
+    createTexture(desc: GPUTextureDescriptor) {
         const texture = spector2.deviceProto.createTexture.call(this.webgpuObject, {
             ...desc,
             usage: desc.usage | GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST | GPUTextureUsage.TEXTURE_BINDING,
@@ -898,13 +1170,18 @@ class DeviceState extends BaseState<GPUDevice> {
 }
 
 class PipelineLayoutState extends BaseState<GPUPipelineLayout> {
-    constructor(device, desc) {
+    device: DeviceState;
+    bindGroupLayouts: BindGroupLayoutState[];
+
+    constructor(device: DeviceState, desc: GPUPipelineLayoutDescriptor) {
         super(desc);
         this.device = device;
-        this.bindGroupLayouts = desc.bindGroupLayouts.map(bgl => spector2.bindGroupLayouts.get(bgl));
+        this.bindGroupLayouts = (desc.bindGroupLayouts as GPUBindGroupLayout[]).map(bgl => {
+            return spector2.bindGroupLayouts.get(bgl)!;
+        });
     }
 
-    serialize() {
+    serialize(): TracePipelineLayout {
         return {
             deviceSerial: this.device.traceSerial,
             bindGroupLayoutsSerial: this.bindGroupLayouts.map(bgl => bgl.traceSerial),
@@ -913,7 +1190,12 @@ class PipelineLayoutState extends BaseState<GPUPipelineLayout> {
 }
 
 class QuerySetState extends BaseState<GPUQuerySet> {
-    constructor(device, desc) {
+    device: DeviceState;
+    type: string;
+    count: number;
+    state: string;
+
+    constructor(device: DeviceState, desc: GPUQuerySetDescriptor) {
         super(desc);
         this.device = device;
         this.type = desc.type;
@@ -921,39 +1203,46 @@ class QuerySetState extends BaseState<GPUQuerySet> {
         this.state = 'valid';
     }
 
-    serialize() {
+    serialize(): TraceQuerySet {
         return {
             deviceSerial: this.device.traceSerial,
             type: this.type,
             count: this.count,
             state: this.state,
-            // TODO what about the data it countains ????
+            // TODO what about the data it contains ????
         };
     }
 }
 
 class QueueState extends BaseState<GPUQueue> {
-    constructor(device, desc) {
+    device: DeviceState;
+
+    constructor(device: DeviceState, desc: any) {
         super(desc);
         this.device = device;
     }
 
-    serialize() {
+    serialize(): TraceQueue {
         return { deviceSerial: this.device.traceSerial };
     }
 
-    serializeWriteData(data, offset, size) {
+    serializeWriteData(data: BufferSource, offset?: number, size?: number) {
         offset ??= 0;
         if (data instanceof ArrayBuffer) {
             size = size ?? data.byteLength - offset;
             return spector2.traceData(data, offset, size);
         } else {
-            size = size ?? data.length - offset;
-            return spector2.traceData(data.buffer, offset * data.BYTES_PER_ELEMENT, size * data.BYTES_PER_ELEMENT);
+            const typedData = data as TypedArray;
+            size = size ?? typedData.length - offset;
+            return spector2.traceData(
+                data.buffer,
+                offset * typedData.BYTES_PER_ELEMENT,
+                size * typedData.BYTES_PER_ELEMENT
+            );
         }
     }
 
-    writeBuffer(buffer, bufferOffset, data, dataOffset, size) {
+    writeBuffer(buffer: GPUBuffer, bufferOffset: number, data: BufferSource, dataOffset: number, size: number) {
         spector2.queueProto.writeBuffer.call(this.webgpuObject, buffer, bufferOffset, data, dataOffset, size);
         if (!spector2.recordingTrace()) {
             return;
@@ -971,7 +1260,12 @@ class QueueState extends BaseState<GPUQueue> {
         });
     }
 
-    writeTexture(destination, data, dataLayout, size) {
+    writeTexture(
+        destination: GPUImageCopyTexture,
+        data: BufferSource,
+        dataLayout: GPUImageDataLayout,
+        size: GPUExtent3D
+    ) {
         spector2.queueProto.writeTexture.call(this.webgpuObject, destination, data, dataLayout, size);
         if (!spector2.recordingTrace()) {
             return;
@@ -979,7 +1273,7 @@ class QueueState extends BaseState<GPUQueue> {
 
         const serializedData = this.serializeWriteData(
             data,
-            dataLayout.dataOffset,
+            dataLayout.offset || 0,
             undefined /*TODO guess the correct size based on the format / size??*/
         );
         spector2.traceCommand({
@@ -1003,7 +1297,11 @@ class QueueState extends BaseState<GPUQueue> {
         });
     }
 
-    copyExternalImageToTexture(source, destination, copySize) {
+    copyExternalImageToTexture(
+        source: GPUImageCopyExternalImage,
+        destination: GPUImageCopyTextureTagged,
+        copySize: GPUExtent3D
+    ) {
         spector2.queueProto.copyExternalImageToTexture.call(this.webgpuObject, source, destination, copySize);
         if (!spector2.recordingTrace()) {
             return;
@@ -1013,7 +1311,7 @@ class QueueState extends BaseState<GPUQueue> {
         console.assert(false);
     }
 
-    submit(commandBuffers) {
+    submit(commandBuffers: GPUCommandBuffer[]) {
         spector2.queueProto.submit.call(this.webgpuObject, commandBuffers);
         if (!spector2.recordingTrace()) {
             return;
@@ -1088,7 +1386,7 @@ class RenderPassEncoderState extends BaseState<GPURenderPassEncoder> {
         return {};
     }
 
-    draw(vertexCount, instanceCount, firstVertex, firstInstance) {
+    draw(vertexCount: number, instanceCount?: number, firstVertex?: number, firstInstance?: number) {
         spector2.renderPassEncoderProto.draw.call(
             this.webgpuObject,
             vertexCount,
@@ -1107,7 +1405,13 @@ class RenderPassEncoderState extends BaseState<GPURenderPassEncoder> {
         });
     }
 
-    drawIndexed(indexCount, instanceCount, firstIndex, baseVertex, firstInstance) {
+    drawIndexed(
+        indexCount: number,
+        instanceCount?: number,
+        firstIndex?: number,
+        baseVertex?: number,
+        firstInstance?: number
+    ) {
         spector2.renderPassEncoderProto.drawIndexed.call(
             this.webgpuObject,
             indexCount,
@@ -1133,7 +1437,7 @@ class RenderPassEncoderState extends BaseState<GPURenderPassEncoder> {
         this.encoder.addCommand({ name: 'popDebugGroup' });
     }
 
-    pushDebugGroup(groupLabel) {
+    pushDebugGroup(groupLabel: string) {
         spector2.renderPassEncoderProto.pushDebugGroup.call(this.webgpuObject, groupLabel);
         this.encoder.addCommand({
             name: 'pushDebugGroup',
@@ -1143,7 +1447,7 @@ class RenderPassEncoderState extends BaseState<GPURenderPassEncoder> {
         });
     }
 
-    setBindGroup(index, bindGroup, dynamicOffsets) {
+    setBindGroup(index: number, bindGroup: GPUBindGroup, dynamicOffsets?: number[]) {
         if (dynamicOffsets !== undefined) {
             console.assert(false, "Don't know how to handle dynamic bindgroups yet.");
         }
@@ -1159,7 +1463,7 @@ class RenderPassEncoderState extends BaseState<GPURenderPassEncoder> {
         });
     }
 
-    setIndexBuffer(buffer, indexFormat, offset, size) {
+    setIndexBuffer(buffer: GPUBuffer, indexFormat: string, offset?: number, size?: number) {
         spector2.renderPassEncoderProto.setIndexBuffer.call(this.webgpuObject, buffer, indexFormat, offset, size);
         this.encoder.reference(buffer);
         const bufferState = spector2.buffers.get(buffer);
@@ -1176,7 +1480,7 @@ class RenderPassEncoderState extends BaseState<GPURenderPassEncoder> {
         });
     }
 
-    setPipeline(pipeline) {
+    setPipeline(pipeline: GPURenderPipeline) {
         spector2.renderPassEncoderProto.setPipeline.call(this.webgpuObject, pipeline);
         this.encoder.reference(pipeline);
         this.encoder.addCommand({
@@ -1187,7 +1491,7 @@ class RenderPassEncoderState extends BaseState<GPURenderPassEncoder> {
         });
     }
 
-    setVertexBuffer(slot, buffer, offset, size) {
+    setVertexBuffer(slot: number, buffer: GPUBuffer, offset?: number, size?: number) {
         spector2.renderPassEncoderProto.setVertexBuffer.call(this.webgpuObject, slot, buffer, offset, size);
         this.encoder.reference(buffer);
         const bufferState = spector2.buffers.get(buffer);
@@ -1204,7 +1508,12 @@ class RenderPassEncoderState extends BaseState<GPURenderPassEncoder> {
         });
     }
 
-    setViewport(x, y, width, height, minDepth, maxDepth) {
+    setScissorRect(x: number, y: number, width: number, height: number) {
+        spector2.renderPassEncoderProto.setScissorRect.call(this.webgpuObject, x, y, width, height);
+        this.encoder.addCommand({ name: 'setScissorRect', args: { x, y, width, height } });
+    }
+
+    setViewport(x: number, y: number, width: number, height: number, minDepth: number, maxDepth: number) {
         spector2.renderPassEncoderProto.setViewport.call(this.webgpuObject, x, y, width, height, minDepth, maxDepth);
         this.encoder.addCommand({ name: 'setViewport', args: { x, y, width, height, minDepth, maxDepth } });
     }
@@ -1215,23 +1524,55 @@ class RenderPassEncoderState extends BaseState<GPURenderPassEncoder> {
     }
 }
 
+/*
+interface Attribute {
+    format: string;
+    offset: number;
+    shaderLocation: number;
+}
+
+interface VertexBuffer {
+    arrayStride: number;
+    stepMode: string;
+    attributes: Attribute[];
+}
+*/
+
 class RenderPipelineState extends BaseState<GPURenderPipeline> {
-    constructor(device, desc) {
+    device: DeviceState;
+    layout: GPUPipelineLayout | string;
+    vertex: {
+        module: ShaderModuleState;
+        entryPoint: string;
+        constants: Record<string, number>;
+        buffers: GPUVertexBufferLayout[];
+    };
+    primitive: GPUPrimitiveState;
+    depthStencil?: GPUDepthStencilState;
+    multisample: GPUMultisampleState;
+    fragment?: {
+        module: ShaderModuleState;
+        entryPoint: string;
+        constants: Record<string, number>;
+        targets: GPUColorTargetState[];
+    };
+
+    constructor(device: DeviceState, desc: GPURenderPipelineDescriptor) {
         super(desc);
         this.device = device;
         this.layout = desc.layout;
 
         const v = desc.vertex;
         this.vertex = {
-            module: spector2.shaderModules.get(v.module),
+            module: spector2.shaderModules.get(v.module)!,
             entryPoint: v.entryPoint,
             constants: { ...v.constants },
 
-            buffers: (v.buffers ?? []).map(b => {
+            buffers: ((v.buffers as GPUVertexBufferLayout[]) ?? []).map(b => {
                 return {
                     arrayStride: b.arrayStride,
                     stepMode: b.stepMode ?? 'vertex',
-                    attributes: b.attributes.map(a => {
+                    attributes: (b.attributes as GPUVertexAttribute[]).map(a => {
                         return {
                             format: a.format,
                             offset: a.offset,
@@ -1242,7 +1583,7 @@ class RenderPipelineState extends BaseState<GPURenderPipeline> {
             }),
         };
 
-        const p = desc.primitiveState ?? {};
+        const p = desc.primitive ?? {};
         this.primitive = {
             topology: p.topology ?? 'triangle-list',
             stripIndexFormat: p.stripIndexFormat,
@@ -1280,7 +1621,7 @@ class RenderPipelineState extends BaseState<GPURenderPipeline> {
                 stencilWriteMask: ds.stencilWriteMask ?? 0xffffffff,
 
                 depthBias: ds.depthBias ?? 0,
-                depthBiasSlopScale: ds.depthBiasSlopeScale ?? 0,
+                depthBiasSlopeScale: ds.depthBiasSlopeScale ?? 0,
                 depthBiasClamp: ds.depthBiasClamp ?? 0,
             };
         }
@@ -1295,12 +1636,12 @@ class RenderPipelineState extends BaseState<GPURenderPipeline> {
         const f = desc.fragment;
         if (f !== undefined) {
             this.fragment = {
-                module: spector2.shaderModules.get(f.module),
+                module: spector2.shaderModules.get(f.module)!,
                 entryPoint: f.entryPoint,
                 constants: { ...f.constants },
 
-                targets: f.targets.map(t => {
-                    const target = {
+                targets: (f.targets as GPUColorTargetState[]).map(t => {
+                    const target: GPUColorTargetState = {
                         format: t.format,
                         writeMask: t.writeMask ?? GPUColorWrite.ALL,
                     };
@@ -1327,34 +1668,41 @@ class RenderPipelineState extends BaseState<GPURenderPipeline> {
         }
     }
 
-    serialize() {
-        const result = {
+    serialize(): TraceRenderPipeline {
+        const { vertex, layout, primitive, multisample, depthStencil, fragment } = this;
+        const result: TraceRenderPipeline = {
             deviceSerial: this.device.traceSerial,
-            layout: this.layout,
-            vertex: { ...this.vertex },
-            primitive: this.primitive,
-            multisample: this.multisample,
-            depthStencil: this.depthStencil,
-            fragment: { ...this.fragment },
+            vertex: {
+                moduleSerial: vertex.module.traceSerial,
+                entryPoint: vertex.entryPoint,
+                constants: vertex.constants,
+                buffers: vertex.buffers,
+            },
+            primitive,
+            multisample,
+            depthStencil,
+            //fragment: { ...this.fragment },
         };
 
-        if (result.layout !== 'auto') {
-            result.layoutSerial = spector2.pipelineLayouts.get(this.layout).traceSerial;
-            delete result.layout;
+        if (layout === 'auto') {
+            result.layout = 'auto';
+        } else {
+            result.layoutSerial = spector2.pipelineLayouts.get(layout as GPUPipelineLayout)!.traceSerial;
         }
 
-        result.vertex.moduleSerial = result.vertex.module.traceSerial;
-        delete result.vertex.module;
-
-        if (result.fragment !== undefined) {
-            result.fragment.moduleSerial = result.fragment.module.traceSerial;
-            delete result.fragment.module;
+        if (fragment !== undefined) {
+            result.fragment = {
+                moduleSerial: fragment.module.traceSerial,
+                entryPoint: fragment.entryPoint,
+                constants: fragment.constants,
+                targets: fragment.targets,
+            };
         }
 
         return result;
     }
 
-    getBindGroupLayout(groupIndex) {
+    getBindGroupLayout(groupIndex: number) {
         const bgl = spector2.renderPipelineProto.getBindGroupLayout.call(this.webgpuObject, groupIndex);
         spector2.registerObjectIn(
             'bindGroupLayouts',
@@ -1370,23 +1718,27 @@ class RenderPipelineState extends BaseState<GPURenderPipeline> {
 }
 
 class SamplerState extends BaseState<GPUSampler> {
-    constructor(device, desc) {
+    device: DeviceState;
+    desc: TraceSamplerState;
+
+    constructor(device: DeviceState, desc: GPUSamplerDescriptor) {
         super(desc);
         this.device = device;
-        this.desc = {};
-        this.desc.addressModeU = desc.addressModeU ?? 'clamp-to-edge';
-        this.desc.addressModeV = desc.addressModeV ?? 'clamp-to-edge';
-        this.desc.addressModeW = desc.addressModeW ?? 'clamp-to-edge';
-        this.desc.magFilter = desc.magFilter ?? 'nearest';
-        this.desc.minFilter = desc.minFilter ?? 'nearest';
-        this.desc.mipmapFilter = desc.mipmapFilter ?? 'nearest';
-        this.desc.lodMinClamp = desc.lodMinClamp ?? 0;
-        this.desc.lodMaxClamp = desc.lodMaxClamp ?? 32;
-        this.desc.compare = desc.compare;
-        this.desc.maxAnisotropy = desc.maxAnisotropy ?? 1;
+        this.desc = {
+            addressModeU: desc.addressModeU ?? 'clamp-to-edge',
+            addressModeV: desc.addressModeV ?? 'clamp-to-edge',
+            addressModeW: desc.addressModeW ?? 'clamp-to-edge',
+            magFilter: desc.magFilter ?? 'nearest',
+            minFilter: desc.minFilter ?? 'nearest',
+            mipmapFilter: desc.mipmapFilter ?? 'nearest',
+            lodMinClamp: desc.lodMinClamp ?? 0,
+            lodMaxClamp: desc.lodMaxClamp ?? 32,
+            compare: desc.compare,
+            maxAnisotropy: desc.maxAnisotropy ?? 1,
+        };
     }
 
-    serialize() {
+    serialize(): TraceSampler {
         return {
             deviceSerial: this.device.traceSerial,
             ...this.desc,
@@ -1395,13 +1747,16 @@ class SamplerState extends BaseState<GPUSampler> {
 }
 
 class ShaderModuleState extends BaseState<GPUShaderModule> {
-    constructor(device, desc) {
+    device: DeviceState;
+    code: string;
+
+    constructor(device: DeviceState, desc: GPUShaderModuleDescriptor) {
         super(desc);
         this.device = device;
         this.code = desc.code;
     }
 
-    serialize() {
+    serialize(): TraceShaderModule {
         return { deviceSerial: this.device.traceSerial, code: this.code };
     }
 }
@@ -1426,12 +1781,23 @@ export const kTextureFormatInfo: Record<GPUTextureFormat, TextureFormatInfo> = {
 };
 const kBytesPerRowAlignment = 256;
 
-function align(n, alignment) {
+function align(n: number, alignment: number) {
     return Math.ceil(n / alignment) * alignment;
 }
 
 class TextureState extends BaseState<GPUTexture> {
-    constructor(device, desc, swapChainId) {
+    device: DeviceState;
+    swapChainId?: string;
+    state: string;
+    format: GPUTextureFormat;
+    usage: GPUTextureUsageFlags;
+    size: GPUExtent3DDictFull;
+    dimension: GPUTextureDimension;
+    mipLevelCount: number;
+    sampleCount: number;
+    viewFormats: GPUTextureFormat[];
+
+    constructor(device: DeviceState, desc: GPUTextureDescriptor, swapChainId?: string) {
         super(desc);
         this.swapChainId = swapChainId; // a string if texture is from `getCurrentTexture`
         this.state = 'available';
@@ -1442,10 +1808,10 @@ class TextureState extends BaseState<GPUTexture> {
         this.dimension = desc.dimension ?? '2d';
         this.mipLevelCount = desc.mipLevelCount ?? 1;
         this.sampleCount = desc.sampleCount ?? 1;
-        this.viewFormats = desc.viewFormats ?? []; // deep copy
+        this.viewFormats = [...(desc.viewFormats ?? [])]; // deep copy
     }
 
-    async serializeAsync() {
+    async serializeAsync(): TraceTexture {
         // Always serialize the creation parameters and add the initial data if possible.
         const result = this.serialize();
 
@@ -1473,14 +1839,14 @@ class TextureState extends BaseState<GPUTexture> {
         }
         // TODO check for compressed textures as well.
 
-        const formatInfo = kTextureFormatInfo[this.format];
+        const formatInfo = kTextureFormatInfo[this.format]!;
 
         const readbacks = [];
         let mapPromises = [];
 
         spector2.doWebGPUOp(() => {
             // TODO pool encoders?
-            const encoder = this.device.webgpuObject.createCommandEncoder();
+            const encoder = this.device.webgpuObject!.createCommandEncoder();
 
             for (let mip = 0; mip < this.mipLevelCount; mip++) {
                 const width = Math.max(1, this.size.width >> mip);
@@ -1526,7 +1892,7 @@ class TextureState extends BaseState<GPUTexture> {
         return result;
     }
 
-    serialize() {
+    serialize(): TraceTexture {
         return {
             deviceSerial: this.device.traceSerial,
             state: this.state,
@@ -1569,7 +1935,16 @@ class TextureState extends BaseState<GPUTexture> {
 }
 
 class TextureViewState extends BaseState<GPUTextureView> {
-    constructor(texture, desc) {
+    texture: TextureState;
+    format: GPUTextureFormat;
+    dimension: GPUTextureViewDimension;
+    aspect: GPUTextureAspect;
+    baseMipLevel: number;
+    mipLevelCount?: number;
+    baseArrayLayer: number;
+    arrayLayerCount?: number;
+
+    constructor(texture: TextureState, desc: GPUTextureViewDescriptor) {
         super(desc);
         this.texture = texture;
         this.format = desc.format ?? texture.format;
@@ -1581,7 +1956,7 @@ class TextureViewState extends BaseState<GPUTextureView> {
         this.arrayLayerCount = desc.arrayLayerCount; // TODO default;
     }
 
-    serialize() {
+    serialize(): TraceTextureView {
         return {
             textureSerial: this.texture.traceSerial,
             format: this.format,

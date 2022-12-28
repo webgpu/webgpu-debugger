@@ -1,81 +1,90 @@
 /* eslint-disable @typescript-eslint/ban-types */
 
-if (!GPUDevice.prototype.createBuffer.toString().includes('native')) {
-    throw new Error('This must run before the context is wrapped!');
-}
-
 type AnyFunc = (...args: any[]) => any;
 type FuncsByName = Record<string, AnyFunc>;
-
 const origFnsByClass = new Map<Function, FuncsByName>();
-
-const webGPUClasses: Function[] = [
-    HTMLCanvasElement,
-    GPU,
-    GPUAdapter,
-    GPUBuffer,
-    GPUCommandEncoder,
-    GPUCanvasContext,
-    GPUDevice,
-    GPUQuerySet,
-    GPUQueue,
-    GPURenderPassEncoder,
-    GPURenderPipeline,
-    GPUTexture,
-];
-
-for (const Class of webGPUClasses) {
-    const origFns: FuncsByName = {};
-    const proto = Class.prototype;
-    for (const name in proto) {
-        const props = Object.getOwnPropertyDescriptor(proto, name);
-        if (!props?.writable || typeof proto[name] !== 'function') {
-            continue;
-        }
-        origFns[name] = proto[name];
-    }
-    origFnsByClass.set(Class, origFns);
-}
-
-type ClassFnNamesA = [Function, string[]];
-type ClassFnNames = [Function, Set<string>];
-
-const cfn: ClassFnNamesA[] = [
-    [GPU, ['requestAdapter']],
-    [GPUAdapter, ['requestDevice']],
-    [
-        GPUDevice,
-        [
-            'createBuffer',
-            'createTexture',
-            'createSampler',
-            'importExternalTexture',
-            'createBindGroupLayout',
-            'createPipelineLayout',
-            'createBindGroup',
-            'createShaderModule',
-            'createComputePipeline',
-            'createRenderPipeline',
-            'createComputePipelineAsync',
-            'createRenderPipelineAsync',
-            'createCommandEncoder',
-            'createRenderBundleEncoder',
-            'createQuerySet',
-        ],
-    ],
-    [GPUCommandEncoder, ['beginRenderPass', 'beginComputePass', 'finish']],
-    [GPUCanvasContext, ['getCurrentTexture']],
-    [GPUTexture, ['createView']],
-];
-
-const classToCreationFunctionNames: ClassFnNames[] = (() =>
-    cfn.map(([Class, names]) => [Class, new Set<string>(names)]))();
-
-const mapClassToCreationFunctionNames = new Map<Function, Set<string>>(classToCreationFunctionNames);
 
 const isPromise = (p: any) => typeof p === 'object' && typeof p.then === 'function';
 
-const unwrappedDevices = new WeakMap<GPUDevice, GPUDevice>();
+const mapClassToCreationFunctionNames = new Map<Function, Set<string>>();
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+let getUnwrappedDevice = (_: GPUDevice): GPUDevice | undefined => undefined;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+let setUnwrappedDevice = (wrapped: GPUDevice, unwrapped: GPUDevice) => {};
+
+if (typeof GPUDevice !== 'undefined') {
+    if (!GPUDevice.prototype.createBuffer.toString().includes('native')) {
+        throw new Error('This must run before the context is wrapped!');
+    }
+
+    const webGPUClasses: Function[] = [
+        HTMLCanvasElement,
+        GPU,
+        GPUAdapter,
+        GPUBuffer,
+        GPUCommandEncoder,
+        GPUCanvasContext,
+        GPUDevice,
+        GPUQuerySet,
+        GPUQueue,
+        GPURenderPassEncoder,
+        GPURenderPipeline,
+        GPUTexture,
+    ];
+
+    for (const Class of webGPUClasses) {
+        const origFns: FuncsByName = {};
+        const proto = Class.prototype;
+        for (const name in proto) {
+            const props = Object.getOwnPropertyDescriptor(proto, name);
+            if (!props?.writable || typeof proto[name] !== 'function') {
+                continue;
+            }
+            origFns[name] = proto[name];
+        }
+        origFnsByClass.set(Class, origFns);
+    }
+
+    type ClassFnNamesA = [Function, string[]];
+    type ClassFnNames = [Function, Set<string>];
+
+    const cfn: ClassFnNamesA[] = [
+        [GPU, ['requestAdapter']],
+        [GPUAdapter, ['requestDevice']],
+        [
+            GPUDevice,
+            [
+                'createBuffer',
+                'createTexture',
+                'createSampler',
+                'importExternalTexture',
+                'createBindGroupLayout',
+                'createPipelineLayout',
+                'createBindGroup',
+                'createShaderModule',
+                'createComputePipeline',
+                'createRenderPipeline',
+                'createComputePipelineAsync',
+                'createRenderPipelineAsync',
+                'createCommandEncoder',
+                'createRenderBundleEncoder',
+                'createQuerySet',
+            ],
+        ],
+        [GPUCommandEncoder, ['beginRenderPass', 'beginComputePass', 'finish']],
+        [GPUCanvasContext, ['getCurrentTexture']],
+        [GPUTexture, ['createView']],
+    ];
+
+    const classToCreationFunctionNames: ClassFnNames[] = (() =>
+        cfn.map(([Class, names]) => [Class, new Set<string>(names)]))();
+
+    classToCreationFunctionNames.forEach(pair => mapClassToCreationFunctionNames.set(...pair));
+
+    const unwrappedDevices = new WeakMap<GPUDevice, GPUDevice>();
+    getUnwrappedDevice = (wrapped: GPUDevice) => unwrappedDevices.get(wrapped);
+    setUnwrappedDevice = (wrapped: GPUDevice, unwrapped: GPUDevice) => unwrappedDevices.set(wrapped, unwrapped);
+}
 
 /**
  * The prototype to this object may have been altered so we
@@ -138,7 +147,7 @@ export function getUnwrappedGPUCanvasContext(canvas: HTMLCanvasElement, ...args:
 }
 
 export function getUnwrappedGPUDeviceFromWrapped(wrapped: GPUDevice): GPUDevice {
-    const unwrappedDevice = unwrappedDevices.get(wrapped);
+    const unwrappedDevice = getUnwrappedDevice(wrapped);
     if (unwrappedDevice) {
         return unwrappedDevice;
     }
@@ -161,6 +170,7 @@ export function getUnwrappedGPUDeviceFromWrapped(wrapped: GPUDevice): GPUDevice 
             };
         }
     }
+    setUnwrappedDevice(wrapped, obj as GPUDevice);
 
     return obj as GPUDevice;
 }
