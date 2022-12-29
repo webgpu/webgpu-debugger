@@ -1,5 +1,5 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-nocheck
+// @gts-nocheck
 
 import { GPUExtent3DDictFull } from '../lib/utils';
 import {
@@ -7,13 +7,16 @@ import {
     Trace,
     TraceAdapter,
     TraceBindGroup,
+    TraceBindGroupEntry,
     TraceBindGroupLayout,
     TraceBuffer,
     TraceBufferUpdate,
     TraceCommandBuffer,
+    TraceCommandBufferCommand,
     TraceData,
     TraceDevice,
     TraceExplicitBindGroupLayout,
+    TraceObject,
     TracePipelineLayout,
     TraceQuerySet,
     TraceQueue,
@@ -32,7 +35,7 @@ import {
     TraceTextureView,
 } from '../capture';
 
-type RequestAdapterFn = (options: GPURequestAdapterOptions) => Promise<GPUAdapter>;
+type RequestAdapterFn = (options?: GPURequestAdapterOptions) => Promise<GPUAdapter>;
 
 let requestUnwrappedAdapter: RequestAdapterFn;
 
@@ -44,14 +47,16 @@ export async function loadReplay(trace: Trace, requestUnwrappedAdapterFn: Reques
 }
 
 export interface ReplayImageCopyTexture {
-    texture: ReplayTexture;
+    texture: GPUTexture;
+    textureState: ReplayTexture;
     mipLevel: number;
     origin: GPUOrigin3D;
     aspect: GPUTextureAspect;
 }
 
 export interface ReplayImageCopyBuffer {
-    buffer: ReplayBuffer;
+    bufferState: ReplayBuffer;
+    buffer: GPUBuffer;
     offset: number;
     bytesPerRow?: number;
     rowsPerImage?: number;
@@ -75,9 +80,14 @@ export interface ReplayCommandBufferCommandCopyBufferToTexture {
     };
 }
 
+export interface ReplayBindGroupLayoutDescriptor extends GPUBindGroupLayoutDescriptor {
+    renderPipelineSerial?: number;
+    groupIndex?: number;
+}
+
 export interface ReplayRenderPassColorAttachment {
     view: GPUTextureView;
-    viewState: ReplayTexture;
+    viewState: ReplayTextureView;
     resolveTarget?: GPUTextureView;
     resolveTargetState?: ReplayTextureView;
     clearValue: GPUColorDict;
@@ -114,8 +124,8 @@ export interface ReplayCommandBeginRenderPassArgs {
     depthStencilAttachment?: ReplayRenderPassDepthStencilAttachment;
 }
 
-// Pseudo command. This command exists in the command buffer
-// where as the beingRenderPass exists in the renderPass
+// Pseudo command. This command exists in the ReplayCommandBuffer
+// where as the beingRenderPass command exists in the ReplayRenderPass
 export interface ReplayCommandBufferCommandRenderPass {
     name: 'renderPass';
     renderPass: ReplayRenderPass;
@@ -167,6 +177,7 @@ export interface ReplayCommandBufferCommandSetBindGroup {
     args: {
         index: number;
         bindGroup: ReplayBindGroup;
+        dynamicOffsets?: GPUBufferDynamicOffset[];
     };
 }
 
@@ -309,24 +320,77 @@ export type ReplayQueueCommand =
     | ReplayCommandBufferUnmap
     | ReplayCommandBad;
 
+interface ReplayAsyncType<GPUType> {
+    recreate(desc: any): Promise<void>;
+    webgpuObject: GPUType;
+}
+
+interface ReplaySyncType<GPUType> {
+    webgpuObject: GPUType;
+}
+
+interface ReplayStateColorAttachment {
+    view: ReplayTextureView;
+    resolveTarget?: ReplayTextureView;
+}
+
+interface ReplayStateBindGroup {
+    group: ReplayBindGroup;
+    dynamicOffsets?: GPUBufferDynamicOffset[];
+}
+
+interface ReplayStateBuffer {
+    buffer: ReplayBuffer;
+    offset: number;
+    size: number;
+}
+
+interface ReplayStateBeginRenderPass {
+    viewport: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        minDepth: number;
+        maxDepth: number;
+    };
+    scissorRect: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+    };
+    colorAttachments: ReplayStateColorAttachment[];
+    depthStencilAttachment: {
+        view?: ReplayTextureView;
+    };
+    pipeline?: ReplayRenderPipeline;
+    bindGroups: ReplayStateBindGroup[];
+    vertexBuffers: ReplayStateBuffer[];
+    indexBuffer?: ReplayStateBuffer;
+}
+
 export class Replay {
     commands: ReplayQueueCommand[] = [];
-    state: any;
+    data: Record<number, Uint8Array> = {};
 
-    adapters: Record<string, ReplayAdapter> = {};
-    devices: Record<string, ReplayDevice> = {};
-    queues: Record<string, ReplayQueue> = {};
-    bindGroupLayouts: Record<string, ReplayBindGroupLayout> = {};
-    pipelineLayouts: Record<string, ReplayPipelineLayout> = {};
-    shaderModules: Record<string, ReplayShaderModule> = {};
-    renderPipelines: Record<string, ReplayRenderPipeline> = {};
-    buffers: Record<string, ReplayBuffer> = {};
-    samplers: Record<string, ReplaySampler> = {};
-    textures: Record<string, ReplayTexture> = {};
-    textureViews: Record<string, ReplayTextureView> = {};
-    querySets: Record<string, ReplayQuerySet> = {};
-    bindGroups: Record<string, ReplayBindGroup> = {};
-    commandBuffers: Record<string, ReplayCommandBuffer> = {};
+    state: any;
+    textureStateToShow?: ReplayTexture;
+
+    adapters: Record<number, ReplayAdapter> = {};
+    devices: Record<number, ReplayDevice> = {};
+    queues: Record<number, ReplayQueue> = {};
+    bindGroupLayouts: Record<number, ReplayBindGroupLayout> = {};
+    pipelineLayouts: Record<number, ReplayPipelineLayout> = {};
+    shaderModules: Record<number, ReplayShaderModule> = {};
+    renderPipelines: Record<number, ReplayRenderPipeline> = {};
+    buffers: Record<number, ReplayBuffer> = {};
+    samplers: Record<number, ReplaySampler> = {};
+    textures: Record<number, ReplayTexture> = {};
+    textureViews: Record<number, ReplayTextureView> = {};
+    querySets: Record<number, ReplayQuerySet> = {};
+    bindGroups: Record<number, ReplayBindGroup> = {};
+    commandBuffers: Record<number, ReplayCommandBuffer> = {};
 
     adaptersToReplayMap = new Map<GPUAdapter, ReplayAdapter>();
     devicesToReplayMap = new Map<GPUDevice, ReplayDevice>();
@@ -346,42 +410,49 @@ export class Replay {
     constructor() {}
 
     async load(trace: Trace) {
-        async function recreateObjectsAsync<T, T2>(
+        async function recreateObjectsAsync<GPUType, ReplayType extends ReplayAsyncType<GPUType>, TraceType>(
             replay: Replay,
-            Class: new (replay: Replay, desc: any) => T,
-            descMap: Record<string, T>
-        ) {
-            if (descMap === undefined) {
-                return {};
-            }
+            Class: new (replay: Replay, desc: TraceType) => ReplayType,
+            descMap: Record<string, TraceType>
+        ): Promise<[Record<string, ReplayType>, Map<GPUType, ReplayType>]> {
+            //if (descMap === undefined) {
+            //    return {};
+            //}
 
-            const recreatePromises = [];
-            const recreatedObjects: Record<string, T> = {};
-            const mapToReplayObjects = new Map<T2, T>();
+            const recreatePromises: Promise<void>[] = [];
+            const recreateSerials: string[] = [];
+            const recreatedObjects: Record<string, ReplayType> = {};
+            const mapToReplayObjects = new Map<GPUType, ReplayType>();
             for (const traceSerial in descMap) {
                 const desc = descMap[traceSerial];
                 const obj = new Class(replay, desc);
 
                 recreatePromises.push(obj.recreate(desc));
+                recreateSerials.push(traceSerial);
                 recreatedObjects[traceSerial] = obj;
-                mapToReplayObjects.set(obj.webgpuObject, obj);
             }
 
             await Promise.all(recreatePromises);
+
+            for (const serial of recreateSerials) {
+                const obj = recreatedObjects[serial];
+                mapToReplayObjects.set(obj.webgpuObject, obj);
+            }
+
             return [recreatedObjects, mapToReplayObjects];
         }
 
-        function recreateObjects<T, T2>(
+        function recreateObjects<GPUType, ReplayType extends ReplaySyncType<GPUType>, TraceType>(
             replay: Replay,
-            Class: new (replay: Replay, desc: any) => T,
-            descMap: Record<string, T>
-        ) {
-            if (descMap === undefined) {
-                return {};
-            }
+            Class: new (replay: Replay, desc: TraceType) => ReplayType,
+            descMap: Record<string, TraceType>
+        ): [Record<string, ReplayType>, Map<GPUType, ReplayType>] {
+            //if (descMap === undefined) {
+            //    return {};
+            //}
 
-            const recreatedObjects: Record<string, T> = {};
-            const mapToReplayObjects = new Map<T2, T>();
+            const recreatedObjects: Record<string, ReplayType> = {};
+            const mapToReplayObjects = new Map<GPUType, ReplayType>();
             for (const traceSerial in descMap) {
                 const desc = descMap[traceSerial];
                 const obj = new Class(replay, desc);
@@ -391,7 +462,6 @@ export class Replay {
             return [recreatedObjects, mapToReplayObjects];
         }
 
-        this.data = {};
         for (const dataSerial in trace.data) {
             const badArray = trace.data[dataSerial];
             const dataBuf = new Uint8Array(badArray.length);
@@ -409,27 +479,27 @@ export class Replay {
         [this.devices, this.devicesToReplayMap] = await recreateObjectsAsync(this, ReplayDevice, trace.objects.devices);
         [this.queues, this.queuesToReplayMap] = recreateObjects(this, ReplayQueue, trace.objects.queues);
 
-        [this.bindGroupLayouts, this.bindGroupLayoutsReplyMap] = recreateObjects(
+        [this.bindGroupLayouts, this.bindGroupLayoutsToReplayMap] = recreateObjects(
             this,
             ReplayBindGroupLayout,
             trace.objects.bindGroupLayouts
         );
-        [this.pipelineLayouts, this.pipelineLayoutsReplyMap] = recreateObjects(
+        [this.pipelineLayouts, this.pipelineLayoutsToReplayMap] = recreateObjects(
             this,
             ReplayPipelineLayout,
             trace.objects.pipelineLayouts
         );
-        [this.shaderModules, this.shaderModulesReplyMap] = recreateObjects(
+        [this.shaderModules, this.shaderModulesToReplayMap] = recreateObjects(
             this,
             ReplayShaderModule,
             trace.objects.shaderModules
         );
-        [this.renderPipelines, this.renderPipelinesReplyMap] = await recreateObjectsAsync(
+        [this.renderPipelines, this.renderPipelinesToReplayMap] = await recreateObjectsAsync(
             this,
             ReplayRenderPipeline,
             trace.objects.renderPipelines
         );
-        // Initialive the implicit bind group layouts now that all pipelines are created.
+        // Initialize the implicit bind group layouts now that all pipelines are created.
         // Luckily implicit layouts can't be used to create pipeline layouts so we don't have circular dependencies.
         for (const i in this.bindGroupLayouts) {
             if (this.bindGroupLayouts[i].implicit) {
@@ -437,18 +507,22 @@ export class Replay {
             }
         }
 
-        [this.buffers, this.buffersReplyMap] = recreateObjects(this, ReplayBuffer, trace.objects.buffers);
-        [this.samplers, this.samplersReplyMap] = recreateObjects(this, ReplaySampler, trace.objects.samplers);
-        [this.textures, this.texturesReplyMap] = recreateObjects(this, ReplayTexture, trace.objects.textures);
-        [this.textureViews, this.textureViewsReplyMap] = recreateObjects(
+        [this.buffers, this.buffersToReplayMap] = recreateObjects(this, ReplayBuffer, trace.objects.buffers);
+        [this.samplers, this.samplersToReplayMap] = recreateObjects(this, ReplaySampler, trace.objects.samplers);
+        [this.textures, this.texturesToReplayMap] = recreateObjects(this, ReplayTexture, trace.objects.textures);
+        [this.textureViews, this.textureViewsToReplayMap] = recreateObjects(
             this,
             ReplayTextureView,
             trace.objects.textureViews
         );
-        [this.querySets, this.querySetsReplyMap] = recreateObjects(this, ReplayQuerySet, trace.objects.querySets);
-        [this.bindGroups, this.bindGroupsReplyMap] = recreateObjects(this, ReplayBindGroup, trace.objects.bindGroups);
+        [this.querySets, this.querySetsToReplayMap] = recreateObjects(this, ReplayQuerySet, trace.objects.querySets);
+        [this.bindGroups, this.bindGroupsToReplayMap] = recreateObjects(
+            this,
+            ReplayBindGroup,
+            trace.objects.bindGroups
+        );
 
-        [this.commandBuffers, this.commandBuffersReplyMap] = recreateObjects(
+        [this.commandBuffers, this.commandBuffersToReplayMap] = recreateObjects(
             this,
             ReplayCommandBuffer,
             trace.objects.commandBuffers
@@ -543,7 +617,7 @@ export class Replay {
         });
     }
 
-    getData(serializedData) {
+    getData(serializedData: TraceData) {
         const dataBuf = this.data[serializedData.serial];
         console.assert(dataBuf.byteLength === serializedData.size);
         return dataBuf;
@@ -652,11 +726,13 @@ const replayObjectKeys = new Map<ReplayObject, number>();
 
 class ReplayObject {
     replay: Replay;
-    label: string;
+    label?: string;
 
-    constructor(replay, desc) {
+    constructor(replay: Replay, desc?: TraceObject) {
         this.replay = replay;
-        this.label = desc.label ?? '';
+        if (desc) {
+            this.label = desc.label ?? '';
+        }
         replayObjectKeys.set(this, lastReplayObjectKey++);
     }
 
@@ -665,12 +741,9 @@ class ReplayObject {
     }
 }
 
-class ReplayResourceObject<T> extends ReplayObject {
-    webgpuObject?: T;
-}
-
-export class ReplayAdapter extends ReplayResourceObject<GPUAdapter> {
+export class ReplayAdapter extends ReplayObject {
     adapterInfo?: GPUAdapterInfo;
+    webgpuObject!: GPUAdapter;
 
     constructor(replay: Replay, desc: TraceAdapter) {
         super(replay, desc);
@@ -682,8 +755,10 @@ export class ReplayAdapter extends ReplayResourceObject<GPUAdapter> {
         }
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async recreate(desc: TraceAdapter) {
-        this.webgpuObject = await requestUnwrappedAdapter(desc);
+        // TODO: add type TraceAdaptor, convert appropriately
+        this.webgpuObject = await requestUnwrappedAdapter();
         this.adapterInfo = await this.webgpuObject.requestAdapterInfo();
     }
 }
@@ -691,12 +766,15 @@ export class ReplayAdapter extends ReplayResourceObject<GPUAdapter> {
 export class ReplayRenderPass extends ReplayObject {
     commands: ReplayCommandBufferCommand[];
 
-    constructor(replay: Replay, desc) {
-        super(replay, desc);
+    constructor(replay: Replay) {
+        super(replay);
         this.commands = [];
     }
 
-    consumeCommands(beginRenderPassCommand, commandIterator) {
+    consumeCommands(
+        beginRenderPassCommand: ReplayCommandBufferCommandBeginRenderPass,
+        commandIterator: Iterable<TraceCommandBufferCommand>
+    ) {
         console.assert(this.commands.length === 0);
         this.commands.push(beginRenderPassCommand);
 
@@ -739,12 +817,12 @@ export class ReplayRenderPass extends ReplayObject {
         console.assert(false, `BeginRenderPass command doesn't have an associated EndPass.`);
     }
 
-    encodeIn(encoder) {
+    encodeIn(encoder: GPUCommandEncoder) {
         this.encodeUpTo([this.commands.length - 1], encoder);
     }
 
-    encodeUpTo(path, encoder) {
-        const commandIndex = path.shift();
+    encodeUpTo(path: number[], encoder: GPUCommandEncoder) {
+        const commandIndex = path.shift()!;
 
         console.assert(this.commands.length > 0);
         console.assert(this.commands[0].name === 'beginRenderPass');
@@ -767,18 +845,19 @@ export class ReplayRenderPass extends ReplayObject {
         }
 
         console.assert(
-            renderPassDesc.colorAttachments[0]?.viewState,
+            !!renderPassDesc.colorAttachments[0]?.viewState,
             'Computing render pass size currently requires the first color attachment to always be set.'
         );
         const firstAttachment = renderPassDesc.colorAttachments[0].viewState;
         console.assert(firstAttachment.baseMipLevel === 0);
 
         if (commandIndex === 0) {
-            this.replay.state = this.commands[0].args;
+            this.replay.state = renderPassDesc;
             return;
         }
 
-        const state = {
+        // init to defaults
+        const state: ReplayStateBeginRenderPass = {
             viewport: {
                 x: 0,
                 y: 0,
@@ -787,14 +866,20 @@ export class ReplayRenderPass extends ReplayObject {
                 minDepth: 0.0,
                 maxDepth: 1.0,
             },
+            scissorRect: {
+                x: 0,
+                y: 0,
+                width: firstAttachment.texture.size.width,
+                height: firstAttachment.texture.size.height,
+            },
             colorAttachments: renderPassDesc.colorAttachments.map(a => {
                 return { view: a.viewState, resolveTarget: a.resolveTargetState };
             }),
             depthStencilAttachment: { view: renderPassDesc.depthStencilAttachment?.viewState },
-            pipeline: null,
+            pipeline: undefined,
             bindGroups: [],
             vertexBuffers: [],
-            indexBuffer: { buffer: null, offset: 0, size: 0 },
+            indexBuffer: undefined,
         };
 
         const renderPass = encoder.beginRenderPass(renderPassDesc);
@@ -803,7 +888,7 @@ export class ReplayRenderPass extends ReplayObject {
         // HAAAAACK
         const a = renderPassDesc.colorAttachments[0];
         if (a.resolveTarget) {
-            this.replay.textureStateToShow = a.resolveTargetState.texture;
+            this.replay.textureStateToShow = a.resolveTargetState?.texture;
         } else {
             this.replay.textureStateToShow = a.viewState.texture;
         }
@@ -834,8 +919,8 @@ export class ReplayRenderPass extends ReplayObject {
                     renderPass.pushDebugGroup(c.args.groupLabel);
                     break;
                 case 'setBindGroup':
-                    renderPass.setBindGroup(c.args.index, c.args.bindGroup.webgpuObject, c.dynamicOffsets);
-                    state.bindGroups[c.args.index] = { group: c.args.bindGroup, dynamicOffsets: c.dynamicOffsets };
+                    renderPass.setBindGroup(c.args.index, c.args.bindGroup.webgpuObject, c.args.dynamicOffsets);
+                    state.bindGroups[c.args.index] = { group: c.args.bindGroup, dynamicOffsets: c.args.dynamicOffsets };
                     break;
                 case 'setIndexBuffer':
                     renderPass.setIndexBuffer(
@@ -857,6 +942,10 @@ export class ReplayRenderPass extends ReplayObject {
                         offset: c.args.offset,
                         size: c.args.size,
                     };
+                    break;
+                case 'setScissorRect':
+                    renderPass.setScissorRect(c.args.x, c.args.y, c.args.width, c.args.height);
+                    state.scissorRect = { ...c.args };
                     break;
                 case 'setViewport':
                     renderPass.setViewport(
@@ -880,7 +969,7 @@ export class ReplayRenderPass extends ReplayObject {
         }
     }
 
-    *iterateCommands([i, j, k]) {
+    *iterateCommands([i, j, k]: number[]) {
         for (let l = 0; l < this.commands.length; l++) {
             const c = this.commands[l];
             switch (c.name) {
@@ -908,6 +997,7 @@ export class ReplayRenderPass extends ReplayObject {
 
 export class ReplayCommandBuffer extends ReplayObject {
     commands: ReplayCommandBufferCommand[];
+    webgpuObject!: GPUCommandBuffer; // THIS DOESN'T EXIST. It's only here to make typescript happy
 
     constructor(replay: Replay, desc: TraceCommandBuffer) {
         super(replay, desc);
@@ -918,7 +1008,7 @@ export class ReplayCommandBuffer extends ReplayObject {
         console.assert(commandIterator.next().done);
     }
 
-    consumeCommands(commandIterator) {
+    consumeCommands(commandIterator: Iterable<TraceCommandBufferCommand>) {
         console.assert(this.commands.length === 0);
 
         for (const command of commandIterator) {
@@ -957,7 +1047,7 @@ export class ReplayCommandBuffer extends ReplayObject {
                     }
 
                     // Special case, add a pseudo-command that's a whole render pass command.
-                    const rp = new ReplayRenderPass(this.replay, c.args);
+                    const rp = new ReplayRenderPass(this.replay);
                     rp.consumeCommands(c, commandIterator);
                     this.commands.push({ name: 'renderPass', renderPass: rp });
                     continue;
@@ -988,12 +1078,12 @@ export class ReplayCommandBuffer extends ReplayObject {
         }
     }
 
-    encodeIn(encoder) {
+    encodeIn(encoder: GPUCommandEncoder) {
         this.encodeUpTo([this.commands.length - 1], encoder, true);
     }
 
-    encodeUpTo(path, encoder, full = false) {
-        const commandIndex = path.shift();
+    encodeUpTo(path: number[], encoder: GPUCommandEncoder, full = false) {
+        const commandIndex = path.shift()!;
         for (let i = 0; i <= commandIndex; i++) {
             const c = this.commands[i];
             switch (c.name) {
@@ -1022,7 +1112,7 @@ export class ReplayCommandBuffer extends ReplayObject {
         }
     }
 
-    *iterateCommands([i, j]) {
+    *iterateCommands([i, j]: number[]) {
         for (let k = 0; k < this.commands.length; k++) {
             const c = this.commands[k];
             switch (c.name) {
@@ -1068,11 +1158,36 @@ export class ReplayBuffer extends ReplayObject {
     }
 }
 
-export class ReplayBindGroup extends ReplayObject {
+type ReplayBindingTextureView = ReplayTextureView;
+type ReplayBindingSampler = ReplaySampler;
+type ReplayBindingBuffer = {
+    buffer: ReplayBuffer;
+    offset?: number;
+    size?: number;
+};
+type ReplayBinding = ReplayBindingTextureView | ReplayBindingSampler | ReplayBindingBuffer;
+
+function getResourceFromTraceBindGroupEntry(replay: Replay, e: TraceBindGroupEntry): GPUBindingResource {
+    if (e.textureViewSerial !== undefined) {
+        return replay.textureViews[e.textureViewSerial].webgpuObject;
+    } else if (e.samplerSerial !== undefined) {
+        return replay.samplers[e.samplerSerial].webgpuObject;
+    } else if (e.bufferSerial !== undefined) {
+        return {
+            buffer: replay.buffers[e.bufferSerial].webgpuObject,
+            offset: e.offset,
+            size: e.size,
+        };
+    } else {
+        throw new Error('bad bind group entry');
+    }
+}
+
+export class ReplayBindGroup extends ReplayObject implements ReplaySyncType<GPUBindGroup> {
     device: ReplayDevice;
     //desc: GPUBindGroupDescriptor;
     webgpuObject: GPUBindGroup;
-    bindings = [];
+    bindings: ReplayBinding[] = [];
 
     constructor(replay: Replay, desc: TraceBindGroup) {
         super(replay, desc);
@@ -1093,31 +1208,24 @@ export class ReplayBindGroup extends ReplayObject {
             }
         }
 
-        this.webgpuObject = this.device.webgpuObject.createBindGroup({
+        const bindGroupLayoutDesc: GPUBindGroupDescriptor = {
             layout: this.replay.bindGroupLayouts[desc.layoutSerial].webgpuObject,
             entries: desc.entries.map(e => {
-                const entry = { binding: e.binding };
-                if (e.textureViewSerial !== undefined) {
-                    entry.resource = this.replay.textureViews[e.textureViewSerial].webgpuObject;
-                } else if (e.samplerSerial !== undefined) {
-                    entry.resource = this.replay.samplers[e.samplerSerial].webgpuObject;
-                } else if (e.bufferSerial !== undefined) {
-                    entry.resource = {
-                        buffer: this.replay.buffers[e.bufferSerial].webgpuObject,
-                        offset: e.offset,
-                        size: e.size,
-                    };
-                }
+                const entry: GPUBindGroupEntry = {
+                    binding: e.binding,
+                    resource: getResourceFromTraceBindGroupEntry(this.replay, e),
+                };
                 return entry;
             }),
-        });
+        };
+        this.webgpuObject = this.device.webgpuObject.createBindGroup(bindGroupLayoutDesc);
     }
 }
 
 export class ReplayBindGroupLayout extends ReplayObject {
     device: ReplayDevice;
-    desc: GPUBindGroupLayoutDescriptor;
-    webgpuObject?: GPUBindGroupLayout;
+    desc: ReplayBindGroupLayoutDescriptor;
+    webgpuObject!: GPUBindGroupLayout;
     implicit: boolean;
 
     constructor(replay: Replay, desc: TraceBindGroupLayout) {
@@ -1130,12 +1238,12 @@ export class ReplayBindGroupLayout extends ReplayObject {
             return;
         }
 
-        this.webgpuObject = this.device.webgpuObject.createBindGroupLayout(desc);
+        this.webgpuObject = this.device.webgpuObject.createBindGroupLayout(this.desc);
     }
 
     initializeFromImplicitDesc() {
-        const pipeline = this.replay.renderPipelines[this.desc.renderPipelineSerial];
-        this.webgpuObject = pipeline.webgpuObject.getBindGroupLayout(this.desc.groupIndex);
+        const pipeline = this.replay.renderPipelines[this.desc.renderPipelineSerial!];
+        this.webgpuObject = pipeline.webgpuObject.getBindGroupLayout(this.desc.groupIndex!);
     }
 }
 
@@ -1187,7 +1295,7 @@ export class ReplayQueue extends ReplayObject {
         this.webgpuObject = this.device.webgpuObject.queue;
     }
 
-    executeSubmit(commandBuffers) {
+    executeSubmit(commandBuffers: ReplayCommandBuffer[]) {
         const encoder = this.device.webgpuObject.createCommandEncoder();
         for (const commandBuffer of commandBuffers) {
             commandBuffer.encodeIn(encoder);
@@ -1195,8 +1303,8 @@ export class ReplayQueue extends ReplayObject {
         this.webgpuObject.submit([encoder.finish()]);
     }
 
-    replaySubmitTo(path, commandBuffers) {
-        const commandBufferIndex = path.shift();
+    replaySubmitTo(path: number[], commandBuffers: ReplayCommandBuffer[]) {
+        const commandBufferIndex = path.shift()!;
         const encoder = this.device.webgpuObject.createCommandEncoder();
         for (let i = 0; i < commandBufferIndex - 1; i++) {
             commandBuffers[i].encodeIn(encoder);
@@ -1207,8 +1315,7 @@ export class ReplayQueue extends ReplayObject {
 }
 
 export interface ReplayGPUProgramableStage {
-    moduleSerial: string;
-    module: GPUShaderModule;
+    module: ReplayShaderModule;
     entryPoint: string;
     constants?: Record<string, number>;
 }
@@ -1222,6 +1329,7 @@ export interface ReplayGPUFragmentState extends ReplayGPUProgramableStage {
 }
 
 export interface ReplayGPURenderPipelineDescriptor {
+    layout?: ReplayPipelineLayout;
     vertex: ReplayGPUVertexState;
     primitive?: GPUPrimitiveState;
     depthStencil?: GPUDepthStencilState;
@@ -1231,48 +1339,74 @@ export interface ReplayGPURenderPipelineDescriptor {
 
 export class ReplayRenderPipeline extends ReplayObject {
     device: ReplayDevice;
-    desc: TraceRenderPipeline; // TODO: This needs to change to a different type
+    desc?: ReplayGPURenderPipelineDescriptor;
     webgpuObject!: GPURenderPipeline;
 
     constructor(replay: Replay, desc: TraceRenderPipeline) {
         super(replay, desc);
         this.device = this.replay.devices[desc.deviceSerial];
-        this.desc = desc;
     }
 
     async recreate(desc: TraceRenderPipeline) {
-        const vsModule = this.replay.shaderModules[desc.vertex.moduleSerial];
-        this.desc.vertex.module = vsModule;
+        const { vertex, fragment } = desc;
 
-        // Do this properly and with all state pls.
-        const localDesc: GPURenderPipelineDescriptor = {
-            label: desc.label,
+        let replayLayout: ReplayPipelineLayout | undefined;
+        let layout: GPUPipelineLayout | 'auto';
+        if (desc.layout === 'auto') {
+            layout = 'auto';
+        } else {
+            replayLayout = this.replay.pipelineLayouts[desc.layoutSerial!];
+            layout = replayLayout.webgpuObject;
+        }
+
+        const vsModule = this.replay.shaderModules[vertex.moduleSerial];
+        const fsModule = fragment ? this.replay.shaderModules[fragment.moduleSerial] : null;
+
+        const replayDesc: ReplayGPURenderPipelineDescriptor = {
+            layout: replayLayout,
             vertex: {
-                ...desc.vertex,
-                module: vsModule.webgpuObject,
+                entryPoint: desc.vertex.entryPoint,
+                module: vsModule,
+                constants: vertex.constants,
             },
+            ...(fsModule && {
+                fragment: {
+                    entryPoint: fragment!.entryPoint,
+                    module: fsModule,
+                    constants: fragment!.constants,
+                    targets: fragment!.targets,
+                },
+            }),
             depthStencil: desc.depthStencil,
             multisample: desc.multisample,
             primitive: desc.primitive,
         };
 
-        if (desc.fragment !== undefined) {
-            const fsModule = this.replay.shaderModules[desc.fragment.moduleSerial];
-            this.desc.fragment.module = fsModule;
-            localDesc.fragment = {
-                ...desc.fragment,
-                module: fsModule.webgpuObject,
-            };
-        }
+        // Do this properly and with all state pls.
+        const localDesc: GPURenderPipelineDescriptor = {
+            layout,
+            label: desc.label,
+            vertex: {
+                entryPoint: vertex.entryPoint,
+                module: vsModule.webgpuObject,
+                constants: vertex.constants,
+                buffers: vertex.buffers,
+            },
+            depthStencil: desc.depthStencil,
+            multisample: desc.multisample,
+            primitive: desc.primitive,
+            ...(fsModule && {
+                fragment: {
+                    entryPoint: fragment!.entryPoint,
+                    module: fsModule.webgpuObject,
+                    constants: fragment!.constants,
+                    targets: fragment!.targets,
+                    ...desc.fragment,
+                },
+            }),
+        };
 
-        if (desc.layout === 'auto') {
-            localDesc.layout = 'auto';
-        } else {
-            const layout = this.replay.pipelineLayouts[desc.layoutSerial!];
-            desc.layout = layout;
-            localDesc.layout = layout.webgpuObject;
-        }
-
+        this.desc = replayDesc;
         this.webgpuObject = await this.device.webgpuObject.createRenderPipelineAsync(localDesc);
     }
 }
@@ -1388,7 +1522,7 @@ export class ReplayTextureView extends ReplayObject {
     mipLevelCount: number;
     baseArrayLayer: number;
     arrayLayerCount: number;
-    webgpuObject?: GPUTextureView;
+    webgpuObject: GPUTextureView;
 
     constructor(replay: Replay, desc: TraceTextureView) {
         super(replay, desc);

@@ -138,7 +138,7 @@ function callUnwrappedGPUFn(Class: Function, obj: any, fnName: string, ...args: 
     return addOriginalFunctionsToResult(result);
 }
 
-export function requestUnwrappedAdapter(options: GPURequestAdapterOptions) {
+export function requestUnwrappedAdapter(options?: GPURequestAdapterOptions) {
     return callUnwrappedGPUFn(GPU, navigator.gpu, 'requestAdapter', options);
 }
 

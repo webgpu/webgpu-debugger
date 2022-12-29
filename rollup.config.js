@@ -13,8 +13,8 @@ async function getServeAndLiveloadPlugins() {
     console.log('loading server and liveReload plugins');
     // we can't always load these as apparently they start processes and so
     // node never exits.
-    const livereload = await import('rollup-plugin-livereload');
-    const serve = await import('rollup-plugin-serve');
+    const { default: livereload } = await import('rollup-plugin-livereload');
+    const { default: serve } = await import('rollup-plugin-serve');
 
     return [
         serve({

@@ -1,5 +1,5 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-nocheck
+// @gts-nocheck
 /* eslint-disable @typescript-eslint/ban-types */
 import { gpuExtent3DDictFullFromGPUExtent3D, GPUExtent3DDictFull } from '../lib/utils';
 
@@ -68,22 +68,21 @@ class ObjectRegistry<GPUType extends Object, CaptureState extends CaptureStateBa
         this.objects = this.objects.filter(ref => ref.deref() !== undefined);
     }
 
-    [Symbol.iterator](): IterableIterator<CaptureState> {
+    [Symbol.iterator](this: ObjectRegistry<GPUType, CaptureState>) {
         let i = 0;
         this.iterating = true;
 
         return {
-            registry: this,
-            next() {
-                while (i < this.registry.objects.length) {
-                    const obj = this.registry.objects[i++].deref();
+            next: () => {
+                while (i < this.objects.length) {
+                    const obj = this.objects[i++].deref();
                     if (obj === undefined) {
                         continue;
                     }
-                    return { value: this.registry.get(obj), done: false };
+                    return { value: this.get(obj)!, done: false };
                 }
-                this.registry.iterating = false;
-                return { done: true };
+                this.iterating = false;
+                return { done: true, value: null as unknown as CaptureState }; // TODO: Fix once I understand typescript
             },
         };
     }
@@ -91,7 +90,7 @@ class ObjectRegistry<GPUType extends Object, CaptureState extends CaptureStateBa
 
 type Proto = Record<string, Function>;
 type ClassFuncs = { Class: Function; proto: Proto; wrappers: Proto };
-type RequestAdapterFn = (options?: GPURequestAdapterOptions | undefined) => Promise<GPUAdapter | null>;
+type RequestAdapterFn = (options?: GPURequestAdapterOptions) => Promise<GPUAdapter | null>;
 
 export interface TraceObject {
     label?: string;
@@ -272,6 +271,7 @@ export interface TraceCommandBufferCommandSetBindGroup {
     args: {
         index: number;
         bindGroupSerial: number;
+        dynamicOffsets?: GPUBufferDynamicOffset[];
     };
 }
 
@@ -530,26 +530,26 @@ export type TraceQueueCommand =
 
 export interface Trace {
     objects: {
-        adapters: Record<string, TraceAdapter>;
-        bindGroups: Record<string, TraceBindGroup>;
-        bindGroupLayouts: Record<string, TraceBindGroupLayout>;
-        buffers: Record<string, TraceBuffer>;
-        commandBuffers: Record<string, TraceCommandBuffer>;
-        commandEncoders: Record<string, any>; // TODO: Add correct type
-        canvasContexts: Record<string, any>; // TODO: Add correct type
-        devices: Record<string, TraceDevice>;
-        pipelineLayouts: Record<string, TracePipelineLayout>;
-        querySets: Record<string, TraceQuerySet>;
-        queues: Record<string, TraceQueue>;
-        samplers: Record<string, TraceSampler>;
-        renderPassEncoders: Record<string, any>; // TODO: Add correct type
-        renderPipelines: Record<string, TraceRenderPipeline>;
-        shaderModules: Record<string, TraceShaderModule>;
-        textures: Record<string, TraceTexture>;
-        textureViews: Record<string, TraceTextureView>;
+        adapters: Record<number, TraceAdapter>;
+        bindGroups: Record<number, TraceBindGroup>;
+        bindGroupLayouts: Record<number, TraceBindGroupLayout>;
+        buffers: Record<number, TraceBuffer>;
+        commandBuffers: Record<number, TraceCommandBuffer>;
+        commandEncoders: Record<number, any>; // TODO: Add correct type
+        canvasContexts: Record<number, any>; // TODO: Add correct type
+        devices: Record<number, TraceDevice>;
+        pipelineLayouts: Record<number, TracePipelineLayout>;
+        querySets: Record<number, TraceQuerySet>;
+        queues: Record<number, TraceQueue>;
+        samplers: Record<number, TraceSampler>;
+        renderPassEncoders: Record<number, any>; // TODO: Add correct type
+        renderPipelines: Record<number, TraceRenderPipeline>;
+        shaderModules: Record<number, TraceShaderModule>;
+        textures: Record<number, TraceTexture>;
+        textureViews: Record<number, TraceTextureView>;
     };
     commands: TraceQueueCommand[];
-    data: Record<string, number[]>;
+    data: Record<number, number[]>;
 }
 
 export class Spector2 {
@@ -660,7 +660,7 @@ export class Spector2 {
         this.gpuRequestAdapter = GPU.prototype.requestAdapter;
         GPU.prototype.requestAdapter = async function (options, ...args) {
             const adapter = await spector2.gpuRequestAdapter.call(this, options, ...args);
-            spector2.registerObjectIn('adapters', adapter, new AdapterState(options)); // TODO deep copy options
+            spector2.registerObjectIn('adapters', adapter!, new AdapterState(options)); // TODO deep copy options
             return adapter;
         };
 
@@ -852,7 +852,7 @@ export class Spector2 {
         return dataRef;
     }
 
-    registerObjectIn(typePlural: string, webgpuObject: GPUObjectBase, state: any) {
+    registerObjectIn(typePlural: string, webgpuObject: GPUObjectBase | GPUAdapter, state: any) {
         // TODO: fixing these 2 lines to be typescript happy seems like a bunch of
         // work. You'd probably have to put both the first collections and the second
         // in some map/record of named collections
@@ -890,9 +890,9 @@ class BaseState<T> {
     traceSerial: number;
     label?: string;
 
-    constructor(desc: GPUObjectDescriptorBase) {
+    constructor(desc?: GPUObjectDescriptorBase) {
         // TODO what about the setter for labels?
-        if (desc.label) {
+        if (desc && desc.label) {
             this.label = desc.label;
         }
         this.webgpuObject = null;
@@ -990,6 +990,12 @@ class BindGroupState extends BaseState<GPUBindGroup> {
     }
 }
 
+interface ImplicitBindGroupLayoutDescriptor {
+    implicit: boolean;
+    renderPipeline: RenderPipelineState;
+    groupIndex: number;
+}
+
 class BindGroupLayoutState extends BaseState<GPUBindGroupLayout> {
     device: DeviceState;
     implicit?: boolean;
@@ -997,21 +1003,23 @@ class BindGroupLayoutState extends BaseState<GPUBindGroupLayout> {
     parentRenderPipeline: any;
     pipelineGroupIndex: any;
 
-    constructor(device: DeviceState, desc: GPUBindGroupLayoutDescriptor) {
-        super(desc);
+    constructor(device: DeviceState, desc: GPUBindGroupLayoutDescriptor | ImplicitBindGroupLayoutDescriptor) {
+        const implicitDesc = desc as ImplicitBindGroupLayoutDescriptor;
+        const explicitDesc = desc as GPUBindGroupLayoutDescriptor;
+        super(implicitDesc.implicit ? undefined : explicitDesc);
         this.device = device;
 
         // TODO: this is confusing. Sometimes this is called with a GPUBindGroupLayoutDescriptor
         // and sometimes it's called from RenderPipelineState.getBindGroupLayout with entirely
         // different parameters. Should this be refactored?
-        this.implicit = desc.implicit;
+        this.implicit = implicitDesc.implicit;
         if (this.implicit) {
-            this.parentRenderPipeline = desc.renderPipeline;
-            this.pipelineGroupIndex = desc.groupIndex;
+            this.parentRenderPipeline = implicitDesc.renderPipeline;
+            this.pipelineGroupIndex = implicitDesc.groupIndex;
             return;
         }
 
-        this.entries = (desc.entries as GPUBindGroupLayoutEntry[]).map(e => {
+        this.entries = (explicitDesc.entries as GPUBindGroupLayoutEntry[]).map(e => {
             const entry: TraceExplicitBindGroupEntry = { binding: e.binding, visibility: e.visibility };
             if (e.buffer) {
                 entry.buffer = {
@@ -1749,6 +1757,7 @@ class RenderPassEncoderState extends BaseState<GPURenderPassEncoder> {
             args: {
                 index,
                 bindGroupSerial: spector2.bindGroups.get(bindGroup)!.traceSerial,
+                dynamicOffsets: window.structuredClone(dynamicOffsets),
             },
         });
     }
@@ -2003,7 +2012,7 @@ class RenderPipelineState extends BaseState<GPURenderPipeline> {
         spector2.registerObjectIn(
             'bindGroupLayouts',
             bgl,
-            new BindGroupLayoutState(this, {
+            new BindGroupLayoutState(this.device, {
                 implicit: true,
                 renderPipeline: this,
                 groupIndex,
@@ -2123,14 +2132,14 @@ export const kTextureFormatInfo: Record<GPUTextureFormat, TextureFormatInfo> = {
     rgba32float: c1116,
     rgb10a2unorm: c114,
     rg11b10ufloat: c114,
+    rgb9e5ufloat: c114,
 
-    stencil8: { type: 'stencil' },
+    stencil8: { type: 'stencil', blockByteSize: 1 },
     depth16unorm: { type: 'depth', blockWidth: 1, blockHeight: 1, blockByteSize: 2 },
     depth32float: { type: 'depth', blockWidth: 1, blockHeight: 1, blockByteSize: 4 },
     'depth24plus-stencil8': { type: 'depth-stencil' },
     depth24plus: { type: 'depth', blockWidth: 1, blockHeight: 1, blockByteSize: 4 },
     'depth32float-stencil8': { type: 'depth-stencil' },
-    rgb9e5ufloat: c114,
 
     'bc1-rgba-unorm': c448,
     'bc1-rgba-unorm-srgb': c448,
@@ -2245,7 +2254,7 @@ class TextureState extends BaseState<GPUTexture> {
         }
         // TODO check for compressed textures as well.
 
-        const formatInfo = kTextureFormatInfo[this.format]!;
+        const { blockByteSize } = kTextureFormatInfo[this.format]!;
 
         type Readback = { buffer: GPUBuffer; bytesPerRow: number; mipLevel: number };
         const readbacks: Readback[] = [];
@@ -2259,7 +2268,7 @@ class TextureState extends BaseState<GPUTexture> {
                 const width = Math.max(1, this.size.width >> mip);
                 const height = Math.max(1, this.size.height >> mip);
                 const depthOrArrayLayers = this.size.depthOrArrayLayers; // TODO support 3D.
-                const bytesPerRow = align(width * formatInfo.blockByteSize, kBytesPerRowAlignment);
+                const bytesPerRow = align(width * blockByteSize!, kBytesPerRowAlignment);
                 const bufferSize = bytesPerRow * height * depthOrArrayLayers;
 
                 const readbackBuffer = this.device.webgpuObject!.createBuffer({
