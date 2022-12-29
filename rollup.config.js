@@ -5,11 +5,29 @@ import typescript from '@rollup/plugin-typescript';
 import fs from 'fs';
 import process from 'process';
 import postcss from 'rollup-plugin-postcss';
-import livereload from 'rollup-plugin-livereload';
-import serve from 'rollup-plugin-serve';
 
 const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 const isWatch = process.env.ROLLUP_WATCH;
+
+async function getServeAndLiveloadPlugins() {
+    console.log('loading server and liveReload plugins');
+    // we can't always load these as apparently they start processes and so
+    // node never exits.
+    const livereload = await import('rollup-plugin-livereload');
+    const serve = await import('rollup-plugin-serve');
+
+    return [
+        serve({
+            open: true,
+            openPage: process.env.START_PATH || '/examples/',
+            verbose: true,
+            contentBase: [''],
+            host: 'localhost',
+            port: 3000,
+        }),
+        livereload({ watch: 'dist' }),
+    ];
+}
 
 const plugins = [
     resolve({
@@ -18,92 +36,84 @@ const plugins = [
     typescript({ tsconfig: './tsconfig.json' }),
 ];
 
-export default [
-    {
-        input: 'src/capture/index.ts',
-        output: [
-            {
-                file: 'dist/capture.js',
-                format: 'esm',
-                sourcemap: true,
-            },
-        ],
-        plugins,
-    },
-    {
-        input: 'src/replay/index.ts',
-        output: [
-            {
-                file: 'dist/replay.js',
-                format: 'esm',
-                sourcemap: true,
-            },
-        ],
-        plugins,
-    },
-    {
-        input: 'src/ui/index.ts',
-        output: [
-            //{
-            //  file: packageJson.main,
-            //  format: "cjs",
-            //  sourcemap: true,
-            //  name: "spector2",
-            //},
-            {
-                file: packageJson.module,
-                format: 'esm',
-                sourcemap: true,
-            },
-        ],
-        // This is a hack to workaround a warning that should be fixed
-        onwarn(warning, warn) {
-            if (warning.code === 'THIS_IS_UNDEFINED') {
-                return;
-            }
-            warn(warning);
-        },
-        plugins: [
-            resolve({
-                browser: true,
-            }),
-            replace({
-                preventAssignment: true,
-                values: {
-                    'process.env.NODE_ENV': JSON.stringify('development'),
+async function getConfig() {
+    return [
+        {
+            input: 'src/capture/index.ts',
+            output: [
+                {
+                    file: 'dist/capture.js',
+                    format: 'esm',
+                    sourcemap: true,
                 },
-            }),
-            commonjs({
-                include: /node_modules/,
-                requireReturnsDefault: 'auto', // <---- this solves default issue
-            }),
-            typescript({
-                tsconfig: './tsconfig.json',
-                sourceRoot: '/src',
-            }),
-            postcss({
-                minimize: true,
-                sourceMap: true,
-            }),
-            ...(isWatch
-                ? [
-                      serve({
-                          open: true,
-                          openPage: process.env.START_PATH || '/examples/',
-                          verbose: true,
-                          contentBase: [''],
-                          host: 'localhost',
-                          port: 3000,
-                      }),
-                      livereload({ watch: 'dist' }),
-                  ]
-                : []),
-        ],
-    },
-    //{
-    //  input: "dist/esm/types/index.d.ts",
-    //  output: [{ file: "dist/index.d.ts", format: "esm" }],
-    //  external: [/\.css$/],
-    //  plugins: [dts()],
-    //},
-];
+            ],
+            plugins,
+        },
+        {
+            input: 'src/replay/index.ts',
+            output: [
+                {
+                    file: 'dist/replay.js',
+                    format: 'esm',
+                    sourcemap: true,
+                },
+            ],
+            plugins,
+        },
+        {
+            input: 'src/ui/index.ts',
+            output: [
+                //{
+                //  file: packageJson.main,
+                //  format: "cjs",
+                //  sourcemap: true,
+                //  name: "spector2",
+                //},
+                {
+                    file: packageJson.module,
+                    format: 'esm',
+                    sourcemap: true,
+                },
+            ],
+            // This is a hack to workaround a warning that should be fixed
+            onwarn(warning, warn) {
+                if (warning.code === 'THIS_IS_UNDEFINED') {
+                    return;
+                }
+                warn(warning);
+            },
+            plugins: [
+                resolve({
+                    browser: true,
+                }),
+                replace({
+                    preventAssignment: true,
+                    values: {
+                        'process.env.NODE_ENV': JSON.stringify('development'),
+                    },
+                }),
+                commonjs({
+                    include: /node_modules/,
+                    requireReturnsDefault: 'auto', // <---- this solves default issue
+                }),
+                typescript({
+                    tsconfig: './tsconfig.json',
+                    sourceRoot: '/src',
+                }),
+                postcss({
+                    minimize: true,
+                    sourceMap: true,
+                }),
+                ...(isWatch ? await getServeAndLiveloadPlugins() : []),
+            ],
+        },
+        //{
+        //  input: "dist/esm/types/index.d.ts",
+        //  output: [{ file: "dist/index.d.ts", format: "esm" }],
+        //  external: [/\.css$/],
+        //  plugins: [dts()],
+        //},
+    ];
+}
+
+export default getConfig();
