@@ -1,5 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @gts-nocheck
 /* eslint-disable @typescript-eslint/ban-types */
 import { gpuExtent3DDictFullFromGPUExtent3D, GPUExtent3DDictFull } from '../lib/utils';
 

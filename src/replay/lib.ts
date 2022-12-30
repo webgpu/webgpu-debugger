@@ -1,6 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @gts-nocheck
-
 import { GPUExtent3DDictFull } from '../lib/utils';
 import {
     kTextureFormatInfo,
