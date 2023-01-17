@@ -59,6 +59,28 @@ export interface ReplayImageCopyBuffer {
     rowsPerImage?: number;
 }
 
+export interface ReplayCommandBufferCommandCopyBufferToBuffer {
+    name: 'copyBufferToBuffer';
+    args: {
+        source: GPUBuffer;
+        sourceState: ReplayBuffer;
+        sourceOffset: number;
+        destination: GPUBuffer;
+        destinationState: ReplayBuffer;
+        destinationOffset: number;
+        size: number;
+    };
+}
+
+export interface ReplayCommandBufferCommandCopyBufferToTexture {
+    name: 'copyBufferToTexture';
+    args: {
+        source: ReplayImageCopyBuffer;
+        destination: ReplayImageCopyTexture;
+        copySize: GPUExtent3D;
+    };
+}
+
 export interface ReplayCommandBufferCommandCopyTextureToTexture {
     name: 'copyTextureToTexture';
     args: {
@@ -68,11 +90,11 @@ export interface ReplayCommandBufferCommandCopyTextureToTexture {
     };
 }
 
-export interface ReplayCommandBufferCommandCopyBufferToTexture {
-    name: 'copyBufferToTexture';
+export interface ReplayCommandBufferCommandCopyTextureToBuffer {
+    name: 'copyTextureToBuffer';
     args: {
-        source: ReplayImageCopyBuffer;
-        destination: ReplayImageCopyTexture;
+        source: ReplayImageCopyTexture;
+        destination: ReplayImageCopyBuffer;
         copySize: GPUExtent3D;
     };
 }
@@ -228,8 +250,10 @@ export interface ReplayCommandBufferCommandSetViewport {
 }
 
 export type ReplayCommandBufferCommand =
-    | ReplayCommandBufferCommandCopyTextureToTexture
+    | ReplayCommandBufferCommandCopyBufferToBuffer
     | ReplayCommandBufferCommandCopyBufferToTexture
+    | ReplayCommandBufferCommandCopyTextureToBuffer
+    | ReplayCommandBufferCommandCopyTextureToTexture
     | ReplayCommandBufferCommandPopDebugGroup
     | ReplayCommandBufferCommandPushDebugGroup
     | ReplayCommandBufferCommandBeginRenderPass
@@ -971,8 +995,10 @@ export class ReplayRenderPass extends ReplayObject {
             const c = this.commands[l];
             switch (c.name) {
                 case 'beginRenderPass':
+                case 'copyBufferToBuffer':
                 case 'copyBufferToTexture':
                 case 'copyTextureToTexture':
+                case 'copyTextureToBuffer':
                 case 'draw':
                 case 'drawIndexed':
                 case 'endPass':
@@ -1049,6 +1075,14 @@ export class ReplayCommandBuffer extends ReplayObject {
                     this.commands.push({ name: 'renderPass', renderPass: rp });
                     continue;
                 }
+                case 'copyBufferToBuffer':
+                    c.args.source.bufferState = this.replay.buffers[c.args.source.bufferSerial];
+                    c.args.source.buffer = c.args.source.bufferState.webgpuObject;
+                    delete c.args.source.buffer;
+                    c.args.destination.bufferState = this.replay.buffers[c.args.destination.bufferSerial];
+                    c.args.destination.buffer = c.args.destination.bufferState.webgpuObject;
+                    delete c.args.destination.texture;
+                    break;
                 case 'copyBufferToTexture':
                     c.args.source.bufferState = this.replay.buffers[c.args.source.bufferSerial];
                     c.args.source.buffer = c.args.source.bufferState.webgpuObject;
@@ -1056,6 +1090,14 @@ export class ReplayCommandBuffer extends ReplayObject {
                     c.args.destination.textureState = this.replay.textures[c.args.destination.textureSerial];
                     c.args.destination.texture = c.args.destination.textureState.webgpuObject;
                     delete c.args.destination.texture;
+                    break;
+                case 'copyTextureToBuffer':
+                    c.args.source.textureState = this.replay.textures[c.args.source.textureSerial];
+                    c.args.source.texture = c.args.source.textureState.webgpuObject;
+                    delete c.args.source.texture;
+                    c.args.destination.bufferState = this.replay.buffers[c.args.destination.bufferSerial];
+                    c.args.destination.buffer = c.args.destination.bufferState.webgpuObject;
+                    delete c.args.destination.buffer;
                     break;
                 case 'copyTextureToTexture':
                     c.args.source.textureState = this.replay.textures[c.args.source.textureSerial];
@@ -1091,8 +1133,20 @@ export class ReplayCommandBuffer extends ReplayObject {
                         c.renderPass.encodeIn(encoder);
                     }
                     break;
+                case 'copyBufferToBuffer':
+                    encoder.copyBufferToBuffer(
+                        c.args.source,
+                        c.args.sourceOffset,
+                        c.args.destination,
+                        c.args.destinationOffset,
+                        c.args.size
+                    );
+                    break;
                 case 'copyBufferToTexture':
                     encoder.copyBufferToTexture(c.args.source, c.args.destination, c.args.copySize);
+                    break;
+                case 'copyTextureToBuffer':
+                    encoder.copyTextureToBuffer(c.args.source, c.args.destination, c.args.copySize);
                     break;
                 case 'copyTextureToTexture':
                     encoder.copyTextureToTexture(c.args.source, c.args.destination, c.args.copySize);
@@ -1117,7 +1171,9 @@ export class ReplayCommandBuffer extends ReplayObject {
                     yield* c.renderPass.iterateCommands([i, j, k]);
                     break;
 
+                case 'copyBufferToBuffer':
                 case 'copyBufferToTexture':
+                case 'copyTextureToBuffer':
                 case 'copyTextureToTexture':
                 case 'popDebugGroup':
                 case 'pushDebugGroup':

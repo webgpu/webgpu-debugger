@@ -188,6 +188,26 @@ export interface TraceCommandBufferCommandCopyBufferToTexture {
     };
 }
 
+export interface TraceCommandBufferCommandCopyTextureToBuffer {
+    name: 'copyTextureToBuffer';
+    args: {
+        source: TraceImageCopyTexture;
+        destination: TraceImageCopyBuffer;
+        copySize: GPUExtent3D;
+    };
+}
+
+export interface TraceCommandBufferCommandCopyBufferToBuffer {
+    name: 'copyBufferToBuffer';
+    args: {
+        sourceSerial: number;
+        sourceOffset: number;
+        destinationSerial: number;
+        destinationOffset: number;
+        size: number;
+    };
+}
+
 export interface TraceCommandBufferCommandPopDebugGroup {
     name: 'popDebugGroup';
 }
@@ -327,8 +347,10 @@ export interface TraceCommandBufferCommandEndPass {
 }
 
 export type TraceCommandBufferCommand =
-    | TraceCommandBufferCommandCopyTextureToTexture
+    | TraceCommandBufferCommandCopyBufferToBuffer
     | TraceCommandBufferCommandCopyBufferToTexture
+    | TraceCommandBufferCommandCopyTextureToTexture
+    | TraceCommandBufferCommandCopyTextureToBuffer
     | TraceCommandBufferCommandPopDebugGroup
     | TraceCommandBufferCommandPushDebugGroup
     | TraceCommandBufferCommandBeginRenderPass
@@ -1274,6 +1296,59 @@ class CommandEncoderState extends BaseState<GPUCommandEncoder> {
         this.reference(destination.texture);
     }
 
+    copyBufferToBuffer(
+        source: GPUBuffer,
+        sourceOffset: GPUSize64,
+        destination: GPUBuffer,
+        destinationOffset: GPUSize64,
+        size: GPUSize64
+    ) {
+        spector2.commandEncoderProto.copyBufferToBuffer.call(
+            this.webgpuObject,
+            source,
+            sourceOffset,
+            destination,
+            destinationOffset,
+            size
+        );
+        this.addCommand({
+            name: 'copyBufferToBuffer',
+            args: {
+                sourceSerial: spector2.buffers.get(source)!.traceSerial,
+                sourceOffset,
+                destinationSerial: spector2.buffers.get(destination)!.traceSerial,
+                destinationOffset,
+                size,
+            },
+        });
+        this.reference(source);
+        this.reference(destination);
+    }
+
+    copyTextureToBuffer(source: GPUImageCopyTexture, destination: GPUImageCopyBuffer, copySize: GPUExtent3D) {
+        spector2.commandEncoderProto.copyTextureToBuffer.call(this.webgpuObject, source, destination, copySize);
+        this.addCommand({
+            name: 'copyTextureToBuffer',
+            args: {
+                source: {
+                    textureSerial: spector2.textures.get(source.texture)!.traceSerial,
+                    mipLevel: source.mipLevel ?? 0,
+                    origin: source.origin ?? {}, // TODO copy
+                    aspect: source.aspect ?? 'all',
+                },
+                destination: {
+                    bufferSerial: spector2.buffers.get(destination.buffer)!.traceSerial,
+                    offset: destination.offset ?? 0,
+                    bytesPerRow: destination.bytesPerRow,
+                    rowsPerImage: destination.rowsPerImage,
+                },
+                copySize, // TODO copy
+            },
+        });
+        this.reference(source.texture);
+        this.reference(destination.buffer);
+    }
+
     finish(desc: GPUCommandBufferDescriptor) {
         const commandBuffer = spector2.commandEncoderProto.finish.call(this.webgpuObject, desc);
         spector2.registerObjectIn('commandBuffers', commandBuffer, new CommandBufferState(this, desc ?? {}));
@@ -1610,6 +1685,12 @@ class QueueState extends BaseState<GPUQueue> {
 
         // TODO implement me!
         console.assert(false);
+    }
+
+    onSubmittedWorkDone() {
+        // TODO: do we need anything here?
+        const promise = spector2.queueProto.onSubmittedWorkDone();
+        return promise;
     }
 
     submit(commandBuffers: GPUCommandBuffer[]) {
