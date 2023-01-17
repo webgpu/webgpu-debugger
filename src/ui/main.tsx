@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './components/App/App';
 import { uiStateHelper } from './contexts/UIStateContext';
-import { spector2 as capture } from '../capture';
+import { spector2 as capture, spector2 } from '../capture';
 
 let initialized = false;
 
@@ -24,17 +24,28 @@ export async function captureFrame() {
     uiStateHelper.addTrace(trace);
 }
 
+export function startCapture() {
+    if (spector2.tracing) {
+        throw new Error('already tracing');
+    }
+    spector2.startTracing();
+}
+
+export async function endCapture() {
+    if (!spector2.tracing) {
+        throw new Error('not tracing');
+    }
+    const trace = spector2.endTracing();
+    uiStateHelper.addTrace(trace);
+}
+
 init();
 uiStateHelper.registerAPI({
     playTo(replay, id) {
         // TBD: reply the given 'replay' to the specified id
         console.log(replay, id);
     },
-    startCapture() {
-        // TBD: Capture until stop capture is called
-    },
-    endCapture() {
-        // TBD: Stop Capturing
-    },
+    startCapture,
+    endCapture,
     captureFrame,
 });
