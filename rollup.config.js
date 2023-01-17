@@ -36,6 +36,48 @@ const plugins = [
     typescript({ tsconfig: './tsconfig.json' }),
 ];
 
+const commonUIConfig = {
+    input: 'src/ui/index.ts',
+    output: [
+        {
+            file: packageJson.module,
+            format: 'esm',
+            sourcemap: true,
+        },
+    ],
+    // This is a hack to workaround a warning that should be fixed
+    onwarn(warning, warn) {
+        if (warning.code === 'THIS_IS_UNDEFINED') {
+            return;
+        }
+        warn(warning);
+    },
+    plugins: [
+        resolve({
+            browser: true,
+        }),
+        replace({
+            preventAssignment: true,
+            values: {
+                'process.env.NODE_ENV': JSON.stringify('development'),
+            },
+        }),
+        commonjs({
+            include: /node_modules/,
+            requireReturnsDefault: 'auto', // <---- this solves default issue
+        }),
+        typescript({
+            tsconfig: './tsconfig.json',
+            sourceRoot: '/src',
+        }),
+        postcss({
+            minimize: true,
+            sourceMap: true,
+        }),
+        ...(isWatch ? await getServeAndLiveloadPlugins() : []),
+    ],
+};
+
 async function getConfig() {
     return [
         {
@@ -61,50 +103,24 @@ async function getConfig() {
             plugins,
         },
         {
-            input: 'src/ui/index.ts',
+            ...commonUIConfig,
             output: [
-                //{
-                //  file: packageJson.main,
-                //  format: "cjs",
-                //  sourcemap: true,
-                //  name: "spector2",
-                //},
                 {
                     file: packageJson.module,
                     format: 'esm',
                     sourcemap: true,
                 },
             ],
-            // This is a hack to workaround a warning that should be fixed
-            onwarn(warning, warn) {
-                if (warning.code === 'THIS_IS_UNDEFINED') {
-                    return;
-                }
-                warn(warning);
-            },
-            plugins: [
-                resolve({
-                    browser: true,
-                }),
-                replace({
-                    preventAssignment: true,
-                    values: {
-                        'process.env.NODE_ENV': JSON.stringify('development'),
-                    },
-                }),
-                commonjs({
-                    include: /node_modules/,
-                    requireReturnsDefault: 'auto', // <---- this solves default issue
-                }),
-                typescript({
-                    tsconfig: './tsconfig.json',
-                    sourceRoot: '/src',
-                }),
-                postcss({
-                    minimize: true,
-                    sourceMap: true,
-                }),
-                ...(isWatch ? await getServeAndLiveloadPlugins() : []),
+        },
+        {
+            ...commonUIConfig,
+            output: [
+                {
+                    file: 'dist/spector2.umd.js',
+                    format: 'umd',
+                    sourcemap: true,
+                    name: 'spector2',
+                },
             ],
         },
         //{
