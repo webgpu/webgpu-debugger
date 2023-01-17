@@ -1458,6 +1458,16 @@ class DeviceState extends BaseState<GPUDevice> {
         spector2.registerObjectIn('textures', texture, new TextureState(this, desc, /*swapChainId*/ ''));
         return texture;
     }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    pushErrorScope(_filter: GPUErrorFilter) {
+        // TODO: implement
+    }
+
+    popErrorScope(): Promise<GPUError | null> {
+        // TODO: implement
+        return Promise.resolve(null);
+    }
 }
 
 class PipelineLayoutState extends BaseState<GPUPipelineLayout> {
