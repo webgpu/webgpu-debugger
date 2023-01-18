@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './components/App/App';
 import { uiStateHelper } from './contexts/UIStateContext';
-import { spector2 as capture, spector2 } from '../capture';
+import { spector2 as capture } from '../capture';
 
 let initialized = false;
 
@@ -20,22 +20,22 @@ function init() {
 }
 
 export async function captureFrame() {
-    const trace = await capture?.traceFrame();
+    const trace = await capture.traceFrame();
     uiStateHelper.addTrace(trace);
 }
 
 export function startCapture() {
-    if (spector2.tracing) {
+    if (capture.tracing) {
         throw new Error('already tracing');
     }
-    spector2.startTracing();
+    capture.startTracing();
 }
 
 export async function endCapture() {
-    if (!spector2.tracing) {
+    if (!capture.tracing) {
         throw new Error('not tracing');
     }
-    const trace = spector2.endTracing();
+    const trace = capture.endTracing();
     uiStateHelper.addTrace(trace);
 }
 

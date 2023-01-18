@@ -36,15 +36,7 @@ const plugins = [
     typescript({ tsconfig: './tsconfig.json' }),
 ];
 
-const commonUIConfig = {
-    input: 'src/ui/index.ts',
-    output: [
-        {
-            file: packageJson.module,
-            format: 'esm',
-            sourcemap: true,
-        },
-    ],
+const commonConfig = {
     // This is a hack to workaround a warning that should be fixed
     onwarn(warning, warn) {
         if (warning.code === 'THIS_IS_UNDEFINED') {
@@ -76,6 +68,11 @@ const commonUIConfig = {
         }),
         ...(isWatch ? await getServeAndLiveloadPlugins() : []),
     ],
+};
+
+const commonUIConfig = {
+    input: 'src/ui/index.ts',
+    ...commonConfig,
 };
 
 async function getConfig() {
@@ -120,6 +117,17 @@ async function getConfig() {
                     format: 'umd',
                     sourcemap: true,
                     name: 'spector2',
+                },
+            ],
+        },
+        {
+            ...commonConfig,
+            input: 'src/test/main.ts',
+            output: [
+                {
+                    file: 'out/main.js',
+                    format: 'esm',
+                    sourcemap: true,
                 },
             ],
         },
