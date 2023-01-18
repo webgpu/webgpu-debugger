@@ -8,7 +8,7 @@
   "scripts": {
     "build": "rollup -c",
     "check": "npm run lint && node check.js",
-    "check-ci": "npm check",
+    "check-ci": "npm run check",
     "fix": "eslint \"src/**/*.{js,ts,tsx}\" --quiet --fix",
     "lint": "eslint \"src/**/*.{js,ts,tsx}\"",
     "rollup-watch": "rollup -c -w",
