@@ -1,0 +1,24 @@
+name: Test
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout 🍔🍟🥤
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+
+      - name: Use Node.js 😂
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      - name: Test 🧪
+        run: |
+          npm ci
+          npm run check-ci

@@ -6,11 +6,12 @@
   "module": "dist/spector2.js",
   "type": "module",
   "scripts": {
-    "rollup-watch": "rollup -c -w",
-    "lint": "eslint \"src/**/*.{js,ts,tsx}\"",
-    "fix": "eslint \"src/**/*.{js,ts,tsx}\" --quiet --fix",
-    "check": "npm run lint && node check.js",
     "build": "rollup -c",
+    "check": "npm run lint && node check.js",
+    "check-ci": "npm check",
+    "fix": "eslint \"src/**/*.{js,ts,tsx}\" --quiet --fix",
+    "lint": "eslint \"src/**/*.{js,ts,tsx}\"",
+    "rollup-watch": "rollup -c -w",
     "start": "rollup -c rollup.config.js -w",
     "test": "node test/puppeteer.js"
   },
