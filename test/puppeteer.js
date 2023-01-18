@@ -29,7 +29,13 @@ function makePromiseInfo() {
 async function test(port) {
     const browser = await puppeteer.launch({
         ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : { channel: 'chrome-canary' }),
-        args: ['--enable-unsafe-webgpu'],
+        args: [
+            '--enable-unsafe-webgpu',
+            '--enable-features=Vulkan',
+            '--use-angle=swiftshader',
+            '--use-vulkan=swiftshader',
+            '--use-webgpu-adapter=swiftshader',
+        ],
     });
     const page = await browser.newPage();
 
