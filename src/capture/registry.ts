@@ -530,6 +530,7 @@ export interface TraceBufferUpdate {
 
 export interface TraceQueueCommandBufferUpdateData {
     name: 'bufferUpdateData';
+    deviceSerial: number;
     bufferSerial: number;
     updates: TraceBufferUpdate[];
 }
@@ -941,6 +942,10 @@ class AdapterState extends BaseState<GPUAdapter> {
         );
         return device;
     }
+
+    destroy() {
+        // TODO: handle this
+    }
 }
 
 interface BindGroupEntry {
@@ -1161,10 +1166,14 @@ class BufferState extends BaseState<GPUBuffer> {
         };
     }
 
-    getMappedRange(offset: number, size: number) {
-        // TODO: support getting multiple small ranges and updating them on unmap.
-        console.assert(offset === undefined && size === undefined);
+    mapAsync(mode: GPUMapModeFlags, offset?: number, size?: number) {
+        offset ??= 0;
+        size ??= Math.max(this.size - offset);
+        const promise = spector2.bufferProto.mapAsync.call(this.webgpuObject, mode, offset, size);
+        return promise;
+    }
 
+    getMappedRange(offset?: number, size?: number) {
         offset ??= 0;
         size ??= Math.max(this.size - offset);
 
@@ -1177,6 +1186,7 @@ class BufferState extends BaseState<GPUBuffer> {
         if (spector2.recordingTrace()) {
             spector2.traceCommand({
                 name: 'bufferUpdateData',
+                deviceSerial: this.device.traceSerial,
                 bufferSerial: this.traceSerial,
                 updates: this.mappedRanges.map(({ arrayBuf, offset, size }) => {
                     return {
@@ -1543,6 +1553,10 @@ class DeviceState extends BaseState<GPUDevice> {
         // TODO: implement
         return Promise.resolve(null);
     }
+
+    destroy() {
+        // TODO: implement
+    }
 }
 
 class PipelineLayoutState extends BaseState<GPUPipelineLayout> {
@@ -1689,7 +1703,7 @@ class QueueState extends BaseState<GPUQueue> {
 
     onSubmittedWorkDone() {
         // TODO: do we need anything here?
-        const promise = spector2.queueProto.onSubmittedWorkDone();
+        const promise = spector2.queueProto.onSubmittedWorkDone.call(this.webgpuObject);
         return promise;
     }
 

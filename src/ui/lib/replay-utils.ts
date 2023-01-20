@@ -11,9 +11,11 @@ export function getPathForLastStep(replay: Replay) {
     const lastCmd = getLastElementAndPushIndex(replay.commands, path);
     if (lastCmd.name === 'queueSubmit') {
         const lastCB = getLastElementAndPushIndex(lastCmd.args.commandBuffers, path);
-        const lastCBCmd = getLastElementAndPushIndex(lastCB.commands, path);
-        if (lastCBCmd.name === 'renderPass') {
-            getLastElementAndPushIndex(lastCBCmd.renderPass.commands, path);
+        if (lastCB) {
+            const lastCBCmd = getLastElementAndPushIndex(lastCB.commands, path);
+            if (lastCBCmd.name === 'renderPass') {
+                getLastElementAndPushIndex(lastCBCmd.renderPass.commands, path);
+            }
         }
     }
     return path;

@@ -35,7 +35,7 @@ export async function endCapture() {
     if (!capture.tracing) {
         throw new Error('not tracing');
     }
-    const trace = capture.endTracing();
+    const trace = await capture.endTracing();
     uiStateHelper.addTrace(trace);
 }
 

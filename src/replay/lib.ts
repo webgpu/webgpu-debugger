@@ -322,6 +322,7 @@ export interface ReplayCommandTextureDestroy {
 
 export interface ReplayCommandBufferUpdateData {
     name: 'bufferUpdateData';
+    device: ReplayDevice;
     buffer: ReplayBuffer;
     updates: TraceBufferUpdate[];
 }
@@ -620,6 +621,7 @@ export class Replay {
                     const cmd = c as TraceQueueCommandBufferUpdateData;
                     return {
                         name: 'bufferUpdateData',
+                        device: this.devices[cmd.deviceSerial],
                         buffer: this.buffers[cmd.bufferSerial],
                         updates: cmd.updates,
                     };
@@ -681,6 +683,21 @@ export class Replay {
                 // Do nothing so as to not invalidate replay state.
                 break;
 
+            case 'bufferUpdateData': {
+                // TODO: we need to remove this command or refactor or something as the user doesn't
+                // issue this command. It represents things like mapAsync/unmap so arguably the user
+                // needs to see mapAsync/unmap.
+                const queue = command.device.webgpuObject.queue;
+                const buffer = command.buffer.webgpuObject;
+                for (const update of command.updates) {
+                    const dataBuf = this.getData(update.data);
+                    queue.writeBuffer(buffer, update.offset, dataBuf);
+                }
+                break;
+            }
+            case 'bufferUnmap':
+                // TODO: decide how to represent this but for now do thing because we never map
+                break;
             default:
                 console.assert(false, `Unhandled command type '${command.name}'`);
         }
@@ -1076,36 +1093,36 @@ export class ReplayCommandBuffer extends ReplayObject {
                     continue;
                 }
                 case 'copyBufferToBuffer':
-                    c.args.source.bufferState = this.replay.buffers[c.args.source.bufferSerial];
-                    c.args.source.buffer = c.args.source.bufferState.webgpuObject;
-                    delete c.args.source.buffer;
-                    c.args.destination.bufferState = this.replay.buffers[c.args.destination.bufferSerial];
-                    c.args.destination.buffer = c.args.destination.bufferState.webgpuObject;
-                    delete c.args.destination.texture;
+                    c.args.sourceState = this.replay.buffers[c.args.sourceSerial];
+                    c.args.source = c.args.sourceState.webgpuObject;
+                    delete c.args.sourceSerial;
+                    c.args.destinationState = this.replay.buffers[c.args.destinationSerial];
+                    c.args.destination = c.args.destinationState.webgpuObject;
+                    delete c.args.destination.destinationSerial;
                     break;
                 case 'copyBufferToTexture':
                     c.args.source.bufferState = this.replay.buffers[c.args.source.bufferSerial];
                     c.args.source.buffer = c.args.source.bufferState.webgpuObject;
-                    delete c.args.source.buffer;
+                    delete c.args.source.bufferSerial;
                     c.args.destination.textureState = this.replay.textures[c.args.destination.textureSerial];
                     c.args.destination.texture = c.args.destination.textureState.webgpuObject;
-                    delete c.args.destination.texture;
+                    delete c.args.destination.textureSerial;
                     break;
                 case 'copyTextureToBuffer':
                     c.args.source.textureState = this.replay.textures[c.args.source.textureSerial];
                     c.args.source.texture = c.args.source.textureState.webgpuObject;
-                    delete c.args.source.texture;
+                    delete c.args.source.textureSerial;
                     c.args.destination.bufferState = this.replay.buffers[c.args.destination.bufferSerial];
                     c.args.destination.buffer = c.args.destination.bufferState.webgpuObject;
-                    delete c.args.destination.buffer;
+                    delete c.args.destination.bufferSerial;
                     break;
                 case 'copyTextureToTexture':
                     c.args.source.textureState = this.replay.textures[c.args.source.textureSerial];
                     c.args.source.texture = c.args.source.textureState.webgpuObject;
-                    delete c.args.source.texture;
+                    delete c.args.source.textureSerial;
                     c.args.destination.textureState = this.replay.textures[c.args.destination.textureSerial];
                     c.args.destination.texture = c.args.destination.textureState.webgpuObject;
-                    delete c.args.destination.texture;
+                    delete c.args.destination.textureSerial;
                     break;
                 case 'pushDebugGroup':
                 case 'popDebugGroup':
@@ -1357,13 +1374,15 @@ export class ReplayQueue extends ReplayObject {
     }
 
     replaySubmitTo(path: number[], commandBuffers: ReplayCommandBuffer[]) {
-        const commandBufferIndex = path.shift()!;
-        const encoder = this.device.webgpuObject.createCommandEncoder();
-        for (let i = 0; i < commandBufferIndex - 1; i++) {
-            commandBuffers[i].encodeIn(encoder);
+        if (commandBuffers.length) {
+            const commandBufferIndex = path.shift()!;
+            const encoder = this.device.webgpuObject.createCommandEncoder();
+            for (let i = 0; i < commandBufferIndex - 1; i++) {
+                commandBuffers[i].encodeIn(encoder);
+            }
+            commandBuffers[commandBufferIndex].encodeUpTo(path, encoder);
+            this.webgpuObject.submit([encoder.finish()]);
         }
-        commandBuffers[commandBufferIndex].encodeUpTo(path, encoder);
-        this.webgpuObject.submit([encoder.finish()]);
     }
 }
 
