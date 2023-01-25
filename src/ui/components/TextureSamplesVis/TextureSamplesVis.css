@@ -6,6 +6,7 @@
   border-radius: 3px;
   box-shadow: 2px 2px 5px rgba(0, 0, 0, 50%);
   width: 200px;
+  pointer-events: none;
 }
 
 .spector2-texture-samples-color {

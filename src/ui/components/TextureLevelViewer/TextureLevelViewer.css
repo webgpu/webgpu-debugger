@@ -7,11 +7,13 @@
 
 .spector2-textureviewer-canvascontainer {
   flex: 1 1 auto;
+  width: 100%;
+  overflow: auto;
+  padding: 1em;
 }
 
 .spector2-textureviewer canvas {
   cursor: crosshair;
-  margin: 1em;
   padding: 0;
   width: auto;
   height: auto;
