@@ -248,7 +248,7 @@ class Debugger extends React.Component<IProps, IState> {
     };
     render() {
         return (
-            <div className="spector2-debugger">
+            <div className="wgdb-debugger">
                 <Toolbar />
                 <div>
                     {/*
@@ -261,7 +261,7 @@ class Debugger extends React.Component<IProps, IState> {
                         </button>
                     */}
                 </div>
-                <div className="spector2-panes">
+                <div className="wgdb-panes">
                     <TileContext.Provider value={{ onAddPaneViaDrag: this.onAddPaneViaDrag }}>
                         <FlexLayout.Layout
                             ref={this.layoutRef}

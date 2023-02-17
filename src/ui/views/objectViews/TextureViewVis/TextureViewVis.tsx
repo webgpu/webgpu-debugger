@@ -5,9 +5,9 @@ import { JsonValueObject } from '../../../components/JsonValue/JsonValue';
 
 export default function TextureViewVis({ data }: { data: ReplayTextureView }) {
     return (
-        <div className="spector2-vis">
+        <div className="wgdb-vis">
             <JsonValueObject data={data} />
-            <div className="spector2-top-separator"></div>
+            <div className="wgdb-top-separator"></div>
             <TextureLevelViewer
                 key={data.replayObjectKey}
                 texture={data.texture}

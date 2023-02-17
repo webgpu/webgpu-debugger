@@ -31,7 +31,7 @@ export default function ShaderModuleVis({ data }: { data: ReplayShaderModule }) 
     const [raw, setRaw] = useState(false);
 
     return (
-        <div className="spector2-vis">
+        <div className="wgdb-vis">
             <JsonValueObject data={desc.hints || {}} />
             <Checkbox label="raw" checked={raw} onChange={setRaw} />
             <pre>{optionallyRemoveLeadingWhitespace(!raw, desc.code)}</pre>

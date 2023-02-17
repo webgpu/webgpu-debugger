@@ -1,13 +1,13 @@
-.spector2-dialog {
+.wgdb-dialog {
   background-color: rgba(0, 0, 0, 0.8);
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-.spector2-dialog>* {
-  background-color: var(--spector2-bg-color);
-  z-index: calc(var(--spector2-z-index) + 1);
+.wgdb-dialog>* {
+  background-color: var(--wgdb-bg-color);
+  z-index: calc(var(--wgdb-z-index) + 1);
   border-radius: 5px;
   padding: 1em;
   max-width: 90%;
@@ -17,7 +17,7 @@
   outline: none;
 }
 
-.spector2-dialog-heading {
+.wgdb-dialog-heading {
   display: flex;
   justify-content: space-between;
   font-size: x-large;
@@ -27,11 +27,11 @@
   user-select: none;
 }
 
-.spector2-dialog-content {
+.wgdb-dialog-content {
   margin: 10px;
 }
 
-.spector2-dialog-close {
+.wgdb-dialog-close {
   position: absolute;
   right: 0;
   top: 0;

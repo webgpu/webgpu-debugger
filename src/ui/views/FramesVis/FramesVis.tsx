@@ -5,7 +5,7 @@ export default function FramesVis() {
     const { helper } = useContext(UIStateContext);
 
     return (
-        <div className="spector2-vis">
+        <div className="wgdb-vis">
             {helper.state.traces.map((trace, ndx) => (
                 <button
                     key={`b${ndx}`}

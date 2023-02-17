@@ -4,7 +4,7 @@ import { JsonValueObject } from '../../../components/JsonValue/JsonValue';
 
 export default function BindGroupVis({ data }: { data: ReplayBindGroup }) {
     return (
-        <div className="spector2-vis">
+        <div className="wgdb-vis">
             <JsonValueObject data={data} />
         </div>
     );

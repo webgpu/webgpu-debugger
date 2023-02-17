@@ -1,48 +1,48 @@
-.spector2-steps-vis {
+.wgdb-steps-vis {
   height: 100%;
 }
 
-.spector2-steps-vis-traces {
+.wgdb-steps-vis-traces {
   display: flex;
 }
 
-.spector2-cmd-indent-1 {
+.wgdb-cmd-indent-1 {
   padding-left: 1em;
 }
 
-.spector2-cmd-indent-2 {
+.wgdb-cmd-indent-2 {
   padding-left: 2em;
 }
 
-.spector2-cmd-indent-3 {
+.wgdb-cmd-indent-3 {
   padding-left: 3em;
 }
 
-.spector2-cmd-indent-4 {
+.wgdb-cmd-indent-4 {
   padding-left: 4em;
 }
 
-.spector2-cmd {
+.wgdb-cmd {
   text-indent: -1em;
   cursor: pointer;
 }
 
-.spector2-cmd>* {
+.wgdb-cmd>* {
   display: inline;
 }
 
-.spector2-cmd>*>* {
+.wgdb-cmd>*>* {
   display: inline;
 }
 
-.spector2-cmd-args {
-  color: var(--spector2-accent-color);
+.wgdb-cmd-args {
+  color: var(--wgdb-accent-color);
 }
 
-.spector2-cmd-arg>* {
+.wgdb-cmd-arg>* {
   display: inline;
 }
 
-.spector2-cmd-selected {
-  background-color: var(--spector2-cmd-selected-bg-color);
+.wgdb-cmd-selected {
+  background-color: var(--wgdb-cmd-selected-bg-color);
 }

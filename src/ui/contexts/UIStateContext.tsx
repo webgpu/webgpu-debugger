@@ -6,7 +6,7 @@ import { arrayRemoveElementByValue } from '../lib/array-utils';
 import { requestUnwrappedAdapter } from '../../capture';
 import { loadReplay } from '../../replay';
 import { getDateForFilename } from '../lib/date-utils';
-import { spector2LocalStorageId } from '../globals';
+import { webgpuDebuggerLocalStorageId } from '../globals';
 
 export type PaneComponentInfo = {
     component: PaneComponent;
@@ -389,7 +389,7 @@ export class UIStateHelper {
                 paneTypes,
                 uiSettings: this.state.uiSettings,
             });
-            localStorage.setItem(spector2LocalStorageId, str);
+            localStorage.setItem(webgpuDebuggerLocalStorageId, str);
         }
     };
 

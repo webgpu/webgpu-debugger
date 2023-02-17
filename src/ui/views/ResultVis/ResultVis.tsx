@@ -16,7 +16,7 @@ const ResultVis = ({ data }: ResultsVisProps) => {
     const { texture, mipLevel } = data || {};
 
     return (
-        <div className="spector2-vis">
+        <div className="wgdb-vis">
             {texture ? (
                 <TextureLevelViewer texture={texture} baseMipLevel={mipLevel} mipLevelCount={1} />
             ) : (

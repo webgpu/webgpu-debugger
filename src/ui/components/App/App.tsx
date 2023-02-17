@@ -12,7 +12,7 @@ import {
     UIStateContext,
     UIStateHelper,
 } from '../../contexts/UIStateContext';
-import { maxPanes, spector2LocalStorageId } from '../../globals';
+import { maxPanes, webgpuDebuggerLocalStorageId } from '../../globals';
 
 import ObjectVis from '../../views/ObjectVis/ObjectVis';
 import ResultVis from '../../views/ResultVis/ResultVis';
@@ -34,7 +34,7 @@ function getPersistentSettings(uiStateHelper: UIStateHelper): {
     uiSettings?: UISettings;
 } {
     try {
-        const persistentSettingsStr = localStorage.getItem(spector2LocalStorageId);
+        const persistentSettingsStr = localStorage.getItem(webgpuDebuggerLocalStorageId);
         if (persistentSettingsStr && persistentSettingsStr.length > 1 && persistentSettingsStr[0] === '{') {
             const settings = JSON.parse(persistentSettingsStr);
             if (settings && settings.layout && settings.paneTypes) {
@@ -113,9 +113,7 @@ class App extends React.Component<UIProps, UIState> {
         uiStateHelper.updateState(this.state);
         return (
             <UIStateContext.Provider value={{ helper: uiStateHelper }}>
-                <div className="spector2">
-                    {this.state.fullUI ? <Debugger initialLayout={this.#layout} /> : <MiniUI />}
-                </div>
+                <div className="wgdb">{this.state.fullUI ? <Debugger initialLayout={this.#layout} /> : <MiniUI />}</div>
             </UIStateContext.Provider>
         );
     }

@@ -22,14 +22,14 @@ export function ValueObject({ depth, data }: { depth?: number; data: Record<stri
     const ctor = Object.getPrototypeOf(data).constructor;
     const specialProperties = getSpecialPropertiesForClass(ctor);
     return (
-        <table className={`spector2-value-object spector2-value-depth${depth}`}>
+        <table className={`wgdb-value-object wgdb-value-depth${depth}`}>
             <tbody>
                 {Object.entries(data).map(([key, value], ndx) =>
                     isExcludedPropertyName(key) ? (
                         <React.Fragment key={`p${ndx}`} />
                     ) : (
-                        <tr className="spector2-value-key-value" key={`p${ndx}`}>
-                            <td key={`k${ndx}`} className="spector2-value-key">
+                        <tr className="wgdb-value-key-value" key={`p${ndx}`}>
+                            <td key={`k${ndx}`} className="wgdb-value-key">
                                 {key}:
                             </td>
                             <td>
@@ -54,7 +54,7 @@ function ValueSmallArray({ depth, data }: { depth?: number; data: any[] }) {
     // convert typedarray to array so map works.
     const arr = Array.isArray(data) ? data : Array.from(data);
     return (
-        <table className={`spector2-value-array spector2-value-depth${depth}`}>
+        <table className={`wgdb-value-array wgdb-value-depth${depth}`}>
             <tbody>
                 <tr>
                     {arr.map((v, ndx) => (
@@ -74,7 +74,7 @@ function ValueLargeArray({ depth, data }: { depth?: number; data: any[] }) {
     // convert typedarray to array so map works.
     const arr = Array.isArray(data) ? data : Array.from(data);
     return (
-        <table className={`spector2-value-array spector2-value-depth${depth}`}>
+        <table className={`wgdb-value-array wgdb-value-depth${depth}`}>
             <tbody>
                 {arr.map((v, ndx) => (
                     <tr key={`e${ndx}`}>
@@ -99,19 +99,19 @@ function ValueArray({ depth, data }: { depth?: number; data: any[] }) {
 
 export default function Value({ depth, data }: { depth?: number; data: any }) {
     if (data === undefined) {
-        return <div className="spector2-value-undefined">undefined</div>;
+        return <div className="wgdb-value-undefined">undefined</div>;
     } else if (data === null) {
-        return <div className="spector2-value-null">null</div>;
+        return <div className="wgdb-value-null">null</div>;
     } else if (typeof data === 'boolean') {
-        return <div className="spector2-value-boolean">{data ? 'true' : 'false'}</div>;
+        return <div className="wgdb-value-boolean">{data ? 'true' : 'false'}</div>;
     } else if (typeof data === 'number') {
         return <ValueNumber data={data} />;
     } else if (typeof data === 'string') {
-        return <div className="spector2-value-string">&quot;{data}&quot;</div>;
+        return <div className="wgdb-value-string">&quot;{data}&quot;</div>;
     } else if (Array.isArray(data) || isTypedArray(data)) {
         return <ValueArray depth={depth} data={data} />;
     } else if (typeof data === 'function') {
-        return <div className="spector2-value-function">{data.name}</div>;
+        return <div className="wgdb-value-function">{data.name}</div>;
     } else if (typeof data === 'object') {
         if (isBaseObject(data)) {
             return <ValueObject depth={depth} data={data} />;

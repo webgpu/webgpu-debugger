@@ -1,9 +1,9 @@
 {
-  "name": "spector2",
+  "name": "webgpu-debugger",
   "version": "0.0.1",
   "description": "WebGPU debugger",
-  "main": "dist/spector2-cjs.js",
-  "module": "dist/spector2.js",
+  "main": "dist/webgpu-debugger-cjs.js",
+  "module": "dist/webgpu-debugger.js",
   "type": "module",
   "scripts": {
     "build": "rollup -c",
@@ -17,7 +17,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Kangz/spector2.git"
+    "url": "git+https://github.com/webgpu/webgpu-debugger.git"
   },
   "keywords": [
     "WebGPU",
@@ -27,9 +27,9 @@
   "author": "Corentin Wallez",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/Kangz/spector2/issues"
+    "url": "https://github.com/webgpu/webgpu-debugger/issues"
   },
-  "homepage": "https://github.com/Kangz/spector2#readme",
+  "homepage": "https://github.com/webgpu/webgpu-debugger#readme",
   "devDependencies": {
     "@rollup/plugin-commonjs": "^23.0.4",
     "@rollup/plugin-node-resolve": "^15.0.1",

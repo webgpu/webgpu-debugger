@@ -1,14 +1,14 @@
-.spector2-replay-group {
+.wgdb-replay-group {
   margin-bottom: 2px;
-  border-bottom: 1px solid var(--spector2-table-cell-border-color);
-  border-bottom: 1px solid var(--spector2-table-cell-border-color);
+  border-bottom: 1px solid var(--wgdb-table-cell-border-color);
+  border-bottom: 1px solid var(--wgdb-table-cell-border-color);
   margin-bottom: 2px;
 }
 
-.spector2-replay-resources {
+.wgdb-replay-resources {
   padding-left: 1.5em;
 }
 
-.spector2-replay-resources>*:nth-child(5n) {
-  border-bottom: 1px solid var(--spector2-table-cell-border-color);
+.wgdb-replay-resources>*:nth-child(5n) {
+  border-bottom: 1px solid var(--wgdb-table-cell-border-color);
 }

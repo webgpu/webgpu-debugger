@@ -1,15 +1,15 @@
-.spector2-toolbar {
+.wgdb-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.spector2-toolbar-left {
+.wgdb-toolbar-left {
   display: flex;
   padding: 2px;
   align-items: stretch;
 }
 
-.spector2-toolbar a {
+.wgdb-toolbar a {
   text-decoration: none;
 }

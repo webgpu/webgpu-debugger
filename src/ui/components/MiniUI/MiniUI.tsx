@@ -6,7 +6,7 @@ import './MiniUI.css';
 const MiniUI: React.FC = () => {
     const { helper } = useContext(UIStateContext);
     return (
-        <div className="spector2-mini">
+        <div className="wgdb-mini">
             <button onClick={helper.capture}>🔴</button>
             <button onClick={helper.toggleUI}>⌄</button>
         </div>

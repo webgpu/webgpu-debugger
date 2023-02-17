@@ -10,7 +10,7 @@ interface Props {
 
 export default function TextureSamplesVis({ data, style = {} }: Props) {
     return (
-        <div className="spector2-texture-samples-vis" style={style}>
+        <div className="wgdb-texture-samples-vis" style={style}>
             <table>
                 <tbody>
                     <tr>
@@ -24,7 +24,7 @@ export default function TextureSamplesVis({ data, style = {} }: Props) {
                     {data.samples.map((sample, ndx) => (
                         <tr key={`e${ndx}`}>
                             <td
-                                className="spector2-texture-samples-color"
+                                className="wgdb-texture-samples-color"
                                 style={{ backgroundColor: sample.cssColor }}
                             ></td>
                             <td>[{sample.values.join(', ')}]</td>

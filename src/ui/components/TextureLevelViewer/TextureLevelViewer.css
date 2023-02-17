@@ -1,29 +1,29 @@
-.spector2-textureviewer {
+.wgdb-textureviewer {
   position: relative;
   display: flex;
   flex-flow: column;
   height: 100%;
 }
 
-.spector2-textureviewer-canvascontainer {
+.wgdb-textureviewer-canvascontainer {
   flex: 1 1 auto;
   width: 100%;
   overflow: auto;
   padding: 1em;
 }
 
-.spector2-textureviewer canvas {
+.wgdb-textureviewer canvas {
   cursor: crosshair;
   padding: 0;
   width: auto;
   height: auto;
 }
 
-.spector2-textureviewer canvas.cube {
+.wgdb-textureviewer canvas.cube {
   cursor: all-scroll;
 }
 
-.spector2-textureviewer canvas.fill {
+.wgdb-textureviewer canvas.fill {
   width: calc(100% - 2em);
   width: calc(100% - 2em);
 }

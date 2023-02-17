@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './components/App/App';
 import { uiStateHelper } from './contexts/UIStateContext';
-import { spector2 as capture } from '../capture';
+import { tracer as capture } from '../capture';
 
 let initialized = false;
 

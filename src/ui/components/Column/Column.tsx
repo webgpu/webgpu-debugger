@@ -8,9 +8,5 @@ interface Props {
 }
 
 export default function Column({ children, className, expand }: React.PropsWithChildren<Props>) {
-    return (
-        <div className={classNames('spector2-column', { 'spector2-column-expand': !!expand }, className)}>
-            {children}
-        </div>
-    );
+    return <div className={classNames('wgdb-column', { 'wgdb-column-expand': !!expand }, className)}>{children}</div>;
 }

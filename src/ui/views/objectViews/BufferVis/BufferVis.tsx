@@ -148,11 +148,11 @@ const BufferGrid: React.FC<Props> = ({ type, columns, showHex, buffer, precision
 
                         return (
                             <div
-                                className={`spector2-buffer-data-elem ${
+                                className={`wgdb-buffer-data-elem ${
                                     columnIndex === 0
-                                        ? 'spector2-buffer-data-offset'
+                                        ? 'wgdb-buffer-data-offset'
                                         : rowIndex === 0
-                                        ? 'spector2-buffer-data-headings'
+                                        ? 'wgdb-buffer-data-headings'
                                         : ''
                                 }`}
                                 style={style}
@@ -161,13 +161,13 @@ const BufferGrid: React.FC<Props> = ({ type, columns, showHex, buffer, precision
                                 )}) byteOffset: ${byteOffset} (0x${byteOffset.toString(16)})`}
                             >
                                 {rowIndex === 0 ? (
-                                    <div className="spector2-grid-header">
+                                    <div className="wgdb-grid-header">
                                         {columnIndex === 0 ? 'offset' : columnIndex - 1}
                                     </div>
                                 ) : columnIndex === 0 ? (
                                     `0x${((rowIndex - 1) * columns).toString(16)}`
                                 ) : rowIndex >= lastViewRow && columnIndex >= lastViewColumn ? (
-                                    <div className="spector2-buffer-data-empty">.</div>
+                                    <div className="wgdb-buffer-data-empty">.</div>
                                 ) : (
                                     <ValueNumber format={formatFn} data={view[dataIndex]} />
                                 )}
@@ -189,11 +189,11 @@ export default function BufferVis({ data }: { data: ReplayBuffer }) {
     const { hex } = s_types[type];
 
     return (
-        <div className="spector2-vis">
-            <div className="spector2-buffer-vis">
+        <div className="wgdb-vis">
+            <div className="wgdb-buffer-vis">
                 <ValueObject data={data} />
-                <div className="spector2-top-separator"></div>
-                <div className="spector2-buffer-vis-controls">
+                <div className="wgdb-top-separator"></div>
+                <div className="wgdb-buffer-vis-controls">
                     <SelectSimple label="" value={type} options={s_typesKeys} onChange={setType} />
                     <Range label="columns:" min={1} max={64} value={columns} onChange={setColumns} />
                     {hex ? (
@@ -202,7 +202,7 @@ export default function BufferVis({ data }: { data: ReplayBuffer }) {
                         <Range label="precision:" min={-1} max={10} value={precision} onChange={setPrecision} />
                     )}
                 </div>
-                <div className="spector2-buffer-data">
+                <div className="wgdb-buffer-data">
                     <BufferGrid type={type} columns={columns} showHex={showHex} precision={precision} buffer={data} />
                 </div>
             </div>

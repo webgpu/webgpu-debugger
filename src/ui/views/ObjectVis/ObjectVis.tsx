@@ -63,13 +63,13 @@ const s_objectClassToVis = new Map<Function, PaneComponent>([
 
 export default function ObjectVis({ data }: ObjectVisProps) {
     if (!data) {
-        return <div className="spector2-vis">no object</div>;
+        return <div className="wgdb-vis">no object</div>;
     }
     const ctor = Object.getPrototypeOf(data).constructor;
     const component = s_objectClassToVis.get(ctor);
     return component ? (
         React.createElement(component, { data })
     ) : (
-        <div className="spector2-vis">unsupported object type: {ctor.name}</div>
+        <div className="wgdb-vis">unsupported object type: {ctor.name}</div>
     );
 }

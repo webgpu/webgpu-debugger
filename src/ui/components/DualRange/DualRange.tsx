@@ -74,9 +74,9 @@ export default function DualRange({
     }, [min, max, onChange]);
 
     return (
-        <label className={'spector2-dualrange'}>
+        <label className={'wgdb-dualrange'}>
             <div>{label}</div>
-            <div className={'spector2-dualrange-container'}>
+            <div className={'wgdb-dualrange-container'}>
                 <input
                     ref={minValRef}
                     type="range"
@@ -85,9 +85,7 @@ export default function DualRange({
                     step={step}
                     value={minVal}
                     onChange={e => setMinVal(Math.min(parseFloat(e.target.value), maxVal - step))}
-                    className={
-                        minVal > min ? 'spector2-dualrange-thumb .spector2-raised-thumb' : 'spector2-dualrange-thumb'
-                    }
+                    className={minVal > min ? 'wgdb-dualrange-thumb .wgdb-raised-thumb' : 'wgdb-dualrange-thumb'}
                 />
                 <input
                     ref={maxValRef}
@@ -97,12 +95,10 @@ export default function DualRange({
                     step={step}
                     value={maxVal}
                     onChange={e => setMaxVal(Math.max(parseFloat(e.target.value), minVal + step))}
-                    className={
-                        maxVal < max ? 'spector2-dualrange-thumb spector2-raised-thumb' : 'spector2-dualrange-thumb'
-                    }
+                    className={maxVal < max ? 'wgdb-dualrange-thumb wgdb-raised-thumb' : 'wgdb-dualrange-thumb'}
                 />
-                <div className="spector2-dualrange-track" />
-                <div ref={range} className="spector2-dualrange-range" />
+                <div className="wgdb-dualrange-track" />
+                <div ref={range} className="wgdb-dualrange-range" />
             </div>
             <div>{valueFormatFn(minVal, maxVal)}</div>
         </label>

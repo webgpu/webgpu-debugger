@@ -175,7 +175,7 @@ const TextureLevelViewer: React.FC<Props> = ({
     }, [texture, mipLevel, arrayLayer, display, aspect, valueRangeMin, valueRangeMax, helper.state.replayCount]);
 
     return (
-        <div className="spector2-textureviewer">
+        <div className="wgdb-textureviewer">
             <div>
                 <Checkbox label="Display actual size:" checked={actualSize} onChange={setActualSize} />
                 <Checkbox label="Pixelated:" checked={pixelated} onChange={setPixelated} />
@@ -229,7 +229,7 @@ const TextureLevelViewer: React.FC<Props> = ({
                 </div>
             )}
             <div
-                className="spector2-textureviewer-canvascontainer"
+                className="wgdb-textureviewer-canvascontainer"
                 style={{ imageRendering: pixelated ? 'pixelated' : 'auto' }}
             >
                 <TextureSamplesVis data={inspectorSamples} style={samplesInspectorStyle} />
