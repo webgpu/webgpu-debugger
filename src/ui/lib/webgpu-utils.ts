@@ -39,3 +39,8 @@ const gpuTextureUsage = [
 ];
 
 export const gpuTextureUsageToString = (v: number) => bitmaskToString(v, gpuTextureUsage);
+
+export const gpuExtent3DToShortString = (s: GPUExtent3D) => {
+    const sd = s as GPUExtent3DDict;
+    return Array.isArray(s) ? s.toString : `${sd.width || 1},${sd.height || 1},${sd.depthOrArrayLayers || 1}`;
+};
