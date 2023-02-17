@@ -67,7 +67,7 @@ function Json({ data }: { data: any }) {
         }
         console.error(errMsg);
         */
-        return <div className="spector2-error">object with cycle({data.constructor.name})</div>;
+        return <div className="wgdb-error">object with cycle({data.constructor.name})</div>;
     }
 }
 
@@ -75,18 +75,18 @@ function Arg({ k, v }: { k: string; v: any }) {
     const { showCommandArgNames } = useContext(StepsContext)!;
     const argName = showCommandArgNames ? `: ${k}` : '';
     if (Array.isArray(v)) {
-        return <div className="spector2-cmd-arg">[...]{argName}</div>;
+        return <div className="wgdb-cmd-arg">[...]{argName}</div>;
     }
     if (typeof v === 'object') {
         return (
-            <div className="spector2-cmd-arg">
+            <div className="wgdb-cmd-arg">
                 {canDisplayInline(v) ? <Value data={v} /> : <Json data={v} />}
                 {argName}
             </div>
         );
     }
     return (
-        <div className="spector2-cmd-arg">
+        <div className="wgdb-cmd-arg">
             <Value data={v} />
             {argName}
         </div>
@@ -95,7 +95,7 @@ function Arg({ k, v }: { k: string; v: any }) {
 
 function Args({ args }: { args: any }) {
     return (
-        <div className="spector2-cmd-args">
+        <div className="wgdb-cmd-args">
             {interleave(
                 Object.entries(args as Record<string, any>)
                     .filter(([, v]) => v !== undefined)
@@ -112,12 +112,12 @@ function RenderPassCommandStep({ command, commandId }: { command: ReplayCommandB
     const { name, args } = command as any;
     return (
         <div
-            className={classNames('spector2-cmd', `spector2-cmd-indent-${commandId.length}`, {
-                'spector2-cmd-selected': isCurrent,
+            className={classNames('wgdb-cmd', `wgdb-cmd-indent-${commandId.length}`, {
+                'wgdb-cmd-selected': isCurrent,
             })}
             onClick={() => stepsContextData.playTo(commandId)}
         >
-            <div className="spector2-cmd-name">{name}</div>({args ? <Args args={args} /> : ''})
+            <div className="wgdb-cmd-name">{name}</div>({args ? <Args args={args} /> : ''})
         </div>
     );
 }
@@ -141,13 +141,13 @@ function RenderPass({ command, commandId }: { command: ReplayCommandBufferComman
     return (
         <React.Fragment>
             <div
-                className={classNames('spector2-cmd', `spector2-cmd-indent-${commandId.length}`, {
-                    'spector2-cmd-selected': isCurrent,
+                className={classNames('wgdb-cmd', `wgdb-cmd-indent-${commandId.length}`, {
+                    'wgdb-cmd-selected': isCurrent,
                 })}
                 onClick={() => stepsContextData.playTo(commandId)}
             >
                 <div>›</div>
-                <div className="spector2-cmd-name">{name}</div>
+                <div className="wgdb-cmd-name">{name}</div>
             </div>
             <RenderPassCommands commands={commands} commandId={commandId} />
         </React.Fragment>
@@ -164,18 +164,18 @@ function QueueSubmit({ command, commandId }: { command: ReplayQueueCommand; comm
     return (
         <React.Fragment>
             <div
-                className={classNames('spector2-cmd', `spector2-cmd-indent-${commandId.length}`, {
-                    'spector2-cmd-selected': isCurrent,
+                className={classNames('wgdb-cmd', `wgdb-cmd-indent-${commandId.length}`, {
+                    'wgdb-cmd-selected': isCurrent,
                 })}
                 onClick={() => stepsContextData.playTo(commandId)}
             >
                 <div>›</div>
-                <div className="spector2-cmd-name">{name}</div>
+                <div className="wgdb-cmd-name">{name}</div>
             </div>
             {commandBuffers.map((cb, ndx) => {
                 return (
                     <React.Fragment key={`cm${ndx}`}>
-                        <div className={`spector2-cmd spector2-cmd-indent-${commandId.length + 1}`} key={`cb${ndx}`}>
+                        <div className={`wgdb-cmd wgdb-cmd-indent-${commandId.length + 1}`} key={`cb${ndx}`}>
                             CommandBuffer: #{ndx}
                         </div>
                         <CommandBufferCommands commands={cb.commands} commandId={[...commandId, ndx]} />
@@ -198,12 +198,12 @@ function GenericCommandBufferCommand({
     const { name, args } = command as any;
     return (
         <div
-            className={classNames('spector2-cmd', `spector2-cmd-indent-${commandId.length}`, {
-                'spector2-cmd-selected': isCurrent,
+            className={classNames('wgdb-cmd', `wgdb-cmd-indent-${commandId.length}`, {
+                'wgdb-cmd-selected': isCurrent,
             })}
             onClick={() => stepsContextData.playTo(commandId)}
         >
-            <div className="spector2-cmd-name">{name}</div>({args ? <Args args={args} /> : ''})
+            <div className="wgdb-cmd-name">{name}</div>({args ? <Args args={args} /> : ''})
         </div>
     );
 }
@@ -255,12 +255,12 @@ function GenericReplayQueueCommand({ command, commandId }: { command: ReplayQueu
     const { name, args } = command as any; // TODO: can we make this more generic?
     return (
         <div
-            className={classNames('spector2-cmd', `spector2-cmd-indent-${commandId.length}`, {
-                'spector2-cmd-selected': isCurrent,
+            className={classNames('wgdb-cmd', `wgdb-cmd-indent-${commandId.length}`, {
+                'wgdb-cmd-selected': isCurrent,
             })}
             onClick={() => stepsContextData.playTo(commandId)}
         >
-            <div className="spector2-cmd-name">{name}</div>({args ? <Args args={args} /> : ''})
+            <div className="wgdb-cmd-name">{name}</div>({args ? <Args args={args} /> : ''})
         </div>
     );
 }
@@ -329,10 +329,10 @@ export default function StepsVis({ data }: StepsVisProps) {
     }, [data]);
 
     return (
-        <div className="spector2-vis">
-            <div className="spector2-steps-vis">
+        <div className="wgdb-vis">
+            <div className="wgdb-steps-vis">
                 <RowHolder>
-                    <Row className="spector2-steps-vis-traces">
+                    <Row className="wgdb-steps-vis-traces">
                         <SelectSimpleIndex
                             label=""
                             value={helper.state.currentTraceIndex}
@@ -348,8 +348,8 @@ export default function StepsVis({ data }: StepsVisProps) {
                             onChange={setShowCommandArgNames}
                         />
                     </Row>
-                    <Row className="spector2-top-separator"></Row>
-                    <Row expand={true} className="spector2-steps-steps">
+                    <Row className="wgdb-top-separator"></Row>
+                    <Row expand={true} className="wgdb-steps-steps">
                         <Overflow>
                             <div style={{ whiteSpace: wrapCommands ? 'normal' : 'nowrap' }}>
                                 <StepsContext.Provider value={{ state, playTo, showCommandArgNames }}>

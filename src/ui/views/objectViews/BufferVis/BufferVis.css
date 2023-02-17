@@ -1,41 +1,41 @@
-.spector2-buffer-vis {
+.wgdb-buffer-vis {
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
 }
 
-.spector2-vis-controls {
+.wgdb-vis-controls {
   width: 100%;
 }
 
-.spector2-buffer-data {
+.wgdb-buffer-data {
   flex: 1 1;
   width: 100%;
   min-width: 0;
   min-height: 0;
 }
 
-.spector2-buffer-data-offset {
-  color: var(--spector2-accent-color);
-  background-color: var(--spector2-tab-bar-bg-color);
+.wgdb-buffer-data-offset {
+  color: var(--wgdb-accent-color);
+  background-color: var(--wgdb-tab-bar-bg-color);
   font-weight: bold;
 }
 
-.spector2-buffer-data-headings {
-  color: var(--spector2-accent-color);
-  background-color: var(--spector2-tab-bar-bg-color);
+.wgdb-buffer-data-headings {
+  color: var(--wgdb-accent-color);
+  background-color: var(--wgdb-tab-bar-bg-color);
   font-weight: bold;
   text-align: center;
 }
 
-.spector2-buffer-data-empty {
-  background-color: var(--spector2-tab-bar-bg-color);
+.wgdb-buffer-data-empty {
+  background-color: var(--wgdb-tab-bar-bg-color);
 }
 
-.spector2-buffer-data-elem {
+.wgdb-buffer-data-elem {
   overflow: hidden;
   text-align: right;
-  border-right: 1px solid var(--spector2-table-cell-border-color);
-  border-bottom: 1px solid var(--spector2-table-cell-border-color);
+  border-right: 1px solid var(--wgdb-table-cell-border-color);
+  border-bottom: 1px solid var(--wgdb-table-cell-border-color);
 }

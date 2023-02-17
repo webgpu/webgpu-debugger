@@ -47,8 +47,8 @@ export default function ReplayVis({ data }: { data: Replay }) {
     };
 
     return (
-        <div className="spector2-vis">
-            <div className="spector2-replay-vis">
+        <div className="wgdb-vis">
+            <div className="wgdb-replay-vis">
                 <div>
                     <button onClick={toggleAll}>Toggle all open/closed</button>
                 </div>
@@ -59,17 +59,17 @@ export default function ReplayVis({ data }: { data: Replay }) {
                     return (
                         <details
                             open={open[nameNdx]}
-                            className="spector2-replay-group"
+                            className="wgdb-replay-group"
                             key={`n${nameNdx}`}
                             onToggle={e => {
                                 e.stopPropagation();
                                 setOpenNdx(nameNdx, (e.target as HTMLDetailsElement).open);
                             }}
                         >
-                            <summary className="spector2-replay-heading">
+                            <summary className="wgdb-replay-heading">
                                 {name} ({Object.values(resources).length})
                             </summary>
-                            <div className="spector2-replay-resources">
+                            <div className="wgdb-replay-resources">
                                 {Object.values(resources).map((resource, ndx) => (
                                     <Value key={`r${ndx}`} data={resource} />
                                 ))}

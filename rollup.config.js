@@ -113,10 +113,10 @@ async function getConfig() {
             ...commonUIConfig,
             output: [
                 {
-                    file: 'dist/spector2.umd.js',
+                    file: 'dist/webgpu-debugger.umd.js',
                     format: 'umd',
                     sourcemap: true,
-                    name: 'spector2',
+                    name: 'webgpuDebugger',
                 },
             ],
         },

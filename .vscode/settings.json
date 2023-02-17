@@ -10,7 +10,8 @@
     "tabbar",
     "tabset",
     "textbox",
-    "Wallez"
+    "Wallez",
+    "wgdb"
   ],
   "editor.formatOnSave": true,
   "eslint.format.enable": true,

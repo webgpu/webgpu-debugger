@@ -8,7 +8,7 @@ interface StateVisProps {
 
 export default function StateVis({ data }: StateVisProps) {
     return (
-        <div className="spector2-vis">
+        <div className="wgdb-vis">
             <JsonValue data={data} />
         </div>
     );

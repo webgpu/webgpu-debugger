@@ -1,114 +1,114 @@
 :root {
-  --spector2-bg-color: white;
-  --spector2-color: black;
-  --spector2-soft-color: #ddd;
-  --spector2-accent-color: #388;
-  --spector2-warn-color: darkorange;
-  --spector2-error-color: #C00;
-  --spector2-clickable-color: #05d;
-  --spector2-tab-moving-bg-color: #f5ffd3;
-  --spector2-tab-bar-bg-color: #eee;
-  --spector2-tab-bg-color: #ddd;
-  --spector2-tab-splitter-bg-color: #b6b6b6;
-  --spector2-tab-move-hover-color: #7dd0db;
-  --spector2-cmd-selected-bg-color: #CEF;
-  --spector2-table-cell-border-color: #888;
-  --spector2-font-size: medium;
-  --spector2-z-index: 100000;
+  --wgdb-bg-color: white;
+  --wgdb-color: black;
+  --wgdb-soft-color: #ddd;
+  --wgdb-accent-color: #388;
+  --wgdb-warn-color: darkorange;
+  --wgdb-error-color: #C00;
+  --wgdb-clickable-color: #05d;
+  --wgdb-tab-moving-bg-color: #f5ffd3;
+  --wgdb-tab-bar-bg-color: #eee;
+  --wgdb-tab-bg-color: #ddd;
+  --wgdb-tab-splitter-bg-color: #b6b6b6;
+  --wgdb-tab-move-hover-color: #7dd0db;
+  --wgdb-cmd-selected-bg-color: #CEF;
+  --wgdb-table-cell-border-color: #888;
+  --wgdb-font-size: medium;
+  --wgdb-z-index: 100000;
 
   color-scheme: light dark;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --spector2-bg-color: #333;
-    --spector2-color: white;
-    --spector2-accent-color: #FF8;
-    --spector2-error-color: #F00;
-    --spector2-soft-color: #555;
-    --spector2-clickable-color: #8AF;
-    --spector2-tab-bar-bg-color: #222;
-    --spector2-tab-bg-color: #68A;
-    --spector2-cmd-arg-bg-color: #444;
-    --spector2-cmd-selected-bg-color: #468;
-    --spector2-table-cell-border-color: #666;
+    --wgdb-bg-color: #333;
+    --wgdb-color: white;
+    --wgdb-accent-color: #FF8;
+    --wgdb-error-color: #F00;
+    --wgdb-soft-color: #555;
+    --wgdb-clickable-color: #8AF;
+    --wgdb-tab-bar-bg-color: #222;
+    --wgdb-tab-bg-color: #68A;
+    --wgdb-cmd-arg-bg-color: #444;
+    --wgdb-cmd-selected-bg-color: #468;
+    --wgdb-table-cell-border-color: #666;
   }
 }
 
-.spector2 {
+.wgdb {
   font-family: monospace;
-  font-size: var(--spector2-font-size);
+  font-size: var(--wgdb-font-size);
   box-sizing: border-box;
-  z-index: var(--spector2-z-index);
+  z-index: var(--wgdb-z-index);
 }
 
-.spector2 * {
+.wgdb * {
   box-sizing: inherit;
   font-family: inherit;
 }
 
-.spector2 button {
+.wgdb button {
   margin: 1px;
 }
 
-.spector2 canvas {
+.wgdb canvas {
   display: block;
   background:
     repeating-conic-gradient(#444 0% 25%, #ccc 0% 50%) 50% / 16px 16px;
 }
 
 /* TODO: be more specific? These are for values */
-.spector2 table {
+.wgdb table {
   border-collapse: collapse;
   width: 100%;
   border: none;
 }
 
-.spector2 td:has(>table) {
+.wgdb td:has(>table) {
   padding: 0;
 }
 
-.spector2 td+td {
-  border-left: 1px solid var(--spector2-table-cell-border-color);
+.wgdb td+td {
+  border-left: 1px solid var(--wgdb-table-cell-border-color);
 }
 
-.spector2 tr+tr {
-  border-top: 1px solid var(--spector2-table-cell-border-color);
+.wgdb tr+tr {
+  border-top: 1px solid var(--wgdb-table-cell-border-color);
 }
 
-.spector2-error {
-  color: var(--spector2-error-color);
+.wgdb-error {
+  color: var(--wgdb-error-color);
 }
 
-.spector2 label {
+.wgdb label {
   /* display: inline-flex; this breaks the buffer view */
   align-items: center;
   white-space: nowrap;
 }
 
-.spector2 label+label,
-.spector2 label+select,
-.spector2 select+label,
-.spector2 select+select {
+.wgdb label+label,
+.wgdb label+select,
+.wgdb select+label,
+.wgdb select+select {
   margin-left: 1.0em;
 }
 
-.spector2 summary {
+.wgdb summary {
   cursor: pointer;
 }
 
-.spector2 summary::marker {
-  color: var(--spector2-soft-color);
+.wgdb summary::marker {
+  color: var(--wgdb-soft-color);
   opacity: 50%;
 }
 
-.spector2-top-separator {
-  border-top: 2px solid var(--spector2-table-cell-border-color);
+.wgdb-top-separator {
+  border-top: 2px solid var(--wgdb-table-cell-border-color);
   padding-top: 4px;
   width: 100%;
 }
 
-.spector2-full-size {
+.wgdb-full-size {
   position: absolute;
   left: 0;
   top: 0;

@@ -5,9 +5,9 @@ import { ValueObject } from '../../../components/Value/Value';
 
 export default function TextureVis({ data }: { data: ReplayTexture }) {
     return (
-        <div className="spector2-vis">
+        <div className="wgdb-vis">
             <ValueObject data={data} />
-            <div className="spector2-top-separator"></div>
+            <div className="wgdb-top-separator"></div>
             <TextureLevelViewer key={data.replayObjectKey} texture={data} />
         </div>
     );

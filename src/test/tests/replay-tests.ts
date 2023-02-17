@@ -1,5 +1,5 @@
 import { assert } from 'chai';
-import { spector2 as capture, requestUnwrappedAdapter } from '../../capture';
+import { tracer as capture, requestUnwrappedAdapter } from '../../capture';
 import { loadReplay, ReplayTexture } from '../../replay';
 import { getPathForLastStep } from '../../ui/lib/replay-utils';
 

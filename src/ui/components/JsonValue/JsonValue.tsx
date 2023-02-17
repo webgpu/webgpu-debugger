@@ -55,9 +55,9 @@ interface JsonValueObjectValueProps {
 
 function JsonValueObjectValueBasic({ propName, value, childDepth, specialProperties }: JsonValueObjectValueProps) {
     return (
-        <div className="spector2-jsonvalue-key-value">
-            <div className="spector2-jsonvalue-key">{propName}:</div>
-            <div className="spector2-jsonvalue-value">
+        <div className="wgdb-jsonvalue-key-value">
+            <div className="wgdb-jsonvalue-key">{propName}:</div>
+            <div className="wgdb-jsonvalue-value">
                 <JsonValueProperty component={specialProperties[propName]} depth={childDepth} data={value} />,
             </div>
         </div>
@@ -74,7 +74,7 @@ function JsonValueObjectValueObject({ propName, value, childDepth, specialProper
                 e.stopPropagation();
                 setOpen((e.target as HTMLDetailsElement).open);
             }}
-            className="spector2-jsonvalue-key-value-expandable"
+            className="wgdb-jsonvalue-key-value-expandable"
         >
             <summary>
                 {propName}: {objectHasKeys ? (open ? `{` : `{...},`) : `{},`}
@@ -82,10 +82,10 @@ function JsonValueObjectValueObject({ propName, value, childDepth, specialProper
 
             {objectHasKeys && (
                 <div style={{ display: open ? '' : 'none' }}>
-                    <div className="spector2-jsonvalue-key-value-expandable-value">
+                    <div className="wgdb-jsonvalue-key-value-expandable-value">
                         <JsonValueProperty component={specialProperties[propName]} depth={childDepth} data={value} />
                     </div>
-                    <div className="spector2-jsonvalue-close-symbol">{'},'}</div>
+                    <div className="wgdb-jsonvalue-close-symbol">{'},'}</div>
                 </div>
             )}
         </details>
@@ -102,7 +102,7 @@ function JsonValueObjectValueArray({ propName, value, childDepth }: JsonValueObj
                 e.stopPropagation();
                 setOpen((e.target as HTMLDetailsElement).open);
             }}
-            className="spector2-jsonvalue-key-value-expandable"
+            className="wgdb-jsonvalue-key-value-expandable"
         >
             <summary>
                 {propName}: {arrayHasElements ? (open ? `[` : `[...],`) : `[],`}
@@ -110,10 +110,10 @@ function JsonValueObjectValueArray({ propName, value, childDepth }: JsonValueObj
 
             {arrayHasElements && (
                 <div style={{ display: open ? '' : 'none' }}>
-                    <div className="spector2-jsonvalue-key-value-expandable-value">
+                    <div className="wgdb-jsonvalue-key-value-expandable-value">
                         <JsonValueArray depth={childDepth} data={value} />
                     </div>
-                    <div className="spector2-jsonvalue-close-symbol">{'],'}</div>
+                    <div className="wgdb-jsonvalue-close-symbol">{'],'}</div>
                 </div>
             )}
         </details>
@@ -164,7 +164,7 @@ export function JsonValueObject({ depth, data }: { depth?: number; data: Record<
     const ctor = Object.getPrototypeOf(data).constructor;
     const specialProperties = getSpecialPropertiesForClass(ctor);
     return (
-        <div className={`spector2-value-object spector2-value-depth${depth}`}>
+        <div className={`wgdb-value-object wgdb-value-depth${depth}`}>
             {Object.entries(data).map(([key, value], ndx) => (
                 <JsonValueObjectValue
                     key={`e${childDepth}-${ndx}`}
@@ -185,8 +185,8 @@ interface JsonValueArrayValueProps {
 
 function JsonValueArrayValueBasic({ value, childDepth }: JsonValueArrayValueProps) {
     return (
-        <div className="spector2-jsonvalue-key-value">
-            <div className="spector2-jsonvalue-value">
+        <div className="wgdb-jsonvalue-key-value">
+            <div className="wgdb-jsonvalue-value">
                 <JsonValue depth={childDepth} data={value} />,
             </div>
         </div>
@@ -203,16 +203,16 @@ function JsonValueArrayValueObject({ value, childDepth }: JsonValueArrayValuePro
                 e.stopPropagation();
                 setOpen((e.target as HTMLDetailsElement).open);
             }}
-            className="spector2-jsonvalue-key-value-expandable"
+            className="wgdb-jsonvalue-key-value-expandable"
         >
             <summary>{objectHasKeys ? (open ? `{` : `{...},`) : `{},`}</summary>
 
             {objectHasKeys && (
                 <div style={{ display: open ? '' : 'none' }}>
-                    <div className="spector2-jsonvalue-key-value-expandable-value">
+                    <div className="wgdb-jsonvalue-key-value-expandable-value">
                         <JsonValue depth={childDepth} data={value} />
                     </div>
-                    <div className="spector2-jsonvalue-close-symbol">{'},'}</div>
+                    <div className="wgdb-jsonvalue-close-symbol">{'},'}</div>
                 </div>
             )}
         </details>
@@ -229,16 +229,16 @@ function JsonValueArrayValueArray({ value, childDepth }: JsonValueArrayValueProp
                 e.stopPropagation();
                 setOpen((e.target as HTMLDetailsElement).open);
             }}
-            className="spector2-jsonvalue-key-value-expandable"
+            className="wgdb-jsonvalue-key-value-expandable"
         >
             <summary>{arrayHasElements ? (open ? `[` : `[...],`) : `[],`}</summary>
 
             {arrayHasElements && (
                 <div style={{ display: open ? '' : 'none' }}>
-                    <div className="spector2-jsonvalue-key-value-expandable-value">
+                    <div className="wgdb-jsonvalue-key-value-expandable-value">
                         <JsonValueArray depth={childDepth} data={value} />
                     </div>
-                    <div className="spector2-jsonvalue-close-symbol">{'],'}</div>
+                    <div className="wgdb-jsonvalue-close-symbol">{'],'}</div>
                 </div>
             )}
         </details>
@@ -263,7 +263,7 @@ function JsonValueArrayValue({ value, childDepth }: { value: any; childDepth: nu
 function JsonValueArray({ depth, data }: { depth?: number; data: any[] }) {
     const childDepth = (depth || 0) + 1;
     return (
-        <div className={`spector2-value-array spector2-value-depth${depth}`}>
+        <div className={`wgdb-value-array wgdb-value-depth${depth}`}>
             <div>
                 {data.map((value, ndx) => (
                     <JsonValueArrayValue key={`a${childDepth}-${ndx}`} value={value} childDepth={childDepth} />
@@ -275,19 +275,19 @@ function JsonValueArray({ depth, data }: { depth?: number; data: any[] }) {
 
 export default function JsonValue({ depth, data }: { depth?: number; data: any }) {
     if (data === undefined) {
-        return <div className="spector2-value-undefined">undefined</div>;
+        return <div className="wgdb-value-undefined">undefined</div>;
     } else if (data === null) {
-        return <div className="spector2-value-null">null</div>;
+        return <div className="wgdb-value-null">null</div>;
     } else if (typeof data === 'boolean') {
-        return <div className="spector2-value-boolean">{data ? 'true' : 'false'}</div>;
+        return <div className="wgdb-value-boolean">{data ? 'true' : 'false'}</div>;
     } else if (typeof data === 'number') {
         return <ValueNumber data={data} />;
     } else if (typeof data === 'string') {
-        return <div className="spector2-value-string">&quot;{data}&quot;</div>;
+        return <div className="wgdb-value-string">&quot;{data}&quot;</div>;
     } else if (Array.isArray(data)) {
         return <JsonValueArray depth={depth} data={data} />;
     } else if (typeof data === 'function') {
-        return <div className="spector2-value-function">{data.name}</div>;
+        return <div className="wgdb-value-function">{data.name}</div>;
     } else if (typeof data === 'object') {
         if (isBaseObject(data)) {
             return <JsonValueObject depth={depth} data={data} />;

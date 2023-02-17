@@ -1,4 +1,4 @@
-.spector2-debugger {
+.wgdb-debugger {
   position: fixed;
   right: 0;
   top: 0;
@@ -6,35 +6,35 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background-color: var(--spector2-bg-color);
-  color: var(--spector2-color);
+  background-color: var(--wgdb-bg-color);
+  color: var(--wgdb-color);
 }
 
-.spector2-vis {
-  font-size: var(--spector2-font-size);
+.wgdb-vis {
+  font-size: var(--wgdb-font-size);
   height: 100%;
 }
 
-.spector2-panes {
+.wgdb-panes {
   position: relative;
   width: 100%;
   height: 100%;
 }
 
 .flexlayout__layout {
-  --color-text: var(--spector2-color);
-  --color-background: var(--spector2-bg-color);
-  --color-base: var(--spector2-bg-color);
+  --color-text: var(--wgdb-color);
+  --color-background: var(--wgdb-bg-color);
+  --color-base: var(--wgdb-bg-color);
 
   /* tab area color when inactive */
-  --color-1: var(--spector2-tab-bar-bg-color);
+  --color-1: var(--wgdb-tab-bar-bg-color);
   /* spitter color */
-  --color-2: var(--spector2-tab-splitter-bg-color);
+  --color-2: var(--wgdb-tab-splitter-bg-color);
   /*#1a1a1a;*/
   --color-3: green;
   /*#262626;*/
   /* tab color, tab area when inactive */
-  --color-4: var(--spector2-tab-bg-color);
+  --color-4: var(--wgdb-tab-bg-color);
   /*#333333;*/
   --color-5: blue;
   /*#404040;*/

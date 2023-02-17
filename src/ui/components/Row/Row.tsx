@@ -8,5 +8,5 @@ interface Props {
 }
 
 export default function Row({ children, className, expand }: React.PropsWithChildren<Props>) {
-    return <div className={classNames('spector2-row', { 'spector2-row-expand': !!expand }, className)}>{children}</div>;
+    return <div className={classNames('wgdb-row', { 'wgdb-row-expand': !!expand }, className)}>{children}</div>;
 }

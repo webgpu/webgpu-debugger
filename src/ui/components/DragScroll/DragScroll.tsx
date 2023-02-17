@@ -47,7 +47,7 @@ const DragScroll: React.FC<React.PropsWithChildren> = ({ children }) => {
     });
 
     return (
-        <div className="spector2-drag-scroll" ref={elemRef}>
+        <div className="wgdb-drag-scroll" ref={elemRef}>
             {children}
         </div>
     );

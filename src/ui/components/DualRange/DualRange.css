@@ -1,43 +1,43 @@
-.spector2-dualrange {
+.wgdb-dualrange {
   display: flex;
 }
 
-.spector2-dualrange>div {
+.wgdb-dualrange>div {
   flex: 1, 1, auto;
   margin-right: 8px;
 }
 
-.spector2-dualrange-container {
+.wgdb-dualrange-container {
   position: relative;
   width: 150px;
 }
 
-.spector2-dualrange-track,
-.spector2-dualrange-range {
+.wgdb-dualrange-track,
+.wgdb-dualrange-range {
   position: absolute;
   height: 6px;
   border-radius: 4px;
 }
 
-.spector2-dualrange-track {
-  background-color: var(--spector2-bg-color);
-  border: 1px solid var(--spector2-table-cell-border-color);
+.wgdb-dualrange-track {
+  background-color: var(--wgdb-bg-color);
+  border: 1px solid var(--wgdb-table-cell-border-color);
   width: 100%;
   z-index: 1;
 }
 
-.spector2-dualrange-range {
+.wgdb-dualrange-range {
   background-color: #99c8ff;
   z-index: 2;
 }
 
-.spector2-dualrange-thumb,
-.spector2-dualrange-thumb::-webkit-slider-thumb {
+.wgdb-dualrange-thumb,
+.wgdb-dualrange-thumb::-webkit-slider-thumb {
   -webkit-appearance: none;
   -webkit-tap-highlight-color: transparent;
 }
 
-.spector2-dualrange-thumb {
+.wgdb-dualrange-thumb {
   pointer-events: none;
   position: absolute;
   height: 0;
@@ -45,11 +45,11 @@
   z-index: 3;
 }
 
-.spector2-dualrange-thumb.spector2-raised-thumb {
+.wgdb-dualrange-thumb.wgdb-raised-thumb {
   z-index: 4;
 }
 
-.spector2-dualrange-thumb::-webkit-slider-thumb {
+.wgdb-dualrange-thumb::-webkit-slider-thumb {
   background-color: #99c8ff;
   border: none;
   border-radius: 50%;

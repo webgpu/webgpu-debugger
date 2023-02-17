@@ -4,7 +4,7 @@ import { JsonValueObject } from '../../../components/JsonValue/JsonValue';
 
 export default function AdapterVis({ data }: { data: ReplayAdapter }) {
     return (
-        <div className="spector2-vis">
+        <div className="wgdb-vis">
             <JsonValueObject data={data} />
         </div>
     );

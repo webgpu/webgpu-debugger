@@ -47,7 +47,7 @@ function makeVisValue(Class: Function, typeName: string) {
         }
         return (
             <div
-                className={`spector2-value-vis spector-value-${typeName}`}
+                className={`wgdb-value-vis spector-value-${typeName}`}
                 onClick={() => {
                     helper.setObjectView(name, data);
                 }}
@@ -109,32 +109,32 @@ export const canDisplayInline = (v: any) => s_replayClassToComponent.has(Object.
 export type PropertyNameToComponentMap = Record<string, ValueComponent>;
 
 const GPUBufferUsageValue = ({ data }: { data: number }) => {
-    return <div className="spector2-value-bitmask">{gpuBufferUsageToString(data)}</div>;
+    return <div className="wgdb-value-bitmask">{gpuBufferUsageToString(data)}</div>;
 };
 
 const GPUTextureUsageValue = ({ data }: { data: number }) => {
-    return <div className="spector2-value-bitmask">{gpuTextureUsageToString(data)}</div>;
+    return <div className="wgdb-value-bitmask">{gpuTextureUsageToString(data)}</div>;
 };
 
 const GPUAdapterInfoValue = ({ data }: { data: GPUAdapterInfo }) => {
     return (
-        <div className="spector2-jsonvalue-key-value-expandable-value">
+        <div className="wgdb-jsonvalue-key-value-expandable-value">
             {'{'}
-            <div className="spector2-jsonvalue-key-value">
-                <div className="spector2-jsonvalue-key">vendor:</div>
-                <div className="spector2-jsonvalue-value">{data.vendor},</div>
+            <div className="wgdb-jsonvalue-key-value">
+                <div className="wgdb-jsonvalue-key">vendor:</div>
+                <div className="wgdb-jsonvalue-value">{data.vendor},</div>
             </div>
-            <div className="spector2-jsonvalue-key-value">
-                <div className="spector2-jsonvalue-key">architecture:</div>
-                <div className="spector2-jsonvalue-value">{data.architecture},</div>
+            <div className="wgdb-jsonvalue-key-value">
+                <div className="wgdb-jsonvalue-key">architecture:</div>
+                <div className="wgdb-jsonvalue-value">{data.architecture},</div>
             </div>
-            <div className="spector2-jsonvalue-key-value">
-                <div className="spector2-jsonvalue-key">device:</div>
-                <div className="spector2-jsonvalue-value">{data.device},</div>
+            <div className="wgdb-jsonvalue-key-value">
+                <div className="wgdb-jsonvalue-key">device:</div>
+                <div className="wgdb-jsonvalue-value">{data.device},</div>
             </div>
-            <div className="spector2-jsonvalue-key-value">
-                <div className="spector2-jsonvalue-key">description:</div>
-                <div className="spector2-jsonvalue-value">{data.description},</div>
+            <div className="wgdb-jsonvalue-key-value">
+                <div className="wgdb-jsonvalue-key">description:</div>
+                <div className="wgdb-jsonvalue-value">{data.description},</div>
             </div>
             {'}'}
         </div>

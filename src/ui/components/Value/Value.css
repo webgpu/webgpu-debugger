@@ -1,12 +1,12 @@
 /* A value that when clicked will open a pane to view the value */
-.spector2-value-vis {
-  color: var(--spector2-clickable-color);
+.wgdb-value-vis {
+  color: var(--wgdb-clickable-color);
   cursor: pointer;
   font-weight: bold;
   white-space: nowrap;
 }
 
-.spector2-value-key {
+.wgdb-value-key {
   /* make the key column as short as possible */
   width: 1px;
 }

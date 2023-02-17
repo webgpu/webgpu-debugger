@@ -7,5 +7,5 @@ interface Props {
 }
 
 export default function RowHolder({ className, children }: React.PropsWithChildren<Props>) {
-    return <div className={classNames('spector2-row-holder', className)}>{children}</div>;
+    return <div className={classNames('wgdb-row-holder', className)}>{children}</div>;
 }

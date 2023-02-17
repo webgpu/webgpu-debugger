@@ -1,12 +1,12 @@
-.spector2-value-undefined,
-.spector2-value-null {
-  color: var(--spector2-warn-color);
+.wgdb-value-undefined,
+.wgdb-value-null {
+  color: var(--wgdb-warn-color);
 }
 
-.spector2-value-nan {
-  color: var(--spector2-error-color);
+.wgdb-value-nan {
+  color: var(--wgdb-error-color);
 }
 
-.spector2-value-inf {
-  color: var(--spector2-warn-color);
+.wgdb-value-inf {
+  color: var(--wgdb-warn-color);
 }

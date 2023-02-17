@@ -1,14 +1,14 @@
-.spector2-texture-samples-vis {
-  background-color: var(--spector2-bg-color);
+.wgdb-texture-samples-vis {
+  background-color: var(--wgdb-bg-color);
   position: absolute;
   display: block;
-  border: 1px solid var(--spector2-table-cell-border-color);
+  border: 1px solid var(--wgdb-table-cell-border-color);
   border-radius: 3px;
   box-shadow: 2px 2px 5px rgba(0, 0, 0, 50%);
   width: 200px;
   pointer-events: none;
 }
 
-.spector2-texture-samples-color {
+.wgdb-texture-samples-color {
   width: 1.5em;
 }

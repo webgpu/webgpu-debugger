@@ -7,5 +7,5 @@ interface Props {
 }
 
 export default function ColumnHolder({ className, children }: React.PropsWithChildren<Props>) {
-    return <div className={classNames('spector2-column-holder', className)}>{children}</div>;
+    return <div className={classNames('wgdb-column-holder', className)}>{children}</div>;
 }

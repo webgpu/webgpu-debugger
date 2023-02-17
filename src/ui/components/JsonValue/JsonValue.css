@@ -1,20 +1,20 @@
-.spector2-jsonvalue-key {
+.wgdb-jsonvalue-key {
   margin-right: 0.5em;
 }
 
-.spector2-jsonvalue-key-value {
+.wgdb-jsonvalue-key-value {
   display: flex;
   margin-left: 1em;
 }
 
-.spector2-jsonvalue-value {
+.wgdb-jsonvalue-value {
   display: flex;
 }
 
-.spector2-jsonvalue-key-value-expandable-value {
+.wgdb-jsonvalue-key-value-expandable-value {
   margin-left: 1em;
 }
 
-.spector2-jsonvalue-close-symbol {
+.wgdb-jsonvalue-close-symbol {
   margin-left: 1em;
 }

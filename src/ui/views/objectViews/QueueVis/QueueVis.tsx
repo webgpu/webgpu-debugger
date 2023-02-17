@@ -4,7 +4,7 @@ import { JsonValueObject } from '../../../components/JsonValue/JsonValue';
 
 export default function QueueVis({ data }: { data: ReplayQueue }) {
     return (
-        <div className="spector2-vis">
+        <div className="wgdb-vis">
             <JsonValueObject data={data} />
         </div>
     );

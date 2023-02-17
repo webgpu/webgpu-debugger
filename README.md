@@ -1,4 +1,4 @@
-# Spector2
+# webgpu-debugger
 
 WebGPU Debugger
 
@@ -8,8 +8,8 @@ WebGPU Debugger
 * run these commands:
 
   ```bash
-  git clone https://github.com/Kangz/spector2.git
-  cd spector2
+  git clone https://github.com/webgpu/webgpu-debugger.git
+  cd webgpu-debugger
   npm ci
   ```
 
@@ -34,10 +34,10 @@ This builds 3 libraries.
    usage:
    
    ```js
-   import { spector2 } from 'dist/capture.js
+   import { webgpuDebugger } from 'dist/capture.js
    
    ...
-     const trace = await spector2.traceFrame();
+     const trace = await webgpuDebugger.traceFrame();
    ```
 
 2. the `replay` library `dist/replay.js`
@@ -54,18 +54,18 @@ This builds 3 libraries.
    TBD
    ```
    
-3. the 'debugger' in `dist/spector2.js`
+3. the 'debugger' in `dist/webgpu-debugger.js`
 
    usage:
    
    ```js
-   import `dist/spector2.js`;
+   import `dist/webgpu-debugger.js`;
    ```
    
    or
    
    ```html
-   <script src="dist/spector2.js"></script>
+   <script src="dist/webgpu-debugger.js"></script>
    ```
 
 ## Pushing changes

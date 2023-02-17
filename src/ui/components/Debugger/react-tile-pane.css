@@ -12,22 +12,25 @@
   height: 100%;
   justify-content: space-around;
 }
+
 .react-tile-pane-tab {
   width: 100%;
   height: 100%;
 }
+
 .react-tile-pane-tabMoving {
   padding: 0.3em 1em;
   border-radius: 4px;
-  background-color: var(--spector2-tab-moving-bg-color);
+  background-color: var(--wgdb-tab-moving-bg-color);
 }
 
 .react-tile-pane-tabInner {
   height: 100%;
   display: flex;
   align-items: center;
-  background-color: var(--spector2-tab-bar-bg-color);
+  background-color: var(--wgdb-tab-bar-bg-color);
 }
+
 .react-tile-pane-tabInnerOff {
   height: 100%;
   /* not sure where these colors are used
@@ -49,6 +52,7 @@
 .react-tile-pane-tabInnerOff:hover .react-tile-pane-off {
   opacity: 1;
 }
+
 .react-tile-pane-off {
   transition: 233ms;
   flex-grow: 0;
@@ -66,12 +70,13 @@
 
 .react-tile-pane-Bar {
   cursor: ew-resize;
-  background-color: var(--spector2-tab-splitter-bg-color);
+  background-color: var(--wgdb-tab-splitter-bg-color);
   width: 4px;
   height: 4px;
 }
+
 .react-tile-pane-Bar:hover {
-  background: var(--spector2-tab-move-hover-color);
+  background: var(--wgdb-tab-move-hover-color);
   height: 6px;
   width: 6px;
 }
