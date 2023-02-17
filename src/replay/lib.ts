@@ -762,7 +762,7 @@ export class Replay {
 let lastReplayObjectKey = 0;
 const replayObjectKeys = new Map<ReplayObject, number>();
 
-class ReplayObject {
+export class ReplayObject {
     replay: Replay;
     label?: string;
 

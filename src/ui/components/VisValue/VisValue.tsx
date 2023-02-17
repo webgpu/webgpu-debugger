@@ -9,6 +9,7 @@ import {
     ReplayBuffer,
     ReplayCommandBuffer,
     ReplayDevice,
+    ReplayObject,
     ReplayPipelineLayout,
     ReplayQuerySet,
     ReplayQueue,
@@ -22,29 +23,22 @@ import {
 
 import { TileContext } from '../../contexts/TileContext';
 import { UIStateContext } from '../../contexts/UIStateContext';
-import { gpuBufferUsageToString, gpuTextureUsageToString } from '../../lib/webgpu-utils';
+import { gpuBufferUsageToString, gpuExtent3DToShortString, gpuTextureUsageToString } from '../../lib/webgpu-utils';
 
 export type ValueComponent = React.FunctionComponent<any> | React.ComponentClass<any>;
 
-function makeVisValue(Class: Function, typeName: string) {
-    return function VisValue({ data }: { data: any }) {
+function makeVisValue<T extends ReplayObject>(
+    Class: Function,
+    typeName: string,
+    shortInfo: (data: T) => string = () => ''
+) {
+    return function VisValue({ data }: { data: T }) {
         const { helper } = useContext(UIStateContext);
         const { onAddPaneViaDrag } = useContext(TileContext);
 
         const freePaneId = helper.state.freePaneIds[0];
-        let name = `${typeName}${data.label ? `(${data.label})` : ''}`;
-        switch (typeName) {
-            case 'GPUTextureView':
-                if (data.texture.label) {
-                    name += `->(${data.texture.label})`;
-                }
-                break;
-            case 'GPUTexture':
-                if (data.swapChainId) {
-                    name += `:[${data.swapChainId}]`;
-                }
-                break;
-        }
+        const extra = shortInfo(data);
+        const name = `${typeName}${data.label ? `(${data.label})` : ''}${extra ? `[${extra}]` : ''}}`;
         return (
             <div
                 className={`wgdb-value-vis spector-value-${typeName}`}
@@ -64,10 +58,17 @@ function makeVisValue(Class: Function, typeName: string) {
     };
 }
 
+// Note: makeVisValue is just a shortcut to make a unique type for each
+// type of resource. You are free to make a custom type or refactor
+// makeVisValue for more options.
 const AdapterValue = makeVisValue(ReplayAdapter, 'GPUAdapter');
 const BindGroupLayoutValue = makeVisValue(ReplayBindGroupLayout, 'GPUBindGroupLayout');
 const BindGroupValue = makeVisValue(ReplayBindGroup, 'GPUBindGroup');
-const BufferValue = makeVisValue(ReplayBuffer, 'GPUBuffer');
+const BufferValue = makeVisValue(
+    ReplayBuffer,
+    'GPUBuffer',
+    (o: ReplayBuffer) => `s: ${o.size}, usage: ${o.usage.toString(16)}`
+);
 const CommandBufferValue = makeVisValue(ReplayCommandBuffer, 'GPUCommandBuffer');
 const DeviceValue = makeVisValue(ReplayDevice, 'GPUDevice');
 const PipelineLayoutValue = makeVisValue(ReplayPipelineLayout, 'GPUPipelineLayout');
@@ -78,8 +79,15 @@ const RenderRenderPipelineValue = makeVisValue(ReplayRenderPass, 'GPURenderPipel
 const ReplayValue = makeVisValue(Replay, 'Resources');
 const SamplerValue = makeVisValue(ReplaySampler, 'GPUSampler');
 const ShaderModuleValue = makeVisValue(ReplayShaderModule, 'GPUShaderModule');
-const TextureValue = makeVisValue(ReplayTexture, 'GPUTexture');
-const TextureViewValue = makeVisValue(ReplayTextureView, 'GPUTextureView');
+const TextureValue = makeVisValue(
+    ReplayTexture,
+    'GPUTexture',
+    (o: ReplayTexture) =>
+        `${o.swapChainId ? `swp:${o.swapChainId},` : ''}sz:${gpuExtent3DToShortString(o.size)},${o.format}`
+);
+const TextureViewValue = makeVisValue(ReplayTextureView, 'GPUTextureView', (o: ReplayTextureView) =>
+    o.texture.label ? `->(${o.texture.label}` : ''
+);
 
 const s_replayClassToComponent = new Map<Function, ValueComponent>([
     [Replay, ReplayValue],
