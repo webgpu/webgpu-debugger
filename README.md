@@ -1,6 +1,6 @@
 # webgpu-debugger
 
-WebGPU Debugger
+# Note: This is still **ALPHA** code. See issues and other random TODO comments for things that need work
 
 ## Development
 
