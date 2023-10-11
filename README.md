@@ -34,10 +34,10 @@ This builds 3 libraries.
    usage:
    
    ```js
-   import { webgpuDebugger } from 'dist/capture.js
+   import { WebGPUDebugger } from 'dist/capture.js
    
    ...
-     const trace = await webgpuDebugger.traceFrame();
+     const trace = await WebGPUDebugger.traceFrame();
    ```
 
 2. the `replay` library `dist/replay.js`
