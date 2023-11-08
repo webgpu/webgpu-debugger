@@ -32,7 +32,7 @@ export default function ShaderModuleVis({ data }: { data: ReplayShaderModule }) 
 
     return (
         <div className="wgdb-vis">
-            <JsonValueObject data={desc.hints || {}} />
+            <JsonValueObject data={desc.compilationHints || {}} />
             <Checkbox label="raw" checked={raw} onChange={setRaw} />
             <pre>{optionallyRemoveLeadingWhitespace(!raw, desc.code)}</pre>
         </div>

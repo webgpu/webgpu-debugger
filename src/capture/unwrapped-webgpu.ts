@@ -10,7 +10,7 @@ const mapClassToCreationFunctionNames = new Map<Function, Set<string>>();
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 let getUnwrappedDevice = (_: GPUDevice): GPUDevice | undefined => undefined;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-let setUnwrappedDevice = (wrapped: GPUDevice, unwrapped: GPUDevice) => {};
+let setUnwrappedDevice = (wrapped: GPUDevice, unwrapped: GPUDevice) => { };
 
 if (typeof GPUDevice !== 'undefined') {
     if (!GPUDevice.prototype.createBuffer.toString().includes('native')) {
@@ -29,6 +29,8 @@ if (typeof GPUDevice !== 'undefined') {
         GPUQueue,
         GPURenderPassEncoder,
         GPURenderPipeline,
+        GPUComputePipeline,
+        GPUComputePassEncoder,
         GPUTexture,
     ];
 

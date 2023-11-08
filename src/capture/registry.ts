@@ -95,7 +95,13 @@ export interface TraceObject {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface TraceAdapter extends TraceObject {}
+export interface TraceAdapter extends TraceObject { }
+export interface TraceAdapterInfo extends TraceObject {
+    vendor: string;
+    architecture: string;
+    device: string;
+    description: string;
+}
 
 export interface TraceBindGroupEntry {
     binding: number;
@@ -153,7 +159,8 @@ export interface TraceExplicitBindGroupLayout extends TraceObject {
 
 export interface TraceImplicitBindGroupLayout extends TraceObject {
     deviceSerial: number;
-    renderPipelineSerial: number;
+    renderPipelineSerial?: number;
+    computePipelineSerial?: number;
     groupIndex: number;
 }
 
@@ -232,10 +239,10 @@ export interface TraceRenderPassColorAttachment {
     storeOp: GPUStoreOp;
 }
 
-export interface TraceRenderPassTimestampWrite {
+export interface TraceRenderPassTimestampWrites {
     querySetSerial: number;
-    queryIndex: number;
-    location: GPURenderPassTimestampLocation;
+    beginningOfPassWriteIndex?: number;
+    endOfPassWriteIndex?: number;
 }
 
 export interface TraceRenderPassDepthStencilAttachment {
@@ -262,6 +269,8 @@ export interface TraceCommandBufferCommandBeginRenderPass {
     name: 'beginRenderPass';
     args: TraceCommandBeginRenderPassArgs;
 }
+
+export interface TraceCommandBeginComputePassArgs { }
 
 export interface TraceCommandBufferCommandDraw {
     name: 'draw';
@@ -346,6 +355,22 @@ export interface TraceCommandBufferCommandEndPass {
     name: 'endPass';
 }
 
+export interface TraceCommandBufferCommandBeginComputePass {
+    name: 'beginComputePass';
+    args: TraceCommandBeginComputePassArgs;
+}
+
+export interface TraceCommandDispatchWorkgroupsArgs {
+    workgroupCountX: number;
+    workgroupCountY: number;
+    workgroupCountZ: number;
+}
+
+export interface TraceCommandBufferCommandDispatchWorkgroups {
+    name: 'dispatchWorkgroups';
+    args: TraceCommandDispatchWorkgroupsArgs;
+}
+
 export type TraceCommandBufferCommand =
     | TraceCommandBufferCommandCopyBufferToBuffer
     | TraceCommandBufferCommandCopyBufferToTexture
@@ -362,7 +387,9 @@ export type TraceCommandBufferCommand =
     | TraceCommandBufferCommandSetVertexBuffer
     | TraceCommandBufferCommandSetScissorRect
     | TraceCommandBufferCommandSetViewport
-    | TraceCommandBufferCommandEndPass;
+    | TraceCommandBufferCommandEndPass
+    | TraceCommandBufferCommandBeginComputePass
+    | TraceCommandBufferCommandDispatchWorkgroups;
 
 export interface TraceDevice extends TraceObject {
     adapterSerial: number;
@@ -403,14 +430,14 @@ export interface TraceSampler extends TraceSamplerState {
 
 export interface TraceVertexState {
     moduleSerial: number;
-    entryPoint: string;
+    entryPoint?: string;
     constants: Record<string, number>;
     buffers: GPUVertexBufferLayout[];
 }
 
 export interface TraceFragmentState {
     moduleSerial: number;
-    entryPoint: string;
+    entryPoint?: string;
     constants: Record<string, number>;
     targets: GPUColorTargetState[];
 }
@@ -424,6 +451,19 @@ export interface TraceRenderPipeline extends TraceObject {
     depthStencil?: GPUDepthStencilState;
     multisample: GPUMultisampleState;
     fragment?: TraceFragmentState;
+}
+
+export interface TraceComputeState {
+    moduleSerial: number;
+    entryPoint?: string;
+    constants: Record<string, number>;
+}
+
+export interface TraceComputePipeline extends TraceObject {
+    deviceSerial: number;
+    layoutSerial?: number;
+    layout?: string;
+    compute: TraceComputeState;
 }
 
 export interface TraceShaderModule extends TraceObject {
@@ -565,6 +605,8 @@ export interface Trace {
         samplers: Record<number, TraceSampler>;
         renderPassEncoders: Record<number, any>; // TODO: Add correct type
         renderPipelines: Record<number, TraceRenderPipeline>;
+        computePassEncoders: Record<number, any>;
+        computePipelines: Record<number, TraceComputePipeline>;
         shaderModules: Record<number, TraceShaderModule>;
         textures: Record<number, TraceTexture>;
         textureViews: Record<number, TraceTextureView>;
@@ -591,6 +633,8 @@ export class WebGPUDebugger {
     queues = new ObjectRegistry<GPUQueue, QueueState>();
     renderPassEncoders = new ObjectRegistry<GPURenderPassEncoder, RenderPassEncoderState>();
     renderPipelines = new ObjectRegistry<GPURenderPipeline, RenderPipelineState>();
+    computePassEncoders = new ObjectRegistry<GPUComputePassEncoder, ComputePassEncoderState>();
+    computePipelines = new ObjectRegistry<GPUComputePipeline, ComputePipelineState>();
     samplers = new ObjectRegistry<GPUSampler, SamplerState>();
     shaderModules = new ObjectRegistry<GPUShaderModule, ShaderModuleState>();
     textures = new ObjectRegistry<GPUTexture, TextureState>();
@@ -605,6 +649,8 @@ export class WebGPUDebugger {
     queueProto: Proto;
     renderPassEncoderProto: Proto;
     renderPipelineProto: Proto;
+    computePassEncoderProto: Proto;
+    computePipelineProto: Proto;
     textureProto: Proto;
 
     canvasGetContext: Function;
@@ -627,6 +673,8 @@ export class WebGPUDebugger {
             const originalProto: Record<string, Function> = {};
 
             for (const name in c.prototype) {
+                console.log(name);
+
                 const props = Object.getOwnPropertyDescriptor(c.prototype, name);
                 if (!props?.writable || typeof c.prototype[name] !== 'function') {
                     continue;
@@ -664,6 +712,8 @@ export class WebGPUDebugger {
         this.queueProto = replacePrototypeOf(GPUQueue, this.queues);
         this.renderPassEncoderProto = replacePrototypeOf(GPURenderPassEncoder, this.renderPassEncoders);
         this.renderPipelineProto = replacePrototypeOf(GPURenderPipeline, this.renderPipelines);
+        this.computePassEncoderProto = replacePrototypeOf(GPUComputePassEncoder, this.computePassEncoders);
+        this.computePipelineProto = replacePrototypeOf(GPUComputePipeline, this.computePipelines);
         // GPUSampler doesn't have methods except the label setter?
         // TODO shader module prototype
         this.textureProto = replacePrototypeOf(GPUTexture, this.textures);
@@ -697,6 +747,7 @@ export class WebGPUDebugger {
                 { Class: GPUQueue, proto: this.queueProto, wrappers: {} },
                 { Class: GPURenderPassEncoder, proto: this.renderPassEncoderProto, wrappers: {} },
                 { Class: GPURenderPipeline, proto: this.renderPipelineProto, wrappers: {} },
+                { Class: GPUComputePipeline, proto: this.computePipelineProto, wrappers: {} },
                 { Class: GPUTexture, proto: this.textureProto, wrappers: {} },
             ],
             getContextWrapper: HTMLCanvasElement.prototype.getContext,
@@ -824,6 +875,8 @@ export class WebGPUDebugger {
                 samplers: serializeAllObjects(this.samplers),
                 renderPassEncoders: {},
                 renderPipelines: serializeAllObjects(this.renderPipelines),
+                computePassEncoders: {},
+                computePipelines: serializeAllObjects(this.computePipelines),
                 shaderModules: serializeAllObjects(this.shaderModules),
                 textures: serializeAsyncAllObjects(this.textures, this.pendingTraceOperations),
                 textureViews: serializeAllObjects(this.textureViews),
@@ -938,6 +991,12 @@ class AdapterState extends BaseState<GPUAdapter> {
         return device;
     }
 
+    async requestAdapterInfo() {
+        const info = await tracer.adapterProto.requestAdapterInfo.call(this.webgpuObject);
+
+        return info;
+    }
+
     destroy() {
         // TODO: handle this
     }
@@ -1012,7 +1071,7 @@ class BindGroupState extends BaseState<GPUBindGroup> {
 
 interface ImplicitBindGroupLayoutDescriptor {
     implicit: boolean;
-    renderPipeline: RenderPipelineState;
+    pipeline: RenderPipelineState | ComputePipelineState;
     groupIndex: number;
 }
 
@@ -1020,7 +1079,7 @@ class BindGroupLayoutState extends BaseState<GPUBindGroupLayout> {
     device: DeviceState;
     implicit?: boolean;
     entries?: TraceExplicitBindGroupEntry[];
-    parentRenderPipeline: any;
+    parentPipeline: any;
     pipelineGroupIndex: any;
 
     constructor(device: DeviceState, desc: GPUBindGroupLayoutDescriptor | ImplicitBindGroupLayoutDescriptor) {
@@ -1034,7 +1093,7 @@ class BindGroupLayoutState extends BaseState<GPUBindGroupLayout> {
         // different parameters. Should this be refactored?
         this.implicit = implicitDesc.implicit;
         if (this.implicit) {
-            this.parentRenderPipeline = implicitDesc.renderPipeline;
+            this.parentPipeline = implicitDesc.pipeline;
             this.pipelineGroupIndex = implicitDesc.groupIndex;
             return;
         }
@@ -1078,7 +1137,8 @@ class BindGroupLayoutState extends BaseState<GPUBindGroupLayout> {
         if (this.implicit) {
             const b: TraceImplicitBindGroupLayout = {
                 deviceSerial: this.device.traceSerial,
-                renderPipelineSerial: this.parentRenderPipeline.traceSerial,
+                renderPipelineSerial: this.parentPipeline instanceof RenderPipelineState ? this.parentPipeline.traceSerial : undefined,
+                computePipelineSerial: this.parentPipeline instanceof ComputePipelineState ? this.parentPipeline.traceSerial : undefined,
                 groupIndex: this.pipelineGroupIndex,
             };
             return b;
@@ -1250,6 +1310,12 @@ class CommandEncoderState extends BaseState<GPUCommandEncoder> {
     beginRenderPass(desc: GPURenderPassDescriptor) {
         const pass = tracer.commandEncoderProto.beginRenderPass.call(this.webgpuObject, desc);
         tracer.registerObjectIn('renderPassEncoders', pass, new RenderPassEncoderState(this, desc));
+        return pass;
+    }
+
+    beginComputePass(desc: GPUComputePassDescriptor) {
+        const pass = tracer.commandEncoderProto.beginComputePass.call(this.webgpuObject, desc);
+        tracer.registerObjectIn('computePassEncoders', pass, new ComputePassEncoderState(this, desc));
         return pass;
     }
 
@@ -1518,6 +1584,12 @@ class DeviceState extends BaseState<GPUDevice> {
         return pipeline;
     }
 
+    createComputePipeline(desc: GPUComputePipelineDescriptor) {
+        const pipeline = tracer.deviceProto.createComputePipeline.call(this.webgpuObject, desc);
+        tracer.registerObjectIn('computePipelines', pipeline, new ComputePipelineState(this, desc));
+        return pipeline;
+    }
+
     createSampler(desc: GPUSamplerDescriptor) {
         const module = tracer.deviceProto.createSampler.call(this.webgpuObject, desc);
         tracer.registerObjectIn('samplers', module, new SamplerState(this, desc ?? {}));
@@ -1722,6 +1794,18 @@ class RenderPassEncoderState extends BaseState<GPURenderPassEncoder> {
     constructor(encoder: CommandEncoderState, desc: GPURenderPassDescriptor) {
         super(desc);
         this.encoder = encoder;
+
+        let timestampWrites;
+        if (desc.timestampWrites) {
+            this.encoder.reference(desc.timestampWrites.querySet);
+
+            timestampWrites = {
+                querySetSerial: tracer.querySets.get(desc.timestampWrites.querySet)!.traceSerial,
+                beginningOfPassWriteIndex: desc.timestampWrites.beginningOfPassWriteIndex,
+                endOfPassWriteIndex: desc.timestampWrites.endOfPassWriteIndex,
+            };
+        }
+
         const serializeDesc: TraceCommandBeginRenderPassArgs = {
             colorAttachments: (desc.colorAttachments as GPURenderPassColorAttachment[]).map(a => {
                 this.encoder.reference(a.view);
@@ -1946,7 +2030,7 @@ class RenderPipelineState extends BaseState<GPURenderPipeline> {
     layout: GPUPipelineLayout | string;
     vertex: {
         module: ShaderModuleState;
-        entryPoint: string;
+        entryPoint?: string;
         constants: Record<string, number>;
         buffers: GPUVertexBufferLayout[];
     };
@@ -1955,7 +2039,7 @@ class RenderPipelineState extends BaseState<GPURenderPipeline> {
     multisample: GPUMultisampleState;
     fragment?: {
         module: ShaderModuleState;
-        entryPoint: string;
+        entryPoint?: string;
         constants: Record<string, number>;
         targets: GPUColorTargetState[];
     };
@@ -2112,7 +2196,145 @@ class RenderPipelineState extends BaseState<GPURenderPipeline> {
             bgl,
             new BindGroupLayoutState(this.device, {
                 implicit: true,
-                renderPipeline: this,
+                pipeline: this,
+                groupIndex,
+            })
+        );
+        return bgl;
+    }
+}
+
+class ComputePassEncoderState extends BaseState<GPUComputePassEncoder> {
+    encoder: CommandEncoderState;
+
+    constructor(encoder: CommandEncoderState, desc: GPUComputePassDescriptor) {
+        super(desc);
+        this.encoder = encoder;
+
+        const serializeDesc: TraceCommandBeginComputePassArgs = {};
+
+        this.encoder.addCommand({
+            name: 'beginComputePass',
+            args: serializeDesc,
+        });
+    }
+
+    serialize() {
+        return {};
+    }
+
+    popDebugGroup() {
+        tracer.computePassEncoderProto.popDebugGroup.call(this.webgpuObject);
+        this.encoder.addCommand({ name: 'popDebugGroup' });
+    }
+
+    pushDebugGroup(groupLabel: string) {
+        tracer.computePassEncoderProto.pushDebugGroup.call(this.webgpuObject, groupLabel);
+        this.encoder.addCommand({
+            name: 'pushDebugGroup',
+            args: {
+                groupLabel,
+            },
+        });
+    }
+
+    dispatchWorkgroups(workgroupCountX: number, workgroupCountY: number, workgroupCountZ: number) {
+        tracer.computePassEncoderProto.dispatchWorkgroups.call(this.webgpuObject, workgroupCountX, workgroupCountY, workgroupCountZ);
+
+        this.encoder.addCommand({
+            name: 'dispatchWorkgroups',
+            args: {
+                workgroupCountX,
+                workgroupCountY,
+                workgroupCountZ
+            },
+        });
+    }
+
+    setBindGroup(index: number, bindGroup: GPUBindGroup, dynamicOffsets?: number[]) {
+        if (dynamicOffsets !== undefined) {
+            console.assert(false, "Don't know how to handle dynamic bindgroups yet.");
+        }
+
+        tracer.computePassEncoderProto.setBindGroup.call(this.webgpuObject, index, bindGroup);
+        this.encoder.reference(bindGroup);
+        this.encoder.addCommand({
+            name: 'setBindGroup',
+            args: {
+                index,
+                bindGroupSerial: tracer.bindGroups.get(bindGroup)!.traceSerial,
+                dynamicOffsets: window.structuredClone(dynamicOffsets),
+            },
+        });
+    }
+
+    setPipeline(pipeline: GPUComputePipeline) {
+        tracer.computePassEncoderProto.setPipeline.call(this.webgpuObject, pipeline);
+        this.encoder.reference(pipeline);
+        this.encoder.addCommand({
+            name: 'setPipeline',
+            args: {
+                pipelineSerial: tracer.computePipelines.get(pipeline)!.traceSerial,
+            },
+        });
+    }
+
+    end() {
+        tracer.computePassEncoderProto.end.call(this.webgpuObject);
+        this.encoder.addCommand({ name: 'endPass' });
+    }
+}
+
+class ComputePipelineState extends BaseState<GPUComputePipeline> {
+    device: DeviceState;
+    layout: GPUPipelineLayout | string;
+    compute: {
+        module: ShaderModuleState;
+        entryPoint?: string;
+        constants: Record<string, number>;
+    };
+
+    constructor(device: DeviceState, desc: GPUComputePipelineDescriptor) {
+        super(desc);
+
+        this.device = device;
+        this.layout = desc.layout;
+
+        this.compute = {
+            module: tracer.shaderModules.get(desc.compute.module)!,
+            entryPoint: desc.compute.entryPoint,
+            constants: { ...desc.compute.constants },
+        };
+    }
+
+    serialize(): TraceComputePipeline {
+        const { layout } = this;
+        const result: TraceComputePipeline = {
+            deviceSerial: this.device.traceSerial,
+            compute: {
+                moduleSerial: this.compute.module.traceSerial,
+                entryPoint: this.compute.entryPoint,
+                constants: this.compute.constants,
+            },
+        };
+
+        if (layout === 'auto') {
+            result.layout = 'auto';
+        } else {
+            result.layoutSerial = tracer.pipelineLayouts.get(layout as GPUPipelineLayout)!.traceSerial;
+        }
+
+        return result;
+    }
+
+    getBindGroupLayout(groupIndex: number) {
+        const bgl = tracer.computePipelineProto.getBindGroupLayout.call(this.webgpuObject, groupIndex);
+        tracer.registerObjectIn(
+            'bindGroupLayouts',
+            bgl,
+            new BindGroupLayoutState(this.device, {
+                implicit: true,
+                pipeline: this,
                 groupIndex,
             })
         );
@@ -2231,6 +2453,7 @@ export const kTextureFormatInfo: Record<GPUTextureFormat, TextureFormatInfo> = {
     rgb10a2unorm: c114,
     rg11b10ufloat: c114,
     rgb9e5ufloat: c114,
+    rgb10a2uint: c114,
 
     stencil8: { type: 'stencil', blockByteSize: 1 },
     depth16unorm: { type: 'depth', blockWidth: 1, blockHeight: 1, blockByteSize: 2 },

@@ -10,6 +10,7 @@ import {
     TraceBufferUpdate,
     TraceCommandBuffer,
     TraceCommandBufferCommand,
+    TraceComputePipeline,
     TraceData,
     TraceDevice,
     TraceExplicitBindGroupLayout,
@@ -101,6 +102,7 @@ export interface ReplayCommandBufferCommandCopyTextureToBuffer {
 
 export interface ReplayBindGroupLayoutDescriptor extends GPUBindGroupLayoutDescriptor {
     renderPipelineSerial?: number;
+    computePipelineSerial?: number;
     groupIndex?: number;
 }
 
@@ -118,7 +120,8 @@ export interface ReplayRenderPassTimestampWrite {
     querySet: GPUQuerySet;
     querySetState: ReplayQuerySet;
     queryIndex: number;
-    location: GPURenderPassTimestampLocation;
+    beginningOfPassWriteIndex: number;
+    endOfPassWriteIndex: number;
 }
 
 export interface ReplayRenderPassDepthStencilAttachment {
@@ -148,6 +151,11 @@ export interface ReplayCommandBeginRenderPassArgs {
 export interface ReplayCommandBufferCommandRenderPass {
     name: 'renderPass';
     renderPass: ReplayRenderPass;
+}
+
+export interface ReplayCommandBufferCommandComputePass {
+    name: 'computePass';
+    computePass: ReplayComputePass;
 }
 
 export interface ReplayCommandBufferCommandBeginRenderPass {
@@ -213,7 +221,7 @@ export interface ReplayCommandBufferCommandSetIndexBuffer {
 export interface ReplayCommandBufferCommandSetPipeline {
     name: 'setPipeline';
     args: {
-        pipeline: ReplayRenderPipeline;
+        pipeline: ReplayRenderPipeline | ReplayComputePipeline;
     };
 }
 
@@ -249,6 +257,25 @@ export interface ReplayCommandBufferCommandSetViewport {
     };
 }
 
+export interface ReplayCommandBeginComputePassArgs {
+}
+
+export interface ReplayCommandBufferCommandBeginComputePass {
+    name: 'beginComputePass';
+    args: ReplayCommandBeginComputePassArgs;
+}
+
+export interface ReplayCommandDispatchWorkgroupsArgs {
+    workgroupCountX: number;
+    workgroupCountY: number;
+    workgroupCountZ: number;
+}
+
+export interface ReplayCommandBufferCommandDispatchWorkgroups {
+    name: 'dispatchWorkgroups';
+    args: ReplayCommandDispatchWorkgroupsArgs;
+}
+
 export type ReplayCommandBufferCommand =
     | ReplayCommandBufferCommandCopyBufferToBuffer
     | ReplayCommandBufferCommandCopyBufferToTexture
@@ -266,7 +293,10 @@ export type ReplayCommandBufferCommand =
     | ReplayCommandBufferCommandSetVertexBuffer
     | ReplayCommandBufferCommandSetScissorRect
     | ReplayCommandBufferCommandSetViewport
-    | ReplayCommandBufferCommandEndPass;
+    | ReplayCommandBufferCommandEndPass
+    | ReplayCommandBufferCommandComputePass
+    | ReplayCommandBufferCommandBeginComputePass
+    | ReplayCommandBufferCommandDispatchWorkgroups;
 
 export interface ReplayCommandSubmit {
     name: 'queueSubmit';
@@ -392,6 +422,11 @@ interface ReplayStateBeginRenderPass {
     indexBuffer?: ReplayStateBuffer;
 }
 
+interface ReplayStateBeginComputePass {
+    pipeline?: ReplayComputePipeline;
+    bindGroups: ReplayStateBindGroup[];
+}
+
 export class Replay {
     commands: ReplayQueueCommand[] = [];
     data: Record<number, Uint8Array> = {};
@@ -406,6 +441,7 @@ export class Replay {
     pipelineLayouts: Record<number, ReplayPipelineLayout> = {};
     shaderModules: Record<number, ReplayShaderModule> = {};
     renderPipelines: Record<number, ReplayRenderPipeline> = {};
+    computePipelines: Record<number, ReplayComputePipeline> = {};
     buffers: Record<number, ReplayBuffer> = {};
     samplers: Record<number, ReplaySampler> = {};
     textures: Record<number, ReplayTexture> = {};
@@ -421,6 +457,7 @@ export class Replay {
     pipelineLayoutsToReplayMap = new Map<GPUPipelineLayout, ReplayPipelineLayout>();
     shaderModulesToReplayMap = new Map<GPUShaderModule, ReplayShaderModule>();
     renderPipelinesToReplayMap = new Map<GPURenderPipeline, ReplayRenderPipeline>();
+    computePipelinesToReplayMap = new Map<GPUComputePipeline, ReplayComputePipeline>();
     buffersToReplayMap = new Map<GPUBuffer, ReplayBuffer>();
     samplersToReplayMap = new Map<GPUSampler, ReplaySampler>();
     texturesToReplayMap = new Map<GPUTexture, ReplayTexture>();
@@ -429,7 +466,7 @@ export class Replay {
     bindGroupsToReplayMap = new Map<GPUBindGroup, ReplayBindGroup>();
     commandBuffersToReplayMap = new Map<GPUCommandBuffer, ReplayCommandBuffer>();
 
-    constructor() {}
+    constructor() { }
 
     async load(trace: Trace) {
         async function recreateObjectsAsync<GPUType, ReplayType extends ReplayAsyncType<GPUType>, TraceType>(
@@ -521,6 +558,12 @@ export class Replay {
             ReplayRenderPipeline,
             trace.objects.renderPipelines
         );
+        [this.computePipelines, this.computePipelinesToReplayMap] = await recreateObjectsAsync(
+            this,
+            ReplayComputePipeline,
+            trace.objects.computePipelines
+        );
+
         // Initialize the implicit bind group layouts now that all pipelines are created.
         // Luckily implicit layouts can't be used to create pipeline layouts so we don't have circular dependencies.
         for (const i in this.bindGroupLayouts) {
@@ -970,8 +1013,10 @@ export class ReplayRenderPass extends ReplayObject {
                     state.indexBuffer = { buffer: c.args.buffer, offset: c.args.offset, size: c.args.size };
                     break;
                 case 'setPipeline':
-                    renderPass.setPipeline(c.args.pipeline.webgpuObject);
-                    state.pipeline = c.args.pipeline;
+                    if (c.args.pipeline instanceof ReplayRenderPipeline) {
+                        renderPass.setPipeline(c.args.pipeline.webgpuObject);
+                        state.pipeline = c.args.pipeline;
+                    }
                     break;
                 case 'setVertexBuffer':
                     renderPass.setVertexBuffer(c.args.slot, c.args.buffer.webgpuObject, c.args.offset, c.args.size);
@@ -1026,6 +1071,147 @@ export class ReplayRenderPass extends ReplayObject {
                 case 'setPipeline':
                 case 'setVertexBuffer':
                 case 'setViewport':
+                    yield { path: [i, j, k, l], command: c };
+                    break;
+                default:
+                    console.assert(false, `Unhandled render pass command type '${c.name}'`);
+            }
+        }
+    }
+}
+
+export class ReplayComputePass extends ReplayObject {
+    commands: ReplayCommandBufferCommand[];
+
+    constructor(replay: Replay) {
+        super(replay);
+        this.commands = [];
+    }
+
+    consumeCommands(
+        beginComputePassCommand: ReplayCommandBufferCommandBeginComputePass,
+        commandIterator: Iterable<TraceCommandBufferCommand>
+    ) {
+        console.assert(this.commands.length === 0);
+        this.commands.push(beginComputePassCommand);
+
+        for (const command of commandIterator) {
+            const c = window.structuredClone(command);
+            switch (c.name) {
+                case 'endPass':
+                    this.commands.push(c);
+                    return;
+
+                case 'setBindGroup':
+                    c.args.bindGroup = this.replay.bindGroups[c.args.bindGroupSerial];
+                    delete c.args.bindGroupSerial;
+                    break;
+                case 'setPipeline':
+                    c.args.pipeline = this.replay.computePipelines[c.args.pipelineSerial];
+                    delete c.args.pipelineSerial;
+                    break;
+                case 'dispatchWorkgroups':
+                case 'drawIndexed':
+                    break;
+                case 'pushDebugGroup':
+                case 'popDebugGroup':
+                    break;
+                default:
+                    console.assert(false, `Unhandled render pass command type '${c.name}'`);
+            }
+            this.commands.push(c);
+        }
+
+        console.assert(false, `BeginComputePass command doesn't have an associated EndPass.`);
+    }
+
+    encodeIn(encoder: GPUCommandEncoder) {
+        this.encodeUpTo([this.commands.length - 1], encoder);
+    }
+
+    encodeUpTo(path: number[], encoder: GPUCommandEncoder) {
+        const commandIndex = path.shift()!;
+
+        console.assert(this.commands.length > 0);
+        console.assert(this.commands[0].name === 'beginComputePass');
+        console.assert(this.commands[this.commands.length - 1].name === 'endPass');
+
+        const computePassDesc = (this.commands[0] as ReplayCommandBufferCommandBeginComputePass).args;
+
+        if (commandIndex === 0) {
+            this.replay.state = computePassDesc;
+            return;
+        }
+
+        // init to defaults
+        const state: ReplayStateBeginComputePass = {
+            pipeline: undefined,
+            bindGroups: [],
+        };
+
+        const computePass = encoder.beginComputePass(computePassDesc);
+        let computePassEnded = false;
+
+        for (let i = 1; i <= commandIndex; i++) {
+            const c = this.commands[i];
+            switch (c.name) {
+                case 'dispatchWorkgroups':
+                    computePass.dispatchWorkgroups(c.args.workgroupCountX, c.args.workgroupCountY, c.args.workgroupCountZ);
+                    break;
+                case 'endPass':
+                    computePass.end();
+                    computePassEnded = true;
+                    break;
+                case 'popDebugGroup':
+                    computePass.popDebugGroup();
+                    break;
+                case 'pushDebugGroup':
+                    computePass.pushDebugGroup(c.args.groupLabel);
+                    break;
+                case 'setBindGroup':
+                    computePass.setBindGroup(c.args.index, c.args.bindGroup.webgpuObject, c.args.dynamicOffsets);
+                    state.bindGroups[c.args.index] = { group: c.args.bindGroup, dynamicOffsets: c.args.dynamicOffsets };
+                    break;
+                case 'setPipeline':
+                    console.assert(c.args.pipeline instanceof ReplayComputePipeline);
+
+                    if (c.args.pipeline instanceof ReplayComputePipeline) {
+                        computePass.setPipeline(c.args.pipeline.webgpuObject);
+                        state.pipeline = c.args.pipeline;
+                    }
+
+                    break;
+                default:
+                    console.assert(false, `Unhandled render pass command type '${c.name}'`);
+            }
+        }
+
+        if (!computePassDesc) {
+            this.replay.state = state;
+            computePass.end();
+        }
+    }
+
+    *iterateCommands([i, j, k]: number[]) {
+        for (let l = 0; l < this.commands.length; l++) {
+            const c = this.commands[l];
+            switch (c.name) {
+                case 'beginRenderPass':
+                case 'copyBufferToBuffer':
+                case 'copyBufferToTexture':
+                case 'copyTextureToTexture':
+                case 'copyTextureToBuffer':
+                case 'draw':
+                case 'drawIndexed':
+                case 'endPass':
+                case 'popDebugGroup':
+                case 'pushDebugGroup':
+                case 'setBindGroup':
+                case 'setIndexBuffer':
+                case 'setPipeline':
+                case 'setVertexBuffer':
+                case 'setViewport':
+                case 'dispatchWorkgroups':
                     yield { path: [i, j, k, l], command: c };
                     break;
                 default:
@@ -1092,6 +1278,13 @@ export class ReplayCommandBuffer extends ReplayObject {
                     this.commands.push({ name: 'renderPass', renderPass: rp });
                     continue;
                 }
+                case 'beginComputePass': {
+                    // Special case, add a pseudo-command that's a whole compute pass command.
+                    const cp = new ReplayComputePass(this.replay);
+                    cp.consumeCommands(c, commandIterator);
+                    this.commands.push({ name: 'computePass', computePass: cp });
+                    continue;
+                }
                 case 'copyBufferToBuffer':
                     c.args.sourceState = this.replay.buffers[c.args.sourceSerial];
                     c.args.source = c.args.sourceState.webgpuObject;
@@ -1148,6 +1341,13 @@ export class ReplayCommandBuffer extends ReplayObject {
                         c.renderPass.encodeUpTo(path, encoder);
                     } else {
                         c.renderPass.encodeIn(encoder);
+                    }
+                    break;
+                case 'computePass':
+                    if (i === commandIndex && !full) {
+                        c.computePass.encodeUpTo(path, encoder);
+                    } else {
+                        c.computePass.encodeIn(encoder);
                     }
                     break;
                 case 'copyBufferToBuffer':
@@ -1312,7 +1512,7 @@ export class ReplayBindGroupLayout extends ReplayObject {
     }
 
     initializeFromImplicitDesc() {
-        const pipeline = this.replay.renderPipelines[this.desc.renderPipelineSerial!];
+        const pipeline = this.desc.renderPipelineSerial != undefined ? this.replay.renderPipelines[this.desc.renderPipelineSerial!] : this.replay.computePipelines[this.desc.computePipelineSerial!];
         this.webgpuObject = pipeline.webgpuObject.getBindGroupLayout(this.desc.groupIndex!);
     }
 }
@@ -1388,7 +1588,7 @@ export class ReplayQueue extends ReplayObject {
 
 export interface ReplayGPUProgramableStage {
     module: ReplayShaderModule;
-    entryPoint: string;
+    entryPoint?: string;
     constants?: Record<string, number>;
 }
 
@@ -1480,6 +1680,55 @@ export class ReplayRenderPipeline extends ReplayObject {
 
         this.desc = replayDesc;
         this.webgpuObject = await this.device.webgpuObject.createRenderPipelineAsync(localDesc);
+    }
+}
+
+export interface ReplayGPUComputePipelineDescriptor {
+    layout?: ReplayPipelineLayout;
+    compute: ReplayShaderModule;
+}
+
+export class ReplayComputePipeline extends ReplayObject {
+    device: ReplayDevice;
+    desc?: ReplayGPUComputePipelineDescriptor;
+    webgpuObject!: GPUComputePipeline;
+
+    constructor(replay: Replay, desc: TraceComputePipeline) {
+        super(replay, desc);
+        this.device = this.replay.devices[desc.deviceSerial];
+    }
+
+    async recreate(desc: TraceComputePipeline) {
+        let replayLayout: ReplayPipelineLayout | undefined;
+        let layout: GPUPipelineLayout | 'auto';
+
+        if (desc.layout === 'auto') {
+            layout = 'auto';
+        } else {
+            replayLayout = this.replay.pipelineLayouts[desc.layoutSerial!];
+            layout = replayLayout.webgpuObject;
+        }
+
+        const computeModule = this.replay.shaderModules[desc.compute.moduleSerial];
+
+        const replayDesc: ReplayGPUComputePipelineDescriptor = {
+            layout: replayLayout,
+            compute: computeModule
+        };
+
+        // Do this properly and with all state pls.
+        const localDesc: GPUComputePipelineDescriptor = {
+            layout,
+            label: desc.label,
+            compute: {
+                entryPoint: desc.compute.entryPoint,
+                module: computeModule.webgpuObject,
+                constants: desc.compute.constants
+            }
+        };
+
+        this.desc = replayDesc;
+        this.webgpuObject = await this.device.webgpuObject.createComputePipelineAsync(localDesc);
     }
 }
 
