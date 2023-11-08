@@ -136,9 +136,9 @@ export interface ReplayRenderPassDepthStencilAttachment {
 
 export interface ReplayCommandBeginRenderPassArgs {
     colorAttachments: ReplayRenderPassColorAttachment[];
-    timestampWrites: ReplayRenderPassTimestampWrite[];
-    occlusionQuerySet?: GPUQuerySet;
-    occlusionQuerySetState?: ReplayQuerySet;
+    //timestampWrites: ReplayRenderPassTimestampWrite[];
+    //occlusionQuerySet?: GPUQuerySet;
+    //occlusionQuerySetState?: ReplayQuerySet;
     maxDrawCount: number;
     depthStencilAttachment?: ReplayRenderPassDepthStencilAttachment;
 }
@@ -1074,17 +1074,17 @@ export class ReplayCommandBuffer extends ReplayObject {
                         delete ds.viewSerial;
                     }
 
-                    for (const w of c.args.timestampWrites) {
-                        w.querySetState = this.replay.querySets[w.querySetSerial];
-                        w.querySet = w.querySet.webgpuObject;
-                        delete w.querySetSerial;
-                    }
-
-                    if (c.args.occlusionQuerySetSerial !== undefined) {
-                        c.args.occlusionQuerySetState = this.replay.querySets[c.args.occlusionQuerySetSerial];
-                        c.args.occlusionQuerySet = c.args.occlusionQuerySetState;
-                        delete c.args.occlusionQuerySetSerial;
-                    }
+                    //for (const w of c.args.timestampWrites) {
+                    //    w.querySetState = this.replay.querySets[w.querySetSerial];
+                    //    w.querySet = w.querySet.webgpuObject;
+                    //    delete w.querySetSerial;
+                    //}
+                    //
+                    //if (c.args.occlusionQuerySetSerial !== undefined) {
+                    //    c.args.occlusionQuerySetState = this.replay.querySets[c.args.occlusionQuerySetSerial];
+                    //    c.args.occlusionQuerySet = c.args.occlusionQuerySetState;
+                    //    delete c.args.occlusionQuerySetSerial;
+                    //}
 
                     // Special case, add a pseudo-command that's a whole render pass command.
                     const rp = new ReplayRenderPass(this.replay);

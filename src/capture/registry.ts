@@ -252,8 +252,8 @@ export interface TraceRenderPassDepthStencilAttachment {
 
 export interface TraceCommandBeginRenderPassArgs {
     colorAttachments: TraceRenderPassColorAttachment[];
-    timestampWrites: TraceRenderPassTimestampWrite[];
-    occlusionQuerySetSerial?: number;
+    //timestampWrites: TraceRenderPassTimestampWrite[];
+    //occlusionQuerySetSerial?: number;
     maxDrawCount: number;
     depthStencilAttachment?: TraceRenderPassDepthStencilAttachment;
 }
@@ -1738,18 +1738,18 @@ class RenderPassEncoderState extends BaseState<GPURenderPassEncoder> {
                 };
             }),
 
-            timestampWrites: ((desc.timestampWrites ?? []) as GPURenderPassTimestampWrite[]).map(w => {
-                this.encoder.reference(w.querySet);
-                return {
-                    querySetSerial: tracer.querySets.get(w.querySet)!.traceSerial,
-                    queryIndex: w.queryIndex,
-                    location: w.location,
-                };
-            }),
-
-            occlusionQuerySetSerial: desc.occlusionQuerySet
-                ? tracer.querySets.get(desc.occlusionQuerySet)!.traceSerial
-                : undefined,
+            //timestampWrites: ((desc.timestampWrites ?? []) as GPURenderPassTimestampWrite[]).map(w => {
+            //    this.encoder.reference(w.querySet);
+            //    return {
+            //        querySetSerial: tracer.querySets.get(w.querySet)!.traceSerial,
+            //        queryIndex: w.queryIndex,
+            //        location: w.location,
+            //    };
+            //}),
+            //
+            //occlusionQuerySetSerial: desc.occlusionQuerySet
+            //    ? tracer.querySets.get(desc.occlusionQuerySet)!.traceSerial
+            //    : undefined,
             maxDrawCount: desc.maxDrawCount ?? 50000000, // Yes that's the spec default.
         };
         this.encoder.reference(desc.occlusionQuerySet);
